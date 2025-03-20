@@ -20,7 +20,7 @@ bot = Bot(token=TELEGRAM_TOKEN)
 # Comando para iniciar o bot
 
 def start(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text('Olá! Eu sou o bot de análise de apostas fifa. Aguarde enquanto eu faço as análises.')
+    update.message.reply_text('Olá! Eu sou o bot de análise de apostas fifa . Aguarde enquanto eu faço as análises.')
 '''
 def get_matches(update: Update, context: CallbackContext) -> None:
     try:

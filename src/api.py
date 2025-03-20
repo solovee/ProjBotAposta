@@ -1,5 +1,10 @@
 import requests
 from typing import Dict, Any
+from datetime import datetime
+
+# Obter a data atual e formatar como YYYYMMDD
+data_atual = datetime.now().strftime('%Y%m%d')
+
 
 class BetsAPIClient:
     def __init__(self, api_key: str):
@@ -18,7 +23,7 @@ class BetsAPIClient:
             'event_id' : event_id
         }
 
-    def get_fifa_matches(self, sport_id: int = 1, day: str = '') -> Dict[str, Any]:
+    def get_fifa_matches(self, sport_id: int = 1, day: str = data_atual) -> Dict[str, Any]:
         """
         pega jogos de FIFA 8 e 12 minutos da BetsAPI.
         """
@@ -48,3 +53,26 @@ class BetsAPIClient:
             return response.json()
         else:
             raise Exception(f"Erro ao obter odds da API: {response.status_code}")
+    
+    def resultados(self, event_id: int=1):
+        url = f'{self.base_url}result'
+
+        params = {
+            'event_id': event_id,
+            'token': self.api_key
+        }
+        
+
+        '''
+        ligas_esoccer = [liga for liga in ligas['results'] if 'Esoccer' in liga['name']]
+eventos_esoccer = []
+
+for liga in ligas_esoccer:
+    params = {
+        'token': api_key,
+        'league_id': liga['id']
+    }
+    response = requests.get('https://api.betsapi.com/v1/events/upcoming', params=params)
+    eventos = response.json()
+    eventos_esoccer.extend(eventos['results'])
+'''
