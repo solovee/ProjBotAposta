@@ -10,7 +10,7 @@ load_dotenv()
 
 
 # Carregar tokens de ambiente
-#API_KEY = os.getenv('BETSAPI_KEY')
+API_KEY = os.getenv('BETSAPI_KEY')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 
 # Inicializar os clientes

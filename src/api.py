@@ -32,6 +32,7 @@ class BetsAPIClient:
             'token': self.api_key,
             'sport_id': sport_id,
             'day': day
+            #precisa de filtragem
         }
         response = requests.get(url, params=params)
         if response.status_code == 200:
