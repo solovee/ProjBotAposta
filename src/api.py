@@ -11,8 +11,9 @@ class BetsAPIClient:
         self.api_key = api_key
         self.base_url = 'https://api.b365api.com/v1/bet365/'
         self.base_url_betsapi = 'https://api.b365api.com/v1/'
+        self.base_url_v3 = 'https://api.b365api.com/v3/bet365/'
 
-    def getHistory(self, event_id: int = 1, qty: int = 10) -> Dict[str, any]:
+    def getHistory(self, event_id: int = 1, qty: int = 10) -> Dict[str, Any]:
         """
         pega o hisórico de partidas
         """
@@ -22,8 +23,30 @@ class BetsAPIClient:
             'token': self.api_key,
             'event_id' : event_id
         }
+        response = requests.get(url, params=params)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            raise Exception(f"Erro ao obter dados da API: {response.status_code}")
 
-    def get_fifa_matches(self, sport_id: int = 1, day: str = data_atual) -> Dict[str, Any]:
+    def get_inplay_games(self, sport_id: int = 1, league_id: int = 10048705) -> Dict[str, Any]:
+
+        url = f'{self.base_url}inplay_filter'
+
+        params = {
+            'sport_id': sport_id,
+            'league_id': league_id
+        }
+
+        response = requests.get(url, params=params)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            raise Exception(f"Erro ao obter dados da API: {response.status_code}")
+        
+
+
+    def get_fifa_matches(self, sport_id: int = 1,league_id: int = 10048705, day: str = data_atual) -> Dict[str, Any]:
         """
         pega jogos de FIFA 8 e 12 minutos da BetsAPI.
         """
@@ -31,6 +54,7 @@ class BetsAPIClient:
         params = {
             'token': self.api_key,
             'sport_id': sport_id,
+            'league_id': league_id,
             'day': day
             #precisa de filtragem
         }
@@ -39,12 +63,25 @@ class BetsAPIClient:
             return response.json()
         else:
             raise Exception(f"Erro ao obter dados da API: {response.status_code}")
+        
+    def getEvent(self, event_id: int = 1):
+
+        url = f'{self.base_url}result'
+
+        params = {
+            'event_id': event_id
+        }
+        response = requests.get(url, params=params)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            raise Exception(f"Erro ao obter odds da API: {response.status_code}")
 
     def get_odds(self, FI: int) -> Dict[str, Any]:
         """
         pega as odds para um evento específico.
         """
-        url = f'{self.base_url}/prematch'
+        url = f'{self.base_url_v3}prematch'
         params = {
             'token': self.api_key,
             'FI': FI
