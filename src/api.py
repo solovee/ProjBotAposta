@@ -59,8 +59,13 @@ class BetsAPIClient:
             #precisa de filtragem
         }
         response = requests.get(url, params=params)
+        resp = response.json()
+        
+        res = [x['id'] for x in resp['results'] if (x.get('ss') is None) or x.get('time_status') == 0]
+
+
         if response.status_code == 200:
-            return response.json()
+            return res
         else:
             raise Exception(f"Erro ao obter dados da API: {response.status_code}")
         
