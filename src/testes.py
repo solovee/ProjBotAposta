@@ -1,21 +1,31 @@
 import requests
 from api import BetsAPIClient
+from dotenv import load_dotenv
+import os
 #'10048705', 'Esoccer GT Leagues - 12 mins play' ;'10047781', 'Esoccer Battle - 8 mins play'
 
 #testar pegar evento 171732570 mais tarde   171790606
+load_dotenv()
 
-
-api = "217012-1ic4weHvqmtEZ0"
+api = os.getenv("API_KEY")
 
 
 apiclient = BetsAPIClient(api_key=api)
 
+ids = apiclient.getUpcoming(leagues=apiclient.leagues_ids)
+print(ids)
 
 
-res = apiclient.get_fifa_matches()
+
+'''
+res = requests.get("https://api.b365api.com/v1/bet365/inplay_filter?sport_id=1&league_id=10047781 &token=217012-1ic4weHvqmtEZ0").json()
+print(res)
+'''
 
 
 
+
+'''
 for id in res:
     odds = apiclient.get_odds(FI=id)['results'][0]['goals']['sp']['goals_over_under']
     print(odds)
@@ -29,7 +39,7 @@ for id in res1:
     odds = apiclient.get_odds(FI=id)['results'][0]['goals']['sp']['goals_over_under']
     print(odds)
 
-
+'''
 
 
 '''
