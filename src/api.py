@@ -21,6 +21,8 @@ class BetsAPIClient:
 
 
     def getUpcoming(self, sport_id: int = 1, leagues: List[Any] = [], day: str = data_atual) -> List[Any]:
+        '''pega jogos futuros'''
+
         results = []
         for league in leagues:
             pages = self.pages(league_id=league)
@@ -30,24 +32,11 @@ class BetsAPIClient:
         return results
 
         
-
-    def get_inplay_games(self, sport_id: int = 1, league_id: int = 10048705) -> Dict[str, Any]:
-
-        url = f'{self.base_url}inplay_filter'
-
-        params = {
-            'sport_id': sport_id,
-            'league_id': league_id
-        }
-
-        response = requests.get(url, params=params)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            raise Exception(f"Erro ao obter dados da API: {response.status_code}")
         
     
     def pages(self, sport_id: int = 1,league_id: int = 10048705, day: str = data_atual) -> int:
+        '''pega o numero de paginas da requisiçao'''
+
         url = f'{self.base_url}upcoming'
         params = {
             'token': self.api_key,
@@ -91,6 +80,8 @@ class BetsAPIClient:
             raise Exception(f"Erro ao obter dados da API: {response.status_code}")
         
     def getInplayEvents(self, sport_id: int = 1, league_id: int = 10048705) -> Dict[str,Any]:
+        '''pega jogos ao vivo'''
+
         url = f'{self.base_url}inplay_filter'
         params = {
             'token': self.api_key,
@@ -101,9 +92,39 @@ class BetsAPIClient:
         if response.status_code == 200:
             return response.json()
         else:
-            raise Exception(f"Erro ao obter odds da API: {response.status_code}")
+            raise Exception(f"Erro ao obter inplay_eventos da API: {response.status_code}")
+        
+
+    def filtraOdds(self, ids: List[Any] = []):
+        done = 0
+        RED = "\033[31m"
+        RESET = "\033[0m"
+        print(ids)
+        for id in ids:
+            try:
+
+                odds = self.get_odds(FI=id)['results'][0]['goals']['sp']['goals_over_under']
+                print(f'{RED}{id}{RESET}', odds)
+                done +=1
+                
+            except KeyError:
+
+                try:
+
+                    odds = self.get_odds(FI=id)['results'][0]['main']['sp']['goals_over_under']
+                    print(f'{RED}{id}{RESET}', odds)
+                    done +=1
+                    
+                except KeyError as e:
+                    print('KeyError, rever filtragem de odds', id)
+                    oddProblema = self.get_odds(FI=id)
+                    print(oddProblema)
+
+        print(len(ids) - done)
         
     def getEvent(self, event_id: int = 1) -> Dict[str, Any]:
+
+        '''retorna dados de um evento'''
 
         url = f'{self.base_url}result'
 
@@ -130,6 +151,6 @@ class BetsAPIClient:
             return response.json()
         else:
             raise Exception(f"Erro ao obter odds da API: {response.status_code}")
-    
+        
     
 

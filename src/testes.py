@@ -10,11 +10,16 @@ load_dotenv()
 api = os.getenv("API_KEY")
 
 
+
 apiclient = BetsAPIClient(api_key=api)
 
 ids = apiclient.getUpcoming(leagues=apiclient.leagues_ids)
-print(ids)
 
+
+
+
+odds = apiclient.filtraOdds(ids=ids)
+print(odds)
 
 
 '''
