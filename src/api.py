@@ -104,31 +104,32 @@ class BetsAPIClient:
         RESET = "\033[0m"
         print(ids)
         games = {}
+
         for id in ids:
             try:
+                odds_data = self.get_odds(FI=id)['results'][0]
+                
+                # Verifica se 'goals' existe antes de acessar
+                if 'goals' in odds_data and 'goals_over_under' in odds_data['goals']['sp']:
+                    odds = odds_data['goals']['sp']['goals_over_under']
+                
+                # Se 'goals_over_under' não estiver em 'goals', verifica em 'main'
+                elif 'main' in odds_data and 'goals_over_under' in odds_data['main']['sp']:
+                    odds = odds_data['main']['sp']['goals_over_under']
+                
+                else:
+                    raise KeyError("goals_over_under não encontrado em 'goals' nem em 'main'.")
 
-                odds = self.get_odds(FI=id)['results'][0]['goals']['sp']['goals_over_under']
                 games[id] = odds
                 print(f'{RED}{id}{RESET}', odds)
-                done +=1
-                
+                done += 1
+
             except KeyError:
-
-                try:
-
-                    odds = self.get_odds(FI=id)['results'][0]['main']['sp']['goals_over_under']
-                    games[id] = odds
-                    print(f'{RED}{id}{RESET}', odds)
-                    done +=1
-                    
-                except KeyError as e:
-                    print('KeyError, rever filtragem de odds', id)
-                    oddProblema = self.get_odds(FI=id)
-                    print(oddProblema)
+                print(f'KeyError, rever filtragem de odds para o evento {id}')
 
         print(len(ids) - done)
-
         return games
+
         
     def getEvent(self, event_id: int = 1) -> Dict[str, Any]:
 

@@ -30,6 +30,8 @@ odds = apiclient.filtraOdds(ids=ids)
 print(odds)
 
 
+#erro = apiclient.get_odds(FI=171948551)
+#print(erro)
 
 '''
 import json
