@@ -2,6 +2,13 @@ import requests
 from api import BetsAPIClient
 from dotenv import load_dotenv
 import os
+from datetime import datetime
+
+
+
+
+
+
 #'10048705', 'Esoccer GT Leagues - 12 mins play' ;'10047781', 'Esoccer Battle - 8 mins play'
 
 #testar pegar evento 171732570 mais tarde   171790606
@@ -13,6 +20,7 @@ api = os.getenv("API_KEY")
 
 apiclient = BetsAPIClient(api_key=api)
 
+
 ids = apiclient.getUpcoming(leagues=apiclient.leagues_ids)
 
 
@@ -22,10 +30,124 @@ odds = apiclient.filtraOdds(ids=ids)
 print(odds)
 
 
+
 '''
-res = requests.get("https://api.b365api.com/v1/bet365/inplay_filter?sport_id=1&league_id=10047781 &token=217012-1ic4weHvqmtEZ0").json()
-print(res)
+import json
+
+data = {
+    "success": 1,
+    "results": {
+        "h2h": [
+            {
+                "id": "199439",
+                "sport_id": "1",
+                "league": {
+                    "id": "849",
+                    "name": "China Super League",
+                    "cc": "cn"
+                },
+                "home": {
+                    "id": "10121",
+                    "name": "Liaoning Hongyun",
+                    "image_id": "41429",
+                    "cc": "cn"
+                },
+                "away": {
+                    "id": "43806",
+                    "name": "Guangzhou R&F",
+                    "image_id": "3375",
+                    "cc": "cn"
+                },
+                "time": "1466924400",
+                "ss": "3-1",
+                "time_status": "3"
+            },
+            {
+                "id": "199440",
+                "sport_id": "1",
+                "league": {
+                    "id": "849",
+                    "name": "China Super League",
+                    "cc": "cn"
+                },
+                "home": {
+                    "id": "43806",
+                    "name": "Guangzhou R&F",
+                    "image_id": "3375",
+                    "cc": "cn"
+                },
+                "away": {
+                    "id": "10121",
+                    "name": "Liaoning Hongyun",
+                    "image_id": "41429",
+                    "cc": "cn"
+                },
+                "time": "1467934400",
+                "ss": "2-2",
+                "time_status": "3"
+            }
+        ]
+    }
+}
+
+# Dicionário para armazenar estatísticas dos times por ID
+team_stats = {}
+
+# Variáveis para calcular a média geral de gols por partida
+total_goals = 0
+num_matches = 0
+
+# Percorre as partidas
+for match in data["results"]["h2h"]:
+    if "ss" in match and match["ss"]:  # Verifica se há placar disponível
+        home_team_id = match["home"]["id"]
+        home_team_name = match["home"]["name"]
+        away_team_id = match["away"]["id"]
+        away_team_name = match["away"]["name"]
+
+        home_goals, away_goals = map(int, match["ss"].split("-"))
+
+        # Soma os gols para a média geral
+        total_goals += home_goals + away_goals
+        num_matches += 1
+
+        # Atualiza os dados do time da casa
+        if home_team_id not in team_stats:
+            team_stats[home_team_id] = {"name": home_team_name, "total_gols": 0, "num_jogos": 0}
+        team_stats[home_team_id]["total_gols"] += home_goals
+        team_stats[home_team_id]["num_jogos"] += 1
+
+        # Atualiza os dados do time visitante
+        if away_team_id not in team_stats:
+            team_stats[away_team_id] = {"name": away_team_name, "total_gols": 0, "num_jogos": 0}
+        team_stats[away_team_id]["total_gols"] += away_goals
+        team_stats[away_team_id]["num_jogos"] += 1
+
+# Calcula a média de gols por partida
+media_total_gols = total_goals / num_matches if num_matches > 0 else 0
+
+# Calcula a média de gols por time
+media_por_time = {
+    stats["name"]: stats["total_gols"] / stats["num_jogos"]
+    for stats in team_stats.values()
+}
+
+# Exibir os resultados
+print(f"Média total de gols por partida: {media_total_gols:.2f}\n")
+print("Média de gols por time:")
+for team, media in media_por_time.items():
+    print(f"{team}: {media:.2f} gols por jogo")
 '''
+
+
+'''
+for a in res:
+    timestamp = a['time']
+    dt = datetime.fromtimestamp(int(timestamp))
+    print(dt)
+    '''
+
+
 
 
 
@@ -47,17 +169,4 @@ for id in res1:
 '''
 
 
-'''
-{'success': 1, 'pager': {'page': 1, 'per_page': 50, 'total': 28}, 'results': [{'id': '171790499', 'sport_id': '1', 'time': '1742688000', 'time_status': '3', 'league': {'id': '10048705', 'name': 'Esoccer GT Leagues - 12 mins play'}, 'home': {'id': '11263951', 'name': 'Villarreal (Pele)'}, 'away': {'id': '11230248', 'name': 'A.Madrid (val)'}, 'ss': '3-3', 'our_event_id': '9701179', 'r_id': '171790499C1A', 'updated_at': '1742688911', 'odds_updated_at': '1742688785'}, {'id': '171790501', 'sport_id': '1', 'time': '1742688000', 'time_status': '3', 'league': {'id': '10048705', 'name': 'Esoccer GT Leagues - 12 mins play'}, 'home': {'id': '11258262', 'name': 'Real Madrid (Xerxes)'}, 'away': {'id': '11225405', 'name': 'A.Bilbao (Aladdin)'}, 'ss': '3-4', 'our_event_id': '9700964', 'r_id': '171790501C1A', 'updated_at': '1742688910', 'odds_updated_at': '1742688785'}, {'id': '171790507', 'sport_id': '1', 'time': '1742688900', 'time_status': '3', 'league': {'id': '10048705', 'name': 'Esoccer GT Leagues - 12 mins play'}, 'home': {'id': '11263951', 'name': 'Villarreal (Pele)'}, 'away': {'id': '11233844', 'name': 'Barcelona (Nio)'}, 'ss': '1-1', 'our_event_id': '9701199', 'r_id': '171790507C1A', 'updated_at': '1742689751', 'odds_updated_at': '1742689390'}, {'id': '171790512', 'sport_id': '1', 'time': '1742688900', 'time_status': '3', 'league': {'id': '10048705', 'name': 'Esoccer GT Leagues - 12 mins play'}, 'home': {'id': '11225405', 'name': 'A.Bilbao (Aladdin)'}, 'away': {'id': '11230248', 'name': 'A.Madrid (val)'}, 'ss': '4-1', 'our_event_id': '9700979', 'r_id': '171790512C1A', 'updated_at': '1742689786', 'odds_updated_at': '1742689390'}, {'id': '171790519', 'sport_id': '1', 'time': '1742689800', 'time_status': '3', 'league': {'id': '10048705', 'name': 'Esoccer GT Leagues - 12 mins play'}, 'home': {'id': '11258262', 'name': 'Real Madrid (Xerxes)'}, 'away': {'id': '11233844', 'name': 'Barcelona (Nio)'}, 'ss': '2-0', 'our_event_id': '9700970', 'r_id': '171790519C1A', 'updated_at': '1742690666', 'odds_updated_at': '1742690533'}, {'id': '171790521', 'sport_id': '1', 'time': '1742689800', 'time_status': '3', 'league': {'id': '10048705', 'name': 'Esoccer GT Leagues - 12 mins play'}, 'home': {'id': '11225405', 'name': 'A.Bilbao (Aladdin)'}, 'away': {'id': '11263951', 'name': 'Villarreal (Pele)'}, 'ss': '3-4', 'our_event_id': '9701215', 'r_id': '171790521C1A', 'updated_at': '1742690681', 'odds_updated_at': '1742690533'}, {'id': '171790523', 'sport_id': '1', 'time': '1742690700', 'time_status': '3', 'league': {'id': '10048705', 'name': 'Esoccer GT Leagues - 12 mins play'}, 'home': {'id': '11225405', 'name': 'A.Bilbao (Aladdin)'}, 'away': {'id': '11233844', 'name': 'Barcelona (Nio)'}, 'ss': '2-2', 'our_event_id': '9700967', 'r_id': '171790523C1A', 'updated_at': '1742691594', 'odds_updated_at': '1742691527'}, {'id': '171790528', 'sport_id': '1', 'time': '1742690700', 'time_status': '3', 'league': {'id': '10048705', 'name': 'Esoccer GT Leagues - 12 mins play'}, 'home': {'id': '11230248', 'name': 'A.Madrid (val)'}, 'away': {'id': '11258262', 'name': 'Real Madrid (Xerxes)'}, 'ss': '2-3', 'our_event_id': '9700971', 'r_id': '171790528C1A', 'updated_at': '1742691593', 'odds_updated_at': '1742691527'}, {'id': '171790530', 'sport_id': '1', 'time': '1742691600', 'time_status': '3', 'league': {'id': '10048705', 'name': 'Esoccer GT Leagues - 12 mins play'}, 'home': {'id': '11230248', 'name': 'A.Madrid (val)'}, 'away': {'id': '11233844', 'name': 'Barcelona (Nio)'}, 'ss': '1-0', 'our_event_id': '9701033', 'r_id': '171790530C1A', 'updated_at': '1742692458', 'odds_updated_at': '1742692278'}, {'id': '171790533', 'sport_id': '1', 'time': '1742691600', 'time_status': '3', 'league': {'id': '10048705', 'name': 'Esoccer GT Leagues - 12 mins play'}, 'home': {'id': '11263951', 'name': 'Villarreal (Pele)'}, 'away': {'id': '11258262', 'name': 'Real Madrid (Xerxes)'}, 'ss': '2-0', 'our_event_id': '9701227', 'r_id': '171790533C1A', 'updated_at': '1742692471', 'odds_updated_at': '1742692278'}, {'id': '171790535', 'sport_id': '1', 'time': '1742692500', 'time_status': '3', 'league': {'id': '10048705', 'name': 'Esoccer GT Leagues - 12 mins play'}, 'home': {'id': '11222730', 'name': 'Arsenal (val)'}, 'away': {'id': '11224465', 'name': 'Inter (Pele)'}, 'ss': '1-0', 'our_event_id': '9701265', 'r_id': '171790535C1A', 'updated_at': '1742693449', 'odds_updated_at': '1742693239'}, {'id': '171790538', 'sport_id': '1', 'time': '1742692500', 'time_status': '3', 'league': {'id': '10048705', 'name': 'Esoccer GT Leagues - 12 mins play'}, 'home': {'id': '11244667', 'name': 'Real Madrid (Aladdin)'}, 'away': {'id': '11226672', 'name': 'PSG (Xerxes)'}, 'ss': '1-3', 'our_event_id': '9701266', 'r_id': '171790538C1A', 'updated_at': '1742693449', 'odds_updated_at': '1742693239'}, {'id': '171790540', 'sport_id': '1', 'time': '1742693400', 'time_status': '3', 'league': {'id': '10048705', 'name': 'Esoccer GT Leagues - 12 mins play'}, 'home': {'id': '11239752', 'name': 'Bayern (Nio)'}, 'away': {'id': '11224465', 'name': 'Inter (Pele)'}, 'ss': '2-2', 'our_event_id': '9701465', 'r_id': '171790540C1A', 'updated_at': '1742694234', 'odds_updated_at': '1742694137'}, {'id': '171790549', 'sport_id': '1', 'time': '1742693400', 'time_status': '3', 'league': {'id': '10048705', 'name': 'Esoccer GT Leagues - 12 mins play'}, 'home': {'id': '11222730', 'name': 'Arsenal (val)'}, 'away': {'id': '11244667', 'name': 'Real Madrid (Aladdin)'}, 'ss': '3-3', 'our_event_id': '9701466', 'r_id': '171790549C1A', 'updated_at': '1742694275', 'odds_updated_at': '1742694137'}, {'id': '171790555', 'sport_id': '1', 'time': '1742694300', 'time_status': '3', 'league': {'id': '10048705', 'name': 'Esoccer GT Leagues - 12 mins play'}, 'home': {'id': '11239752', 'name': 'Bayern (Nio)'}, 'away': {'id': '11226672', 'name': 'PSG (Xerxes)'}, 'ss': '3-4', 'our_event_id': '9701481', 'r_id': '171790555C1A', 'updated_at': '1742695190', 'odds_updated_at': '1742695137'}, {'id': '171790559', 'sport_id': '1', 'time': '1742694300', 'time_status': '3', 'league': {'id': '10048705', 'name': 'Esoccer GT Leagues - 12 mins play'}, 'home': {'id': '11224465', 'name': 'Inter (Pele)'}, 'away': {'id': '11244667', 'name': 'Real Madrid (Aladdin)'}, 'ss': '1-2', 'our_event_id': '9701482', 'r_id': '171790559C1A', 'updated_at': '1742695193', 'odds_updated_at': '1742695137'}, {'id': '171790562', 'sport_id': '1', 'time': '1742695200', 'time_status': '3', 'league': {'id': '10048705', 'name': 'Esoccer GT Leagues - 12 mins play'}, 'home': {'id': '11239752', 'name': 'Bayern (Nio)'}, 'away': {'id': '11244667', 'name': 'Real Madrid (Aladdin)'}, 'ss': '4-0', 'our_event_id': '9701475', 'r_id': '171790562C1A', 'updated_at': '1742696076', 'odds_updated_at': '1742695485'}, {'id': '171790566', 'sport_id': '1', 'time': '1742695200', 'time_status': '3', 'league': {'id': '10048705', 'name': 'Esoccer GT Leagues - 12 mins play'}, 'home': {'id': '11226672', 'name': 'PSG (Xerxes)'}, 'away': {'id': '11222730', 'name': 'Arsenal (val)'}, 'ss': '3-4', 'our_event_id': '9701537', 'r_id': '171790566C1A', 'updated_at': '1742696066', 'odds_updated_at': '1742695485'}, {'id': '171790570', 'sport_id': '1', 'time': '1742696100', 'time_status': '3', 'league': {'id': '10048705', 'name': 'Esoccer GT Leagues - 12 mins play'}, 'home': {'id': '11239752', 'name': 'Bayern (Nio)'}, 'away': {'id': '11222730', 'name': 'Arsenal (val)'}, 'ss': '2-2', 'our_event_id': '9701497', 'r_id': '171790570C1A', 'updated_at': '1742697041', 'odds_updated_at': '1742696814'}, {'id': '171790579', 'sport_id': '1', 'time': '1742696100', 'time_status': '3', 'league': {'id': '10048705', 'name': 'Esoccer GT Leagues - 12 mins play'}, 'home': {'id': '11226672', 'name': 'PSG (Xerxes)'}, 'away': {'id': '11224465', 'name': 'Inter (Pele)'}, 'ss': '3-3', 'our_event_id': '9701467', 'r_id': '171790579C1A', 'updated_at': '1742697057', 'odds_updated_at': '1742696814'}, {'id': '171790586', 'sport_id': '1', 'time': '1742697000', 'time_status': '3', 'league': {'id': '10048705', 'name': 'Esoccer GT Leagues - 12 mins play'}, 'home': {'id': '11224465', 'name': 'Inter (Pele)'}, 'away': {'id': '11222730', 'name': 'Arsenal (val)'}, 'ss': '2-2', 'our_event_id': '9701498', 'r_id': '171790586C1A', 'updated_at': '1742697950', 'odds_updated_at': '1742697854'}, {'id': '171790591', 'sport_id': '1', 'time': '1742697000', 'time_status': '3', 'league': {'id': '10048705', 'name': 'Esoccer GT Leagues - 12 mins play'}, 'home': {'id': '11226672', 'name': 'PSG (Xerxes)'}, 'away': {'id': '11244667', 'name': 'Real Madrid (Aladdin)'}, 'ss': '2-3', 'our_event_id': '9701477', 'r_id': '171790591C1A', 'updated_at': '1742697950', 'odds_updated_at': '1742697854'}, {'id': '171790595', 'sport_id': '1', 'time': '1742697900', 'time_status': '1', 'league': {'id': '10048705', 'name': 'Esoccer GT Leagues - 12 mins play'}, 'home': {'id': '11224465', 'name': 'Inter (Pele)'}, 'away': {'id': '11239752', 'name': 'Bayern (Nio)'}, 'ss': '4-1', 'our_event_id': '9701505', 'r_id': '171790595C1A', 'updated_at': '1742698859', 'odds_updated_at': '1742698697'}, {'id': '171790598', 'sport_id': '1', 'time': '1742697900', 'time_status': '1', 'league': {'id': '10048705', 'name': 'Esoccer GT Leagues - 12 mins play'}, 'home': {'id': '11244667', 'name': 'Real Madrid (Aladdin)'}, 'away': {'id': '11222730', 'name': 'Arsenal (val)'}, 'ss': '1-1', 'our_event_id': '9701623', 'r_id': '171790598C1A', 'updated_at': '1742698859', 'odds_updated_at': '1742698697'}, {'id': '171790601', 'sport_id': '1', 'time': '1742698800', 'time_status': '1', 'league': {'id': '10048705', 'name': 'Esoccer GT Leagues - 12 mins play'}, 'home': {'id': '11226672', 'name': 'PSG (Xerxes)'}, 'away': {'id': '11239752', 'name': 'Bayern (Nio)'}, 'ss': '0-0', 'our_event_id': '9701478', 'r_id': '171790601C1A', 'updated_at': '1742698859', 'odds_updated_at': '1742698827'}, {'id': '171790603', 'sport_id': '1', 'time': '1742698800', 'time_status': '1', 'league': {'id': '10048705', 'name': 'Esoccer GT Leagues - 12 mins play'}, 'home': {'id': '11244667', 'name': 'Real Madrid (Aladdin)'}, 'away': {'id': '11224465', 'name': 'Inter (Pele)'}, 'ss': '0-0', 'our_event_id': '9701468', 'r_id': '171790603C1A', 'updated_at': '1742698860', 'odds_updated_at': '1742698799'}, {'id': '171790606', 'sport_id': '1', 'time': '1742699700', 'time_status': '0', 'league': {'id': '10048705', 'name': 'Esoccer GT Leagues - 12 mins play'}, 'home': {'id': '11244667', 'name': 'Real Madrid (Aladdin)'}, 'away': {'id': '11239752', 'name': 'Bayern (Nio)'}, 'ss': None, 'our_event_id': '9701469', 'r_id': None, 'updated_at': '1742698700', 'odds_updated_at': '1742698745'}, {'id': '171790608', 'sport_id': '1', 'time': '1742699700', 'time_status': '0', 'league': {'id': '10048705', 'name': 'Esoccer GT Leagues - 12 mins play'}, 'home': {'id': '11222730', 'name': 'Arsenal (val)'}, 'away': {'id': '11226672', 'name': 'PSG (Xerxes)'}, 'ss': None, 'our_event_id': '9701671', 'r_id': None, 'updated_at': '1742698700', 'odds_updated_at': '1742698842'}]}
 
-
-
-
-
-
-
-{'id': '981', 'name': 'Goals Over/Under', 'odds': [{'id': '381099211', 'odds': '1.222', 'header': 'Over', 'name': '2.5'}, {'id': '381099213', 'odds': '4.000', 'header': 'Under', 'name': '2.5'}]}
-{'id': '981', 'name': 'Goals Over/Under', 'odds': [{'id': '381099237', 'odds': '1.111', 'header': 'Over', 'name': '2.5'}, {'id': '381099238', 'odds': '6.000', 'header': 'Under', 'name': '2.5'}]}
-{'id': '981', 'name': 'Goals Over/Under', 'odds': [{'id': '380619599', 'odds': '1.100', 'header': 'Over', 'name': '2.5'}, {'id': '380619602', 'odds': '6.500', 'header': 'Under', 'name': '2.5'}]}
-{'id': '981', 'name': 'Goals Over/Under', 'odds': [{'id': '382457152', 'odds': '1.111', 'header': 'Over', 'name': '2.5'}, {'id': '382457157', 'odds': '6.000', 'header': 'Under', 'name': '2.5'}]}
-'''
