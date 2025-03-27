@@ -96,7 +96,19 @@ class BetsAPIClient:
             return response.json()
         else:
             raise Exception(f"Erro ao obter inplay_eventos da API: {response.status_code}")
-        
+            
+    def getAllInplay(self) -> Dict[str,Any]:
+            '''pega jogos ao vivo'''
+
+            url = f'{self.base_url}inplay'
+            params = {
+                'token': self.api_key,
+            }
+            response = requests.get(url, params=params)
+            if response.status_code == 200:
+                return response.json()
+            else:
+                raise Exception(f"Erro ao obter inplay_eventos da API: {response.status_code}")
 
     def filtraOdds(self, ids: List[Any] = []):
         done = 0
@@ -126,6 +138,7 @@ class BetsAPIClient:
 
             except KeyError:
                 print(f'KeyError, rever filtragem de odds para o evento {id}')
+                print(self.get_odds(FI=id))
 
         print(len(ids) - done)
         return games
