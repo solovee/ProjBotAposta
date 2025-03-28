@@ -2,6 +2,9 @@ import requests
 from typing import Dict, Any, List
 from datetime import datetime
 from math import ceil
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+
 
 # Obter a data atual e formatar como YYYYMMDD
 data_atual = datetime.now().strftime('%Y%m%d')
@@ -121,54 +124,56 @@ class BetsAPIClient:
         except ValueError:
             raise Exception("Erro ao processar resposta JSON da API")
         
+
     def filtraOddsOlds(self, ids: List[Any] = []):
-        done = 0
         RED = "\033[31m"
         RESET = "\033[0m"
         
         game = {}  # Dicionário final
-
-        for id in ids:
+        done = 0
+        
+        def process_id(event_id):
             try:
-                response = self.get_odds(FI=id)
+                response = self.get_odds(FI=event_id)
                 
                 if not response or "results" not in response or not response["results"]:
-                    print(f"{RED}Erro: Dados ausentes para o evento {id}{RESET}")
-                    continue
+                    print(f"{RED}Erro: Dados ausentes para o evento {event_id}{RESET}")
+                    return event_id, None
 
                 odds_data = response["results"][0]
-
                 odds = None
-                # Verifica em 'goals' primeiro
+                
                 if "goals" in odds_data and "sp" in odds_data["goals"] and "goals_over_under" in odds_data["goals"]["sp"]:
                     odds = odds_data["goals"]["sp"]["goals_over_under"]
-                
-                # Se não encontrar em 'goals', tenta buscar em 'main'
                 elif "main" in odds_data and "sp" in odds_data["main"] and "goals_over_under" in odds_data["main"]["sp"]:
                     odds = odds_data["main"]["sp"]["goals_over_under"]
-
-                # Se ainda não encontrou, pula o evento
+                
                 if not odds or "odds" not in odds or len(odds["odds"]) < 2:
-                    print(f"{RED}Odds não encontradas para o evento {id}{RESET}")
-                    continue
-
-                # Criando um novo dicionário em cada iteração
+                    print(f"{RED}Odds não encontradas para o evento {event_id}{RESET}")
+                    return event_id, None
+                
                 games = {
                     "odd_over": odds["odds"][0]["odds"],
                     "odd_under": odds["odds"][1]["odds"],
                     "goals_odd": odds["odds"][0]["name"]
                 }
                 
-
-                done += 1
-                game[id] = games  # Armazena no dicionário final
-
+                return event_id, games
             except KeyError:
-                print(f"{RED}KeyError: Estrutura inesperada para o evento {id}{RESET}")
+                print(f"{RED}KeyError: Estrutura inesperada para o evento {event_id}{RESET}")
+                return event_id, None
 
-        print(f"Total de eventos processados: {done}/{len(ids)}")
+        with ThreadPoolExecutor() as executor:
+            future_to_id = {executor.submit(process_id, id): id for id in ids}
+            for future in as_completed(future_to_id):
+                event_id, result = future.result()
+                if result is not None:
+                    game[event_id] = result
+                    done += 1
         
+        print(f"Total de eventos processados: {done}/{len(ids)}")
         return game
+
 
 
     #LIVE
