@@ -21,10 +21,11 @@ api = os.getenv("API_KEY")
 apiclient = BetsAPIClient(api_key=api)
 
 
-ids = apiclient.getUpcoming(leagues=apiclient.leagues_ids)
+ids, dicio = apiclient.getAllOlds(leagues=apiclient.leagues_ids, day=20250326)
 
-res = apiclient.filtraOdds(ids=ids)
-
+#r = apiclient.filtraOddsOlds(ids=ids)
+#print(r)
+print(dicio)
 
 
 
