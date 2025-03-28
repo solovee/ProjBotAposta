@@ -16,72 +16,16 @@ class BetsAPIClient:
         self.base_url_v3 = 'https://api.b365api.com/v3/bet365/'
         self.base_url_event = 'https://api.b365api.com/v1/'
         self._leagues_ids = [10048705, 10047781]
+        self.chamadas = 0
 
 
     @property
     def leagues_ids(self):
         return self._leagues_ids
-
-
-    def getUpcoming(self, sport_id: int = 1, leagues: List[Any] = [], day: str = data_atual) -> List[Any]:
-        '''pega jogos futuros'''
-
-        results = []
-        for league in leagues:
-            pages = self.pages(league_id=league)
-            for page in range(1, pages+1):
-                res = self.get_fifa_matches(league_id = league, page = page)
-                results.extend(res)
-        return results
-
-        
-        
     
-    def pages(self, sport_id: int = 1,league_id: int = 10048705, day: str = data_atual) -> int:
-        '''pega o numero de paginas da requisiçao'''
 
-        url = f'{self.base_url}upcoming'
-        params = {
-            'token': self.api_key,
-            'sport_id': sport_id,
-            'league_id': league_id,
-            'day': day,
-        }
-        response = requests.get(url, params=params)
-        resp = response.json()
-        
-        res = ceil(resp['pager']['total'] / resp['pager']['per_page'])
 
-        if response.status_code == 200:
-            return res
-        else:
-            raise Exception(f"Erro ao obter dados da API: {response.status_code}")
-        
-    
-    
-    def get_old_matches(self, sport_id: int = 1, league_id: int = 10048705, day: str = '20250326', page: int = 1) -> Dict[str, Any]:
-        """
-        Pega jogos de FIFA 8 e 12 minutos da BetsAPI.
-        """
-        url = f'{self.base_url}upcoming'
-        params = {
-            'token': self.api_key,
-            'sport_id': sport_id,
-            'league_id': league_id,
-            'day': day,
-            'page': page
-        }
-        response = requests.get(url, params=params)
-
-        if response.status_code != 200:
-            raise Exception(f"Erro ao obter dados da API: {response.status_code} - {response.text}")
-
-        try:
-            resp = response.json()
-            return resp
-        except ValueError:
-            raise Exception("Erro ao processar resposta JSON da API")
-
+    #OLDS
     def getAllOlds(self, sport_id: int = 1, leagues: List[int] = [], day: str = '20250326') -> List[Any]: 
         """Pega jogos antigos."""
 
@@ -114,10 +58,9 @@ class BetsAPIClient:
                         results.append(a['id']) 
 
                 #print(f"Jogos encontrados na página {page}: {len(res['results']) if 'results' in res else 0}")  # Debug
-
+        print(results)
         return results, di
-
-
+    
 
     def pagesOld(self, sport_id: int = 1, league_id: int = 10048705, day: str = '20250326') -> int:
         """Pega o número de páginas da requisição."""
@@ -130,6 +73,7 @@ class BetsAPIClient:
             'day': day
         }
         response = requests.get(url, params=params)
+        self.chamadas += 1
 
         if response.status_code != 200:
             raise Exception(f"Erro ao obter dados da API: {response.status_code} - {response.text}")
@@ -152,6 +96,126 @@ class BetsAPIClient:
         
     
     
+    
+    def get_old_matches(self, sport_id: int = 1, league_id: int = 10048705, day: str = '20250326', page: int = 1) -> Dict[str, Any]:
+        """
+        Pega jogos de FIFA 8 e 12 minutos da BetsAPI.
+        """
+        url = f'{self.base_url}upcoming'
+        params = {
+            'token': self.api_key,
+            'sport_id': sport_id,
+            'league_id': league_id,
+            'day': day,
+            'page': page
+        }
+        response = requests.get(url, params=params)
+        self.chamadas += 1
+
+        if response.status_code != 200:
+            raise Exception(f"Erro ao obter dados da API: {response.status_code} - {response.text}")
+
+        try:
+            resp = response.json()
+            return resp
+        except ValueError:
+            raise Exception("Erro ao processar resposta JSON da API")
+        
+    def filtraOddsOlds(self, ids: List[Any] = []):
+        done = 0
+        RED = "\033[31m"
+        RESET = "\033[0m"
+        
+        game = {}  # Dicionário final
+
+        for id in ids:
+            try:
+                response = self.get_odds(FI=id)
+                
+                if not response or "results" not in response or not response["results"]:
+                    print(f"{RED}Erro: Dados ausentes para o evento {id}{RESET}")
+                    continue
+
+                odds_data = response["results"][0]
+
+                odds = None
+                # Verifica em 'goals' primeiro
+                if "goals" in odds_data and "sp" in odds_data["goals"] and "goals_over_under" in odds_data["goals"]["sp"]:
+                    odds = odds_data["goals"]["sp"]["goals_over_under"]
+                
+                # Se não encontrar em 'goals', tenta buscar em 'main'
+                elif "main" in odds_data and "sp" in odds_data["main"] and "goals_over_under" in odds_data["main"]["sp"]:
+                    odds = odds_data["main"]["sp"]["goals_over_under"]
+
+                # Se ainda não encontrou, pula o evento
+                if not odds or "odds" not in odds or len(odds["odds"]) < 2:
+                    print(f"{RED}Odds não encontradas para o evento {id}{RESET}")
+                    continue
+
+                # Criando um novo dicionário em cada iteração
+                games = {
+                    "odd_over": odds["odds"][0]["odds"],
+                    "odd_under": odds["odds"][1]["odds"],
+                    "goals_odd": odds["odds"][0]["name"]
+                }
+                
+
+                done += 1
+                game[id] = games  # Armazena no dicionário final
+
+            except KeyError:
+                print(f"{RED}KeyError: Estrutura inesperada para o evento {id}{RESET}")
+
+        print(f"Total de eventos processados: {done}/{len(ids)}")
+        
+        return game
+
+
+    #LIVE
+
+    def getUpcoming(self, sport_id: int = 1, leagues: List[Any] = [], day: str = data_atual) -> List[Any]:
+        '''pega jogos futuros'''
+
+        results = []
+        for league in leagues:
+            pages = self.pages(league_id=league)
+            for page in range(1, pages+1):
+                res = self.get_fifa_matches(league_id = league, page = page)
+                results.extend(res)
+        return results
+
+        
+        
+    
+    def pages(self, sport_id: int = 1,league_id: int = 10048705, day: str = data_atual) -> int:
+        '''pega o numero de paginas da requisiçao'''
+
+        url = f'{self.base_url}upcoming'
+        params = {
+            'token': self.api_key,
+            'sport_id': sport_id,
+            'league_id': league_id,
+            'day': day,
+        }
+        response = requests.get(url, params=params)
+        self.chamadas += 1
+        resp = response.json()
+        
+        res = ceil(resp['pager']['total'] / resp['pager']['per_page'])
+
+        if response.status_code == 200:
+            return res
+        else:
+            raise Exception(f"Erro ao obter dados da API: {response.status_code}")
+        
+    
+    
+    
+
+    
+
+
+    
 
     
 
@@ -169,6 +233,8 @@ class BetsAPIClient:
             
         }
         response = requests.get(url, params=params)
+        self.chamadas += 1
+
         resp = response.json()
         
         res = [x['id'] for x in resp['results'] if (x.get('ss') is None) or x.get('time_status') == 0]
@@ -188,6 +254,7 @@ class BetsAPIClient:
             'league_id': league_id,
         }
         response = requests.get(url, params=params)
+        self.chamadas += 1
         if response.status_code == 200:
             return response.json()
         else:
@@ -201,6 +268,7 @@ class BetsAPIClient:
                 'token': self.api_key,
             }
             response = requests.get(url, params=params)
+            self.chamadas += 1
             if response.status_code == 200:
                 return response.json()
             else:
@@ -239,52 +307,7 @@ class BetsAPIClient:
         print(len(ids) - done)
         return games
     
-    def filtraOddsOlds(self, ids: List[Any] = []):
-        done = 0
-        RED = "\033[31m"
-        RESET = "\033[0m"
-        print(ids)
-        game = {}  # Dicionário final
-
-        for id in ids:
-            try:
-                response = self.get_odds(FI=id)
-                
-                if not response or "results" not in response or not response["results"]:
-                    print(f"{RED}Erro: Dados ausentes para o evento {id}{RESET}")
-                    continue
-
-                odds_data = response["results"][0]
-
-                odds = None
-                # Verifica em 'goals' primeiro
-                if "goals" in odds_data and "sp" in odds_data["goals"] and "goals_over_under" in odds_data["goals"]["sp"]:
-                    odds = odds_data["goals"]["sp"]["goals_over_under"]
-                
-                # Se não encontrar em 'goals', tenta buscar em 'main'
-                elif "main" in odds_data and "sp" in odds_data["main"] and "goals_over_under" in odds_data["main"]["sp"]:
-                    odds = odds_data["main"]["sp"]["goals_over_under"]
-
-                # Se ainda não encontrou, pula o evento
-                if not odds or "odds" not in odds or len(odds["odds"]) < 2:
-                    print(f"{RED}Odds não encontradas para o evento {id}{RESET}")
-                    continue
-
-                # Criando um novo dicionário em cada iteração
-                games = {
-                    "odd_over": odds["odds"][0]["odds"],
-                    "odd_under": odds["odds"][1]["odds"],
-                    "goals_odd": odds["odds"][0]["name"]
-                }
-
-                done += 1
-                game[id] = games  # Armazena no dicionário final
-
-            except KeyError:
-                print(f"{RED}KeyError: Estrutura inesperada para o evento {id}{RESET}")
-
-        print(f"Total de eventos processados: {done}/{len(ids)}")
-        return game
+    
 
 
 
@@ -299,6 +322,7 @@ class BetsAPIClient:
             'event_id': event_id
         }
         response = requests.get(url, params=params)
+        self.chamadas += 1
         if response.status_code == 200:
             return response.json()
         else:
@@ -314,6 +338,7 @@ class BetsAPIClient:
             'FI': FI
         }
         response = requests.get(url, params=params)
+        self.chamadas += 1
         if response.status_code == 200:
             return response.json()
         else:
@@ -332,6 +357,7 @@ class BetsAPIClient:
             'qty': qty
         }
         response = requests.get(url, params=params)
+        self.chamadas += 1
         if response.status_code == 200:
             return response.json()
         else:

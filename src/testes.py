@@ -3,6 +3,8 @@ from api import BetsAPIClient
 from dotenv import load_dotenv
 import os
 from datetime import datetime
+import pandas as pd
+
 
 
 
@@ -23,10 +25,25 @@ apiclient = BetsAPIClient(api_key=api)
 
 ids, dicio = apiclient.getAllOlds(leagues=apiclient.leagues_ids, day=20250326)
 
-#r = apiclient.filtraOddsOlds(ids=ids)
-#print(r)
-print(dicio)
+r = apiclient.filtraOddsOlds(ids=ids)
+
+
+'''
+final_dict = {}
+
+
+for reg in r.keys():
+    if reg in dicio.keys():
+        final_dict[reg] = {**dicio[reg], **r[reg]}  # Mescla os dicionários sem as chaves intermediárias
+
+print(final_dict)
+# Converte o dicionário para um DataFrame
+df = pd.DataFrame.from_dict(final_dict, orient='index')
+
+# Exibe as primeiras linhas do DataFrame
+print(df.head())
 
 
 
+'''
 
