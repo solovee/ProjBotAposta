@@ -1,12 +1,9 @@
+import pandas as pd
 import requests
 from api import BetsAPIClient
 from dotenv import load_dotenv
 import os
 from datetime import datetime
-import pandas as pd
-
-
-
 
 
 
@@ -28,22 +25,19 @@ ids, dicio = apiclient.getAllOlds(leagues=apiclient.leagues_ids, day=20250326)
 r = apiclient.filtraOddsOlds(ids=ids)
 
 
-'''
-final_dict = {}
 
+# Lista para armazenar os dicionários mesclados
+resultado = []
 
-for reg in r.keys():
-    if reg in dicio.keys():
-        final_dict[reg] = {**dicio[reg], **r[reg]}  # Mescla os dicionários sem as chaves intermediárias
+for dados in dicio:
+    event_id = dados.get('id')  # Obtém o ID do evento
+    if event_id in r:  # Verifica se há odds para esse ID
+        merged = {**dados, **r[event_id]}  # Mescla os dicionários
+        resultado.append(merged)  # Adiciona à lista de resultados
+    else:
+        resultado.append(dados)  # Caso não tenha odds, mantém os dados originais
 
-print(final_dict)
-# Converte o dicionário para um DataFrame
-df = pd.DataFrame.from_dict(final_dict, orient='index')
+df = pd.DataFrame(resultado)
+df.isnull().sum()
 
-# Exibe as primeiras linhas do DataFrame
-print(df.head())
-
-
-
-'''
 

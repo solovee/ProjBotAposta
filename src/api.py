@@ -1,6 +1,6 @@
 import requests
 from typing import Dict, Any, List
-from datetime import datetime
+from datetime import datetime, timedelta
 from math import ceil
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -28,8 +28,32 @@ class BetsAPIClient:
     
 
 
+
+    #DATES
+
+    def dia_anterior():
+        """Retorna o dia anterior ao atual no formato YYYYMMDD."""
+        ontem = datetime.now() - timedelta(days=1)
+        return ontem.strftime("%Y%m%d")
+    
+
+    def ultimos_90_dias(data_str: str):
+        """Retorna uma lista com todos os dias dos últimos 90 dias anteriores à data fornecida no formato YYYYMMDD."""
+        data = datetime.strptime(data_str, "%Y%m%d")  # Converte a string para objeto datetime
+        dias = [(data - timedelta(days=i)).strftime("%Y%m%d") for i in range(1, 91)]  # Lista dos últimos 90 dias
+        
+        return dias
+
+    
+
+
+    
+
+    
+
+
     #OLDS
-    def getAllOlds(self, sport_id: int = 1, leagues: List[int] = [], day: str = '20250326') -> List[Any]: 
+    def getAllOlds(self, sport_id: int = 1, leagues: List[int] = [], day: str = dia_anterior()) -> List[Any]: 
         """Pega jogos antigos."""
 
         results = []
@@ -65,7 +89,7 @@ class BetsAPIClient:
         return results, di
     
 
-    def pagesOld(self, sport_id: int = 1, league_id: int = 10048705, day: str = '20250326') -> int:
+    def pagesOld(self, sport_id: int = 1, league_id: int = 10048705, day: str = dia_anterior()) -> int:
         """Pega o número de páginas da requisição."""
         
         url = f'{self.base_url}upcoming'
@@ -100,7 +124,7 @@ class BetsAPIClient:
     
     
     
-    def get_old_matches(self, sport_id: int = 1, league_id: int = 10048705, day: str = '20250326', page: int = 1) -> Dict[str, Any]:
+    def get_old_matches(self, sport_id: int = 1, league_id: int = 10048705, day: str = dia_anterior(), page: int = 1) -> Dict[str, Any]:
         """
         Pega jogos de FIFA 8 e 12 minutos da BetsAPI.
         """
