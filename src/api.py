@@ -3,6 +3,8 @@ from typing import Dict, Any, List
 from datetime import datetime, timedelta
 from math import ceil
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
+import random
 
 
 
@@ -25,8 +27,18 @@ class BetsAPIClient:
     @property
     def leagues_ids(self):
         return self._leagues_ids
-    
 
+
+    def get_odds_with_retry(self, FI, max_retries=3, base_delay=2):
+        for attempt in range(max_retries):
+            try:
+                response = self.get_odds(FI=FI)
+                if response:
+                    return response
+            except Exception as e:
+                print(f"Tentativa {attempt + 1}/{max_retries} falhou: {e}")
+                time.sleep(base_delay * (2 ** attempt) + random.uniform(0, 1))  # Atraso exponencial
+        raise Exception(f"Falha após {max_retries} tentativas ao obter odds para {FI}")
 
 
     #DATES
@@ -164,13 +176,14 @@ class BetsAPIClient:
         
         def process_id(event_id):
             try:
-                response = self.get_odds(FI=event_id)
+                response = self.get_odds_with_retry(event_id)
                 
                 if not response or "results" not in response or not response["results"]:
                     print(f"{RED}Erro: Dados ausentes para o evento {event_id}{RESET}")
                     return event_id, None
 
                 odds_data = response["results"][0]
+                print(odds_data)
                 odds = None
                 
                 if "goals" in odds_data and "sp" in odds_data["goals"] and "goals_over_under" in odds_data["goals"]["sp"]:
@@ -187,6 +200,7 @@ class BetsAPIClient:
                     "odd_under": odds["odds"][1]["odds"],
                     "goals_odd": odds["odds"][0]["name"]
                 }
+                
                 
                 return event_id, games
             except KeyError:
