@@ -53,7 +53,7 @@ class BetsAPIClient:
 
 
     #OLDS
-    def getAllOlds(self, sport_id: int = 1, leagues: List[int] = [], day: str = dia_anterior()) -> List[Any]: 
+    def getAllOlds(self, sport_id: int = 1, leagues: List[int] = [], day: str = dia_anterior()) -> List[Any]:
         """Pega jogos antigos."""
 
         results = []
@@ -61,32 +61,38 @@ class BetsAPIClient:
 
         for league in leagues:
             pages = self.pagesOld(league_id=league, day=day)
-            #print(f"Liga {league}: Total de páginas = {pages}")  # Debug
 
             for page in range(1, pages + 1):
-                #print(f"Buscando página {page} de {pages} para a liga {league}")  # Debug
                 res = self.get_old_matches(league_id=league, page=page, day=day)
-                r = res['results']
-
+                r = res.get('results', [])  # Evita erro se 'results' não estiver presente
                 for registro in r:
-                    dic = {  # Criando um novo dicionário para cada registro
+                    ss = registro.get('ss')  # Pega o valor de 'ss', se existir, ou None
+                    print(ss)
+                    if ss and len(ss) >= 3:  # Verifica se 'ss' não é None e tem pelo menos 3 caracteres
+                        home_goals = int(ss.split('-')[0])  # Pega os gols do time da casa
+                        away_goals = int(ss.split('-')[1])  # Pega os gols do time visitante
+                    else:
+                        home_goals = away_goals = tot_goals = None  # Define como None caso 'ss' seja inválido
+
+                    dic = {
                         'id': registro['id'],
                         'home': registro['home']['id'],
                         'away': registro['away']['id'],
-                        'home_goals': int(registro['ss'][:1]),
-                        'away_goals': int(registro['ss'][2:]),
-                        'tot_goals': int(registro['ss'][:1]) + int(registro['ss'][2:])
+                        'home_goals': home_goals,
+                        'away_goals': away_goals,
+                        'tot_goals': (home_goals + away_goals) if home_goals is not None and away_goals is not None else None
                     }
-                    di.append(dic)  # Adicionando o dicionário correto à lista
+                    di.append(dic)
+
                 
+
                 if res:
                     for a in r:
+                        results.append(a['id'])
 
-                        results.append(a['id']) 
-
-                #print(f"Jogos encontrados na página {page}: {len(res['results']) if 'results' in res else 0}")  # Debug
         print(results)
         return results, di
+
     
 
     def pagesOld(self, sport_id: int = 1, league_id: int = 10048705, day: str = dia_anterior()) -> int:
