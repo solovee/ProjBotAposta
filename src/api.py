@@ -168,6 +168,7 @@ class BetsAPIClient:
         
 
     def filtraOddsOlds(self, ids: List[Any] = []):
+        '''pega odds de eventos e devolve filtradas'''
         RED = "\033[31m"
         RESET = "\033[0m"
         
@@ -230,6 +231,7 @@ class BetsAPIClient:
             pages = self.pages(league_id=league)
             for page in range(1, pages+1):
                 res = self.get_fifa_matches(league_id = league, page = page)
+                print(res)
                 results.extend(res)
         return results
 
@@ -258,14 +260,6 @@ class BetsAPIClient:
             raise Exception(f"Erro ao obter dados da API: {response.status_code}")
         
     
-    
-    
-
-    
-
-
-    
-
     
 
     def get_fifa_matches(self, sport_id: int = 1,league_id: int = 10048705, day: str = data_atual, page: int = 1) -> Dict[str, Any]:
