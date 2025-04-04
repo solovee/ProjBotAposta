@@ -1,0 +1,6 @@
+df geral com id, totgoals, mediaconfronto,mediaindividual, mediavitorias
+
+df especifico com cada linha (handicap, over/under) e suas colunas adicionais (saidas especificas)
+
+
+testar o split e classificaçao do goal_line

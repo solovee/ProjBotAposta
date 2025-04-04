@@ -1,0 +1,6 @@
+*.ipynb filter=lfs diff=lfs merge=lfs -text
+/src/cursoNormal.ipynb filter=lfs diff=lfs merge=lfs -text
+/src/historico.ipynb filter=lfs diff=lfs merge=lfs -text
+/src/NN.ipynb filter=lfs diff=lfs merge=lfs -text
+/src/teste.ipynb filter=lfs diff=lfs merge=lfs -text
+src/historico.ipynb filter=lfs diff=lfs merge=lfs -text

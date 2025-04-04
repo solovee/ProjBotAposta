@@ -1,0 +1,22 @@
+"goals": {
+        "updated_at": "1718021534",
+        "key": "#AC#B1#C1#D8#E147543881#F3#I6#",
+        "sp": {
+          "goals_over_under": {
+            "id": "981",
+            "name": "Goals Over/Under",
+            "odds": [
+              {
+                "id": "1696083587",
+                "odds": "2.100",
+                "header": "Over",
+                "name": "2.5"
+              },
+              {
+                "id": "1696083589",
+                "odds": "1.727",
+                "header": "Under",
+                "name": "2.5"
+              }
+            ]
+          }
