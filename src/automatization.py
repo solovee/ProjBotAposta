@@ -111,7 +111,7 @@ load_dotenv()
 
 api = os.getenv("API_KEY")
 apiclient = BetsAPIClient(api_key=api)
-CSV_FILE = "resultados.csv"
+CSV_FILE = "resultados_novo.csv"
 
 def transform_betting_data(odds_data):
     """Transforma os dados de odds em um DataFrame estruturado."""
