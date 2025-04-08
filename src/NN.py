@@ -27,7 +27,7 @@ def dia_anterior():
         return ontem.strftime("%Y%m%d")
 
 
-df_temp = pd.read_csv('resultados_novo.csv', index_col=0)
+df_temp = pd.read_csv(r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_novo.csv")
 
 
 
@@ -39,6 +39,7 @@ def preProcessGeneral(df=df_temp):
     preProcessGoalLine(df)
     preProcessDoubleChance(df)
     preProcessDrawNoBet(df)
+    df.to_csv('resultados_novo_expandidoNN.csv')
 
 def criaNNs(df=df_temp):
 
@@ -748,6 +749,9 @@ def NN_draw_no_bet(df=df_temp):
     model_draw_no_bet.save("model_draw_no_bet.keras")  # Salva em formato nativo do Keras
 
     return melhor_z_positivo
+
+preProcessGeneral(df_temp)
+
 
 
 
