@@ -138,7 +138,7 @@ def transform_betting_data(odds_data):
         # Goal Line
         for i, gl in enumerate(odds.get('goal_line', []), 1):
             row[f'goal_line{i}'] = gl['handicap']
-            row[f'type_gl{i}'] = 1 if gl['type'] == 'Over' else 2
+            row[f'type_gl{i}'] = 1 if gl['type'] == 'Over' else 'Under'
             row[f'odds_gl{i}'] = gl['odds']
         
         # Double Chance

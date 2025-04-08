@@ -7,6 +7,7 @@ from api import BetsAPIClient
 from dotenv import load_dotenv
 import os
 from datetime import datetime, timedelta
+from sklearn.model_selection import train_test_split
 
 
 
@@ -26,7 +27,7 @@ def dia_anterior():
         ontem = datetime.now() - timedelta(days=1)
         return ontem.strftime("%Y%m%d")
 
-df_temp = pd.read_csv('resultados_novo.csv')
+df_temp = pd.read_csv('resultados_novo.csv', index_col=0)
 
 
 
@@ -123,12 +124,23 @@ def normalizacao_and_split(X, y):
 
     scaler = StandardScaler()
     X_standardized = scaler.fit_transform(X)
-    from sklearn.model_selection import train_test_split
+    
 
     x_train, x_test, y_train, y_test = train_test_split(X_standardized,y, random_state=42, test_size=0.2)
     return x_train, x_test, y_train, y_test
 
-#
+#standarization
+def normalizacao(X):
+
+    scaler = StandardScaler()
+    X_standardized = scaler.fit_transform(X)
+    return X_standardized
+    
+def split(X_standardized, y):
+    x_train, x_test, y_train, y_test = train_test_split(X_standardized,y, random_state=42, test_size=0.2)
+    return x_train, x_test, y_train, y_test
+
+
 
 
 
@@ -572,8 +584,8 @@ def NN_handicap(df=df_temp):
     df_temporario = df[['media_goals_home', 'media_goals_away','home_h2h_mean', 'away_h2h_mean','asian_handicap1_1', 'asian_handicap1_2','odds_ah1', 'ah1_indefinido','ah1_negativo', 'ah1_positivo','ah1_reembolso', 'asian_handicap2_1', 'asian_handicap2_2','odds_ah2', 'ah2_indefinido','ah2_negativo', 'ah2_positivo','ah2_reembolso']].copy()
     df_temporario = df_temporario[df_temporario['indefinido'] == False]
     df_temporario.dropna(inplace=True)
-    X = df_temporario[['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds']]
-    y = df_temporario[['negativo', 'positivo', 'reembolso']]
+    X = df_temporario[['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds']].copy()
+    y = df_temporario[['negativo', 'positivo', 'reembolso']].copy()
     x_train, x_test, y_train, y_test = normalizacao_and_split(X, y)
     model_handicap = tf.keras.Sequential([
         tf.keras.layers.Dense(64, activation='relu', input_shape=(x_train.shape[1],)),
@@ -595,39 +607,189 @@ def NN_handicap(df=df_temp):
     return melhor_z_positivo
 
 
-#NN goal_line
+#junta goal_lines
+def preparar_df_goallines(df):
+    # Seleciona e renomeia as colunas relacionadas à goal line 1
+    df1 = df[['h2h_mean', 'media_goals_home', 'media_goals_away',
+              'goal_line1_1', 'goal_line1_2', 'type_gl1',
+              'gl1_indefinido', 'gl1_negativo', 'gl1_positivo', 'gl1_reembolso']].copy()
+    df1.columns = ['h2h_mean', 'media_goals_home', 'media_goals_away',
+                   'goal_line_1', 'goal_line_2', 'type_gl',
+                   'indefinido', 'negativo', 'positivo', 'reembolso']
 
-model_goal_line = tf.keras.Sequential([
-    tf.keras.layers.Dense(64, activation='relu', input_shape=(x_train.shape[1],)),
-    tf.keras.layers.BatchNormalization(),
-    tf.keras.layers.Dense(64, activation='relu', input_shape=(x_train.shape[1],)),
-    tf.keras.layers.BatchNormalization(),
-    tf.keras.layers.Dropout(0.3),
-    tf.keras.layers.Dense(32, activation='relu'),
-    tf.keras.layers.Dropout(0.3),
-    tf.keras.layers.Dense(3, activation='softmax')
-])
-model_goal_line.compile(optimizer=tf.keras.optimizers.Adam(0.001), loss='categorical_crossentropy', metrics=['accuracy'])
-model_goal_line.fit(x_train, y_train, epochs=30, validation_data=(x_test, y_test))
+    # Seleciona e renomeia as colunas relacionadas à goal line 2
+    df2 = df[['h2h_mean', 'media_goals_home', 'media_goals_away',
+              'goal_line2_1', 'goal_line2_2', 'type_gl2',
+              'gl2_indefinido', 'gl2_negativo', 'gl2_positivo', 'gl2_reembolso']].copy()
+    df2.columns = ['h2h_mean', 'media_goals_home', 'media_goals_away',
+                   'goal_line_1', 'goal_line_2', 'type_gl',
+                   'indefinido', 'negativo', 'positivo', 'reembolso']
+
+    # Concatena os dois dataframes
+    df_final = pd.concat([df1, df2], ignore_index=True)
+
+    return df_final
+
+#NN goal_line
+def NN_goal_line(df=df_temp):
+    
+    df_temporario = df[['h2h_mean' ,'media_goals_home' ,'media_goals_away','goal_line1_1','goal_line1_2','type_gl1', 'goal_line2_1','goal_line2_2','type_gl2', 'gl1_indefinido','gl1_negativo', 'gl1_positivo', 'gl1_reembolso', 'gl2_indefinido', 'gl2_negativo', 'gl2_positivo', 'gl2_reembolso']].copy()
+    df_temporario = preparar_df_goallines(df_temporario)
+    df_temporario = pd.get_dummies(df_temporario, columns=['type_gl'], prefix='type')
+    df_temporario = df_temporario[df_temporario['indefinido'] == False]
+    df_temporario.dropna(inplace=True)
+
+    X = df_temporario[['h2h_mean', 'media_goals_home', 'media_goals_away', 'goal_line_1', 'goal_line_2']].copy()
+    X = normalizacao(X)
+    type_df = df_temporario[['type_over', 'type_under']]
+    X_final = pd.concat([X, type_df], axis=1)
+
+    y = df_temporario[['negativo', 'positivo', 'reembolso']].copy()
+
+    x_train, x_test, y_train, y_test = split(X_final, y)
+
+    model_goal_line = tf.keras.Sequential([
+        tf.keras.layers.Dense(64, activation='relu', input_shape=(x_train.shape[1],)),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Dense(64, activation='relu', input_shape=(x_train.shape[1],)),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Dropout(0.3),
+        tf.keras.layers.Dense(32, activation='relu'),
+        tf.keras.layers.Dropout(0.3),
+        tf.keras.layers.Dense(3, activation='softmax')
+    ])
+    model_goal_line.compile(optimizer=tf.keras.optimizers.Adam(0.001), loss='categorical_crossentropy', metrics=['accuracy'])
+    model_goal_line.fit(x_train, y_train, epochs=30)
+
+    y_pred_probs = model_goal_line.predict(x_test)
+    melhor_z_positivo = encontrar_melhor_z_softmax_positivo(y_test, y_pred_probs)
+
+    model_goal_line.save("model_goal_line.keras")  # Salva em formato nativo do Keras
+
+    return melhor_z_positivo
+
+#juntar double_chances
+def preparar_df_double_chance(df):
+    colunas_comuns = ['media_goals_home', 'media_goals_away', 'media_victories_home',
+                      'media_victories_away', 'home_h2h_mean', 'away_h2h_mean']
+    
+    # Cria df para cada linha de double chance
+    df1 = df[colunas_comuns + ['odds_dc1', 'res_double_chance1']].copy()
+    df1['double_chance'] = 1
+    df1.rename(columns={'odds_dc1': 'odds', 'res_double_chance1': 'resultado'}, inplace=True)
+
+    df2 = df[colunas_comuns + ['odds_dc2', 'res_double_chance2']].copy()
+    df2['double_chance'] = 2
+    df2.rename(columns={'odds_dc2': 'odds', 'res_double_chance2': 'resultado'}, inplace=True)
+
+    df3 = df[colunas_comuns + ['odds_dc3', 'res_double_chance3']].copy()
+    df3['double_chance'] = 3
+    df3.rename(columns={'odds_dc3': 'odds', 'res_double_chance3': 'resultado'}, inplace=True)
+
+    # Concatena os três em um só
+    df_final = pd.concat([df1, df2, df3], ignore_index=True)
+
+    return df_final
 
 #NN double_chance
+def NN_double_chance(df=df_temp):
+    df_temporario =df[['media_goals_home',
+        'media_goals_away','media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'double_chance1',
+       'odds_dc1', 'double_chance2', 'odds_dc2', 'double_chance3', 'odds_dc3',
+       'res_double_chance1', 'res_double_chance2', 'res_double_chance3']]
+    df_temporario = preparar_df_double_chance(df_temporario)
+    df_temporario = pd.get_dummies(df_temporario, columns=['double_chance'], prefix='double_chance_type')
 
-model_double_chance = tf.keras.Sequential([
-    tf.keras.layers.Dense(64, activation='relu'),
-    tf.keras.layers.Dense(64, activation='relu'),
-    tf.keras.layers.Dense(32, activation='relu'),
-    tf.keras.layers.Dense(1, activation='sigmoid')
-])
-model_double_chance.compile(optimizer=tf.keras.optimizers.Adam(0.001), loss='binary_crossentropy', metrics=['accuracy'])
-model_double_chance.fit(x_train, y_train, epochs=30, validation_data=(x_test, y_test))
+    df_temporario.dropna(inplace=True)
+
+    X = df_temporario[['media_goals_home', 'media_goals_away', 'media_victories_home',
+                      'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']].copy()
+    X = normalizacao(X)
+    type_df = df_temporario[['double_chance_type_1', 'double_chance_type_2','double_chance_type_3' ]]
+    X_final = pd.concat([X, type_df], axis=1)
+
+    y = df_temporario['resultado'].copy()
+
+    x_train, x_test, y_train, y_test = split(X_final, y)
+    
+    model_double_chance = tf.keras.Sequential([
+        tf.keras.layers.Dense(64, activation='relu'),
+        tf.keras.layers.Dense(64, activation='relu'),
+        tf.keras.layers.Dense(32, activation='relu'),
+        tf.keras.layers.Dense(1, activation='sigmoid')
+    ])
+    model_double_chance.compile(optimizer=tf.keras.optimizers.Adam(0.001), loss='binary_crossentropy', metrics=['accuracy'])
+    model_double_chance.fit(x_train, y_train, epochs=30)
+
+    y_pred_probs = model_double_chance.predict(x_test)
+    melhor_z_positivo = encontrar_melhor_z_binario_positivo(y_test, y_pred_probs)
+
+    model_double_chance.save("model_double_chance.keras")  # Salva em formato nativo do Keras
+
+    return melhor_z_positivo
+
+#junta draw_no_bet
+def preparar_df_draw_no_bet(df):
+    # Seleciona e renomeia o lado 1
+    df1 = df[['home_goals', 'away_goals', 'media_goals_home', 'media_goals_away',
+              'media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean',
+              'draw_no_bet_team1', 'odds_dnb1', 'dnb1_indefinido', 'dnb1_perde', 'dnb1_ganha', 'dnb1_reembolso']].copy()
+
+    df1.columns = ['home_goals', 'away_goals', 'media_goals_home', 'media_goals_away',
+                   'media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean',
+                   'draw_no_bet_team', 'odds', 'indefinido', 'perde', 'ganha', 'reembolso']
+
+    # Seleciona e renomeia o lado 2
+    df2 = df[['home_goals', 'away_goals', 'media_goals_home', 'media_goals_away',
+              'media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean',
+              'draw_no_bet_team2', 'odds_dnb2', 'dnb2_indefinido', 'dnb2_perde', 'dnb2_ganha', 'dnb2_reembolso']].copy()
+
+    df2.columns = ['home_goals', 'away_goals', 'media_goals_home', 'media_goals_away',
+                   'media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean',
+                   'draw_no_bet_team', 'odds', 'indefinido', 'perde', 'ganha', 'reembolso']
+
+    # Concatena os dois lados
+    df_final = pd.concat([df1, df2], ignore_index=True)
+
+    return df_final
+
 
 #NN draw_no_bet
+def NN_draw_no_bet(df=df_temp):
+    df_temporario = df[['home_goals', 'away_goals','media_goals_home', 
+       'media_goals_away', 'media_victories_home','media_victories_away', 'home_h2h_mean','away_h2h_mean', 'draw_no_bet_team1', 'odds_dnb1', 'draw_no_bet_team2', 'odds_dnb2', 'dnb1_indefinido' , 'dnb1_perde','dnb1_ganha', 'dnb1_reembolso',
+       'dnb2_indefinido', 'dnb2_perde', 'dnb2_ganha', 'dnb2_reembolso']]
+    df_temporario = preparar_df_draw_no_bet(df_temporario)
+    df_temporario = pd.get_dummies(df_temporario, columns=['draw_no_bet_team'], prefix='draw_no_bet_team')
 
-model_draw_no_bet = tf.keras.Sequential([
-    tf.keras.layers.Dense(64, activation='relu'),
-    tf.keras.layers.Dense(64, activation='relu'),
-    tf.keras.layers.Dense(32, activation='relu'),
-    tf.keras.layers.Dense(3, activation='softmax')
-])
-model_draw_no_bet.compile(optimizer=tf.keras.optimizers.Adam(), loss='categorical_crossentropy', metrics=['accuracy'])
-model_draw_no_bet.fit(x_train,y_train, epochs=30, validation_data=(x_test, y_test))
+    df_temporario = df_temporario[df_temporario['indefinido'] == False]
+
+    df_temporario.dropna(inplace=True)
+
+    X = df_temporario[['home_goals', 'away_goals', 'media_goals_home', 'media_goals_away','media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']].copy()
+    X = normalizacao(X)
+    type_df = df_temporario[['draw_no_bet_team_1', 'draw_no_bet_team_2']]
+    X_final = pd.concat([X, type_df], axis=1)
+
+    y = df_temporario[['perde', 'ganha', 'reembolso']].copy()
+
+    x_train, x_test, y_train, y_test = split(X_final, y)
+    
+    model_draw_no_bet = tf.keras.Sequential([
+        tf.keras.layers.Dense(64, activation='relu'),
+        tf.keras.layers.Dense(64, activation='relu'),
+        tf.keras.layers.Dense(32, activation='relu'),
+        tf.keras.layers.Dense(3, activation='softmax')
+    ])
+    model_draw_no_bet.compile(optimizer=tf.keras.optimizers.Adam(), loss='categorical_crossentropy', metrics=['accuracy'])
+    model_draw_no_bet.fit(x_train,y_train, epochs=30)
+
+    y_pred_probs = model_draw_no_bet.predict(x_test)
+    melhor_z_positivo = encontrar_melhor_z_softmax_positivo(y_test, y_pred_probs)
+
+    model_draw_no_bet.save("model_draw_no_bet.keras")  # Salva em formato nativo do Keras
+
+    return melhor_z_positivo
+
+
+
