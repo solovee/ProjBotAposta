@@ -5,6 +5,7 @@ from math import ceil
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 import random
+import pandas as pd
 
 
 
@@ -550,4 +551,46 @@ class BetsAPIClient:
 
         return linhas_desreguladas
     
+    def transform_betting_data(odds_data):
+        """Transforma os dados de odds em um DataFrame estruturado."""
+        rows = []
+        
+        for match_id, odds in odds_data.items():
+            row = {'id': match_id}
+            
+            # Goals Over/Under
+            ou_markets = odds.get('goals_over_under', [])
+            if ou_markets:
+                ou_dict = {item['type']: item for item in ou_markets if item['handicap'] == '2.5'}
+                if 'Over' in ou_dict and 'Under' in ou_dict:
+                    row['goals_over_under'] = '2.5'
+                    row['odd_goals_over1'] = ou_dict['Over']['odds']
+                    row['odd_goals_under1'] = ou_dict['Under']['odds']
+            
+            # Asian Handicap
+            for i, ah in enumerate(odds.get('asian_handicap', []), 1):
+                row[f'asian_handicap{i}'] = ah['handicap']
+                row[f'team_ah{i}'] = ah['team']
+                row[f'odds_ah{i}'] = ah['odds']
+            
+            # Goal Line
+            for i, gl in enumerate(odds.get('goal_line', []), 1):
+                row[f'goal_line{i}'] = gl['handicap']
+                row[f'type_gl{i}'] = 1 if gl['type'] == 'Over' else 2
+                row[f'odds_gl{i}'] = gl['odds']
+            
+            # Double Chance
+            for i, dc in enumerate(odds.get('double_chance', []), 1):
+                row[f'double_chance{i}'] = dc['type']
+                row[f'odds_dc{i}'] = dc['odds']
+            
+            # Draw No Bet
+            for i, dnb in enumerate(odds.get('draw_no_bet', []), 1):
+                row[f'draw_no_bet_team{i}'] = dnb['team']
+                row[f'odds_dnb{i}'] = dnb['odds']
+            
+            rows.append(row)
+        
+        return pd.DataFrame(rows)
+        
 

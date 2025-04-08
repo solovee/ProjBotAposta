@@ -2,7 +2,6 @@ import numpy as np
 import tensorflow as tf
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
-import requests
 from api import BetsAPIClient
 from dotenv import load_dotenv
 import os
@@ -26,6 +25,7 @@ def dia_anterior():
         """Retorna o dia anterior ao atual no formato YYYYMMDD."""
         ontem = datetime.now() - timedelta(days=1)
         return ontem.strftime("%Y%m%d")
+
 
 df_temp = pd.read_csv('resultados_novo.csv', index_col=0)
 
@@ -51,74 +51,73 @@ def criaNNs(df=df_temp):
 
 def preProcessEstatisticasGerais(df=df_temp):
 
-    df_temp[['media_goals_home', 'media_victories_home', 'media_goals_away', 'media_victories_away']] = df_temp.apply(lambda row: estatisticas_ultimos_5(df_temp, row['home'], row['away']), axis=1)
+    df[['media_goals_home', 'media_victories_home', 'media_goals_away', 'media_victories_away']] = df.apply(lambda row: estatisticas_ultimos_5(df, row['home'], row['away']), axis=1)
     # Aplicar a função ao DataFrame
-    medias = df_temp.apply(
+    medias = df.apply(
         lambda row: calcular_medias_h2h(df_temp, row['home'], row['away'], row.name),
         axis=1
     )
     # Adicionar as novas colunas
-    df_temp['h2h_mean'] = medias.apply(lambda x: x['h2h_mean'])
-    df_temp['home_h2h_mean'] = medias.apply(lambda x: x['home_h2h_mean'])
-    df_temp['away_h2h_mean'] = medias.apply(lambda x: x['away_h2h_mean'])
+    df['h2h_mean'] = medias.apply(lambda x: x['h2h_mean'])
+    df['home_h2h_mean'] = medias.apply(lambda x: x['home_h2h_mean'])
+    df['away_h2h_mean'] = medias.apply(lambda x: x['away_h2h_mean'])
 
 def preProcessOverUnder(df=df_temp):
 
-    df_temp['res_goals_over_under'] = df_temp['tot_goals'] > df_temp['goals_over_under']
+    df['res_goals_over_under'] = df['tot_goals'] > df['goals_over_under']
 
 def preProcessHandicap(df=df_temp):
 
     # Aplicar a transformação para ambas as colunas
-    df_temp[['asian_handicap1_1', 'asian_handicap1_2']] = df_temp['asian_handicap1'].apply(lambda x: pd.Series(split_handicap(x)))
-    df_temp[['asian_handicap2_1', 'asian_handicap2_2']] = df_temp['asian_handicap2'].apply(lambda x: pd.Series(split_handicap(x)))
-    df_temp['diff_goals'] = df_temp['home_goals'] - df_temp['away_goals']
+    df[['asian_handicap1_1', 'asian_handicap1_2']] = df['asian_handicap1'].apply(lambda x: pd.Series(split_handicap(x)))
+    df[['asian_handicap2_1', 'asian_handicap2_2']] = df['asian_handicap2'].apply(lambda x: pd.Series(split_handicap(x)))
+    df_temp['diff_goals'] = df['home_goals'] - df['away_goals']
     # Aplicando a função ao DataFrame
-    df_temp['classificacao_ah1'] = df_temp.apply(
+    df['classificacao_ah1'] = df.apply(
         lambda row: classify_asian_handicap(row['team_ah1'], row['asian_handicap1_1'], row['asian_handicap1_2'],row['diff_goals']), axis=1
     )
-    df_temp['classificacao_ah2'] = df_temp.apply(
+    df['classificacao_ah2'] = df.apply(
         lambda row: classify_asian_handicap(row['team_ah2'], row['asian_handicap2_1'], row['asian_handicap2_2'], row['diff_goals']), axis=1
     )
-    df_temp = pd.get_dummies(df_temp, columns=['classificacao_ah1'], prefix='ah1')
-    df_temp = pd.get_dummies(df_temp, columns=['classificacao_ah2'], prefix='ah2')
+    df = pd.get_dummies(df, columns=['classificacao_ah1'], prefix='ah1')
+    df = pd.get_dummies(df, columns=['classificacao_ah2'], prefix='ah2')
 
 
 def preProcessGoalLine(df=df_temp):
 
     # Para goal_line1
-    df_temp[['goal_line1_1', 'goal_line1_2']] = df_temp['goal_line1'].apply(lambda x: pd.Series(split_goal_line(x)))
+    df[['goal_line1_1', 'goal_line1_2']] = df['goal_line1'].apply(lambda x: pd.Series(split_goal_line(x)))
 
     # Para goal_line2
-    df_temp[['goal_line2_1', 'goal_line2_2']] = df_temp['goal_line2'].apply(lambda x: pd.Series(split_goal_line(x)))
+    df[['goal_line2_1', 'goal_line2_2']] = df['goal_line2'].apply(lambda x: pd.Series(split_goal_line(x)))
     # Aplicando ao DataFrame
-    df_temp['classificacao_gl1'] = df_temp.apply(
+    df['classificacao_gl1'] = df.apply(
         lambda row: classify_goal_line(row['type_gl1'], row['goal_line1_1'], row['goal_line1_2'], row['tot_goals']),
         axis=1
     )
 
-    df_temp['classificacao_gl2'] = df_temp.apply(
+    df['classificacao_gl2'] = df.apply(
         lambda row: classify_goal_line(row['type_gl2'], row['goal_line2_1'], row['goal_line2_2'], row['tot_goals']),
         axis=1
     )
-    df_temp = pd.get_dummies(df_temp, columns=['classificacao_gl1'], prefix='gl1')
-    df_temp = pd.get_dummies(df_temp, columns=['classificacao_gl2'], prefix='gl2')
+    df = pd.get_dummies(df, columns=['classificacao_gl1'], prefix='gl1')
+    df = pd.get_dummies(df, columns=['classificacao_gl2'], prefix='gl2')
 
 
 def preProcessDoubleChance(df=df_temp):
-
-    calcular_resultado_double_chance(df_temp)
+    calcular_resultado_double_chance(df)
 
 
 def preProcessDrawNoBet(df=df_temp):
 
-    df_temp['res_draw_no_bet1'] = df_temp.apply(
+    df['res_draw_no_bet1'] = df.apply(
     lambda row: classify_draw_no_bet(row['draw_no_bet_team1'], row['home_goals'], row['away_goals']), axis=1
     )
-    df_temp['res_draw_no_bet2'] = df_temp.apply(
+    df['res_draw_no_bet2'] = df.apply(
         lambda row: classify_draw_no_bet(row['draw_no_bet_team2'], row['home_goals'], row['away_goals']), axis=1
     )
-    df_draw_no_bet = pd.get_dummies(df_temp, columns=['res_draw_no_bet1'], prefix='dnb1')
-    df_draw_no_bet = pd.get_dummies(df_temp, columns=['res_draw_no_bet2'], prefix='dnb2')
+    df = pd.get_dummies(df, columns=['res_draw_no_bet1'], prefix='dnb1')
+    df = pd.get_dummies(df, columns=['res_draw_no_bet2'], prefix='dnb2')
 
 
 
