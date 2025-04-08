@@ -40,6 +40,14 @@ def preProcessGeneral(df=df_temp):
     preProcessDoubleChance(df)
     preProcessDrawNoBet(df)
 
+def criaNNs(df=df_temp):
+
+    z_over_under_positivo, z_over_under_negativo = NN_over_under(df)
+    z_handicap = NN_handicap(df)
+    z_goal_line = NN_goal_line(df)
+    z_double_chance = NN_double_chance(df)
+    z_draw_no_bet = NN_draw_no_bet(df)
+
 
 def preProcessEstatisticasGerais(df=df_temp):
 
@@ -159,8 +167,7 @@ def estatisticas_ultimos_5(df, home_team, away_team):
 
     return pd.Series([media_gols_home, vitorias_home, media_gols_away, vitorias_away])
 
-# Aplicar a função e adicionar as colunas ao DataFrame
-df_temp[['media_goals_home', 'media_victories_home', 'media_goals_away', 'media_victories_away']] = df_temp.apply(lambda row: estatisticas_ultimos_5(df_temp, row['home'], row['away']), axis=1)
+
 
 def calcular_medias_h2h(df, home_id, away_id, index):
     """
@@ -206,21 +213,10 @@ def calcular_medias_h2h(df, home_id, away_id, index):
         'away_h2h_mean': away_h2h_mean
     }
 
-# Aplicar a função ao DataFrame
-medias = df_temp.apply(
-    lambda row: calcular_medias_h2h(df_temp, row['home'], row['away'], row.name),
-    axis=1
-)
-
-# Adicionar as novas colunas
-df_temp['h2h_mean'] = medias.apply(lambda x: x['h2h_mean'])
-df_temp['home_h2h_mean'] = medias.apply(lambda x: x['home_h2h_mean'])
-df_temp['away_h2h_mean'] = medias.apply(lambda x: x['away_h2h_mean'])
 
 
 #OVER_UNDER
 
-df_temp['res_goals_over_under'] = df_temp['tot_goals'] > df_temp['goals_over_under']
 
 
 #HANDICAP
@@ -241,10 +237,6 @@ def split_handicap(value):
         return np.array([c, c])
 
 
-# Aplicar a transformação para ambas as colunas
-df_temp[['asian_handicap1_1', 'asian_handicap1_2']] = df_temp['asian_handicap1'].apply(lambda x: pd.Series(split_handicap(x)))
-df_temp[['asian_handicap2_1', 'asian_handicap2_2']] = df_temp['asian_handicap2'].apply(lambda x: pd.Series(split_handicap(x)))
-df_temp['diff_goals'] = df_temp['home_goals'] - df_temp['away_goals']
 
 def classify_asian_handicap(team, ah1, ah2, diff_goals):
     """
@@ -287,16 +279,7 @@ def classify_asian_handicap(team, ah1, ah2, diff_goals):
         else:
             return 'reembolso'
 
-# Aplicando a função ao DataFrame
-df_temp['classificacao_ah1'] = df_temp.apply(
-    lambda row: classify_asian_handicap(row['team_ah1'], row['asian_handicap1_1'], row['asian_handicap1_2'],row['diff_goals']), axis=1
-)
 
-df_temp['classificacao_ah2'] = df_temp.apply(
-    lambda row: classify_asian_handicap(row['team_ah2'], row['asian_handicap2_1'], row['asian_handicap2_2'], row['diff_goals']), axis=1
-)
-df_temp = pd.get_dummies(df_temp, columns=['classificacao_ah1'], prefix='ah1')
-df_temp = pd.get_dummies(df_temp, columns=['classificacao_ah2'], prefix='ah2')
 #criar nn 1 e 2
 
 #GOAL_LINE
@@ -314,11 +297,7 @@ def split_goal_line(value):
         c = float(value)
         return np.array([c, c])
 
-# Para goal_line1
-df_temp[['goal_line1_1', 'goal_line1_2']] = df_temp['goal_line1'].apply(lambda x: pd.Series(split_goal_line(x)))
 
-# Para goal_line2
-df_temp[['goal_line2_1', 'goal_line2_2']] = df_temp['goal_line2'].apply(lambda x: pd.Series(split_goal_line(x)))
 
 def classify_goal_line(team_gl, gl1, gl2, tot_goals):
     """
@@ -364,18 +343,7 @@ def classify_goal_line(team_gl, gl1, gl2, tot_goals):
             else:
                 return 'reembolso'  # Meio ganho/meio reembolso
 
-# Aplicando ao DataFrame
-df_temp['classificacao_gl1'] = df_temp.apply(
-    lambda row: classify_goal_line(row['type_gl1'], row['goal_line1_1'], row['goal_line1_2'], row['tot_goals']),
-    axis=1
-)
 
-df_temp['classificacao_gl2'] = df_temp.apply(
-    lambda row: classify_goal_line(row['type_gl2'], row['goal_line2_1'], row['goal_line2_2'], row['tot_goals']),
-    axis=1
-)
-df_temp = pd.get_dummies(df_temp, columns=['classificacao_gl1'], prefix='gl1')
-df_temp = pd.get_dummies(df_temp, columns=['classificacao_gl2'], prefix='gl2')
 #criar nn 1 e 2
 
 #DOUBLE_CHANCE
@@ -390,7 +358,7 @@ def calcular_resultado_double_chance(df):
     df['res_double_chance3'] = ((df['home_goals'] != df['away_goals'])).astype(int)
 
     return df
-calcular_resultado_double_chance(df_temp)
+
 #criar nn 1, 2 e 3
 
 
@@ -429,16 +397,7 @@ def classify_draw_no_bet(team, home_goals, away_goals):
             return 'reembolso'
     
     return 'indefinido'
-df_temp['res_draw_no_bet1'] = df_temp.apply(
-    lambda row: classify_draw_no_bet(row['draw_no_bet_team1'], row['home_goals'], row['away_goals']), axis=1
-)
 
-df_temp['res_draw_no_bet2'] = df_temp.apply(
-    lambda row: classify_draw_no_bet(row['draw_no_bet_team2'], row['home_goals'], row['away_goals']), axis=1
-)
-
-df_draw_no_bet = pd.get_dummies(df_temp, columns=['res_draw_no_bet1'], prefix='dnb1')
-df_draw_no_bet = pd.get_dummies(df_temp, columns=['res_draw_no_bet2'], prefix='dnb2')
 
 #criar nn 1 e 2
 
