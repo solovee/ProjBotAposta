@@ -430,7 +430,7 @@ def classify_draw_no_bet(team, home_goals, away_goals):
 import numpy as np
 
 def encontrar_melhor_z_binario_positivo(y_true, y_pred_probs, min_percent=0.05):
-    thresholds_pos = np.arange(0.5, 1.01, 0.05)
+    thresholds_pos = np.arange(0.5, 1.01, 0.025)
     # Total de previsões positivas (com qualquer confiança)
     total_pred_positivas = np.sum(y_pred_probs >= 0.5)
 
@@ -452,14 +452,15 @@ def encontrar_melhor_z_binario_positivo(y_true, y_pred_probs, min_percent=0.05):
                 melhor_acc = acc
                 melhor_z = z
                 melhor_n = n
+    
 
-    return melhor_z
+    return melhor_z, melhor_acc
 
 
 
 def encontrar_melhor_z_binario_negativo(y_true, y_pred_probs, min_percent=0.05):
 
-    thresholds_neg = np.arange(0.5, -0.01, -0.05)
+    thresholds_neg = np.arange(0.5, -0.01, -0.025)
     # Total de previsões negativas (com qualquer confiança)
     total_pred_negativas = np.sum(y_pred_probs < 0.5)
 
@@ -482,11 +483,11 @@ def encontrar_melhor_z_binario_negativo(y_true, y_pred_probs, min_percent=0.05):
                 melhor_z = z
                 melhor_n = n
 
-    return melhor_z
+    return melhor_z, melhor_acc
 
 def encontrar_melhor_z_softmax_positivo(y_test, y_pred_probs, min_percent=0.05):
 
-    thresholds=np.arange(0.40, 1.01, 0.05)
+    thresholds=np.arange(0.40, 1.01, 0.025)
 
     classe_positiva = 1
 
@@ -527,20 +528,22 @@ def NN_over_under(df=df_temp):
     y = df['res_goals_over_under']
     x_train, x_test, y_train, y_test = normalizacao_and_split(X,y)
     model_over_under = tf.keras.Sequential([
-        tf.keras.layers.Dense(100, activation='relu'),
-        tf.keras.layers.Dense(100, activation='relu'),
-        tf.keras.layers.Dense(50, activation='relu'),
-        tf.keras.layers.Dense(1, activation='sigmoid')
+        tf.keras.layers.Dense(64, activation='relu', input_shape=(x_train.shape[1],)),
+        tf.keras.layers.Dropout(0.3),
+        tf.keras.layers.Dense(32, activation='relu'),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Dense(1, activation='sigmoid')  # Saída binária
     ])
-    model_over_under.compile(optimizer='adam', loss=tf.keras.losses.BinaryCrossentropy(), metrics=['accuracy'])
+    model_over_under.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001), loss=tf.keras.losses.BinaryCrossentropy(), metrics=['accuracy'])
     model_over_under.fit(x_train, y_train, epochs=30)
     y_pred_probs = model_over_under.predict(x_test)
     
-    melhor_z_positivo = encontrar_melhor_z_binario_positivo(y_test, y_pred_probs)
-    melhor_z_negativo = encontrar_melhor_z_binario_negativo(y_test, y_pred_probs)
-
+    melhor_z_positivo, melhor_acc_positivo = encontrar_melhor_z_binario_positivo(y_test, y_pred_probs)
+    melhor_z_negativo, melhor_acc_negativo = encontrar_melhor_z_binario_negativo(y_test, y_pred_probs)
+    posi = [melhor_z_positivo, melhor_acc_positivo]
+    neg = [ melhor_z_negativo, melhor_acc_negativo]
     model_over_under.save("model_over_under.keras")  # Salva em formato nativo do Keras
-    return melhor_z_positivo, melhor_z_negativo
+    return posi, neg
 
 
 #junta handicaps
@@ -595,7 +598,7 @@ def NN_handicap(df=df_temp):
     type_df = type_df.reset_index(drop=True)
     X_final = pd.concat([X, type_df], axis=1)
     y = df_temporario[['negativo', 'positivo', 'reembolso']].copy()
-    x_train, x_test, y_train, y_test = split(X_final, y)
+    
 
     # 1. Criando o y binário: positivo (1) ou não (0)
     y_binario = df_temporario['positivo'].astype(int)
@@ -615,19 +618,19 @@ def NN_handicap(df=df_temp):
     modelo_binario.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001), loss='binary_crossentropy', metrics=['accuracy'])
 
     # 4. Treinamento
-    hist_bin = modelo_binario.fit(x_train_bin, y_train_bin, epochs=30, validation_split=0.1)
+    hist_bin = modelo_binario.fit(x_train_bin, y_train_bin, epochs=30)
     y_pred_probs = modelo_binario.predict(x_test_bin)
-    melhor_z_positivo = encontrar_melhor_z_binario_positivo(y_test_bin, y_pred_probs )
+    melhor_z_positivo, melhor_acc = encontrar_melhor_z_binario_positivo(y_test_bin, y_pred_probs )
 
     modelo_binario.save("model_handicap_binario.keras")  # Salva em formato nativo do Keras
 
-    return melhor_z_positivo
+    return melhor_z_positivo, melhor_acc
 
     # 5. Previsões
     
     
     '''
-  
+    x_train, x_test, y_train, y_test = split(X_final, y)
     model_handicap = tf.keras.Sequential([
         tf.keras.layers.Dense(64, activation='relu', input_shape=(x_train.shape[1],)),
         tf.keras.layers.BatchNormalization(),
@@ -678,20 +681,48 @@ def NN_goal_line(df=df_temp):
     df_temporario = df[['h2h_mean' ,'media_goals_home' ,'media_goals_away','goal_line1_1','goal_line1_2','type_gl1', 'goal_line2_1','goal_line2_2','type_gl2', 'gl1_indefinido','gl1_negativo', 'gl1_positivo', 'gl1_reembolso', 'gl2_indefinido', 'gl2_negativo', 'gl2_positivo', 'gl2_reembolso']].copy()
     df_temporario = preparar_df_goallines(df_temporario)
     
-    df_temporario = pd.get_dummies(df_temporario, columns=['type_gl'], prefix='type')
+    df_temporario = pd.get_dummies(df_temporario, columns=['type_gl'], prefix='type_gl')
     df_temporario.to_csv('type1.csv')
     df_temporario = df_temporario[df_temporario['indefinido'] == False]
     df_temporario.dropna(inplace=True)
 
     X = df_temporario[['h2h_mean', 'media_goals_home', 'media_goals_away', 'goal_line_1', 'goal_line_2']].copy()
     X = normalizacao(X)
-    
-    type_df = df_temporario[['type_1.0', 'type_2.0']]
-
     X = pd.DataFrame(X, columns=['h2h_mean', 'media_goals_home', 'media_goals_away', 'goal_line_1', 'goal_line_2']).reset_index(drop=True)
+    type_df = df_temporario[['type_gl_1.0', 'type_gl_2.0']]
     type_df = type_df.reset_index(drop=True)
     X_final = pd.concat([X, type_df], axis=1)
+    
+    
+    
+    # 1. Criando o y binário: positivo (1) ou não (0)
+    y_binario = df_temporario['positivo'].astype(int)
 
+    # 2. Reutilizando o X_final já preparado e normalizado
+    x_train_bin, x_test_bin, y_train_bin, y_test_bin = split(X_final, y_binario)
+
+        # 3. Criando o modelo binário
+    modelo_binario_goal_line = tf.keras.Sequential([
+        tf.keras.layers.Dense(64, activation='relu', input_shape=(x_train_bin.shape[1],)),
+        tf.keras.layers.Dropout(0.3),
+        tf.keras.layers.Dense(32, activation='relu'),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Dense(1, activation='sigmoid')  # Saída binária
+    ])
+
+    modelo_binario_goal_line.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001), loss='binary_crossentropy', metrics=['accuracy'])
+
+    # 4. Treinamento
+    hist_bin = modelo_binario_goal_line.fit(x_train_bin, y_train_bin, epochs=30)
+    y_pred_probs = modelo_binario_goal_line.predict(x_test_bin)
+    melhor_z_positivo, melhor_acc = encontrar_melhor_z_binario_positivo(y_test_bin, y_pred_probs )
+
+    modelo_binario_goal_line.save("model_binario_goal_line.keras")  # Salva em formato nativo do Keras
+
+    return melhor_z_positivo, melhor_acc
+
+
+'''
 
     y = df_temporario[['negativo', 'positivo', 'reembolso']].copy()
 
@@ -716,6 +747,7 @@ def NN_goal_line(df=df_temp):
     model_goal_line.save("model_goal_line.keras")  # Salva em formato nativo do Keras
 
     return melhor_z_positivo
+'''
 
 #juntar double_chances
 def preparar_df_double_chance(df):
@@ -768,19 +800,22 @@ def NN_double_chance(df=df_temp):
     
     model_double_chance = tf.keras.Sequential([
         tf.keras.layers.Dense(64, activation='relu'),
+        tf.keras.layers.Dropout(0.3),
         tf.keras.layers.Dense(64, activation='relu'),
+        tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(32, activation='relu'),
+        tf.keras.layers.Dropout(0.1),
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
     model_double_chance.compile(optimizer=tf.keras.optimizers.Adam(0.001), loss='binary_crossentropy', metrics=['accuracy'])
     model_double_chance.fit(x_train, y_train, epochs=30)
 
     y_pred_probs = model_double_chance.predict(x_test)
-    melhor_z_positivo = encontrar_melhor_z_binario_positivo(y_test, y_pred_probs)
+    melhor_z_positivo, melhor_acc = encontrar_melhor_z_binario_positivo(y_test, y_pred_probs)
 
     model_double_chance.save("model_double_chance.keras")  # Salva em formato nativo do Keras
 
-    return melhor_z_positivo
+    return melhor_z_positivo, melhor_acc
 
 #junta draw_no_bet
 def preparar_df_draw_no_bet(df):
@@ -810,19 +845,21 @@ def preparar_df_draw_no_bet(df):
 
 #NN draw_no_bet
 def NN_draw_no_bet(df=df_temp):
+
     df_temporario = df[['home_goals', 'away_goals','media_goals_home', 
        'media_goals_away', 'media_victories_home','media_victories_away', 'home_h2h_mean','away_h2h_mean', 'draw_no_bet_team1', 'odds_dnb1', 'draw_no_bet_team2', 'odds_dnb2', 'dnb1_indefinido' , 'dnb1_perde','dnb1_ganha', 'dnb1_reembolso',
        'dnb2_indefinido', 'dnb2_perde', 'dnb2_ganha', 'dnb2_reembolso']]
     df_temporario = preparar_df_draw_no_bet(df_temporario)
-    print(df_temporario['draw_no_bet_team'].value_counts(dropna=False))
 
     df_temporario = pd.get_dummies(df_temporario, columns=['draw_no_bet_team'], prefix='draw_no_bet_team')
     df_temporario.to_csv('teeste.csv')
     df_temporario = df_temporario[df_temporario['indefinido'] == False]
 
     df_temporario.dropna(inplace=True)
+    
 
     X = df_temporario[['home_goals', 'away_goals', 'media_goals_home', 'media_goals_away','media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']].copy()
+    
     X = normalizacao(X)
     X = pd.DataFrame(X, columns=['home_goals', 'away_goals', 'media_goals_home', 'media_goals_away',
                              'media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']).reset_index(drop=True)
@@ -831,7 +868,32 @@ def NN_draw_no_bet(df=df_temp):
     type_df = type_df.reset_index(drop=True)
 
     X_final = pd.concat([X, type_df], axis=1)
+    #   1. Criando o y binário: positivo (1) ou não (0)
+    y_binario = df_temporario['ganha'].astype(int)
 
+    # 2. Reutilizando o X_final já preparado e normalizado
+    x_train_bin, x_test_bin, y_train_bin, y_test_bin = split(X_final, y_binario)
+            # 3. Criando o modelo binário
+
+    modelo_binario_draw_no_bet = tf.keras.Sequential([
+        tf.keras.layers.Dense(64, activation='relu', input_shape=(x_train_bin.shape[1],)),
+        tf.keras.layers.Dropout(0.3),
+        tf.keras.layers.Dense(32, activation='relu'),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Dense(1, activation='sigmoid')  # Saída binária
+    ])
+
+    modelo_binario_draw_no_bet.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001), loss='binary_crossentropy', metrics=['accuracy'])
+
+    # 4. Treinamento
+    hist_bin = modelo_binario_draw_no_bet.fit(x_train_bin, y_train_bin, epochs=30, validation_split=0.1)
+    y_pred_probs = modelo_binario_draw_no_bet.predict(x_test_bin)
+    melhor_z_positivo, melhor_acc = encontrar_melhor_z_binario_positivo(y_test_bin, y_pred_probs )
+
+    modelo_binario_draw_no_bet.save("model_binario_draw_no_bet.keras")  # Salva em formato nativo do Keras
+
+    return melhor_z_positivo, melhor_acc
+    '''
     y = df_temporario[['perde', 'ganha', 'reembolso']].copy()
 
     x_train, x_test, y_train, y_test = split(X_final, y)
@@ -851,8 +913,9 @@ def NN_draw_no_bet(df=df_temp):
     model_draw_no_bet.save("model_draw_no_bet.keras")  # Salva em formato nativo do Keras
 
     return melhor_z_positivo
+    '''
 
-df_temp = preProcessEstatisticasGerais(df_temp)
-df_temp = preProcessHandicap
-lista = NN_handicap(df_temp)
+
+df_temp = preProcessGeneral(df_temp)
+lista = criaNNs(df_temp)
 print(lista)
