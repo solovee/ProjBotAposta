@@ -50,7 +50,7 @@ for dados in dicio:
     else:
         resultado.append(dados)  # Caso não tenha odds, mantém os dados originais
 '''
-
+'''
 
 import pandas as pd
 import requests
@@ -169,3 +169,104 @@ df_ultimos_5 = df_filtrado.tail(10)
 
 print(df_ultimos_5[['home', 'away', 'gols_time']])  # Exibir só as colunas principais
 
+'''
+import time
+import os
+import pandas as pd
+from datetime import datetime, timedelta
+import requests
+from api import BetsAPIClient
+from dotenv import load_dotenv
+
+load_dotenv()
+
+api = os.getenv("API_KEY")
+apiclient = BetsAPIClient(api_key=api)
+CSV_FILE = "resultados_novo.csv"
+
+def transform_betting_data(odds_data):
+    rows = []
+    for match_id, odds in odds_data.items():
+        row = {'id': match_id}
+
+        ou_markets = odds.get('goals_over_under', [])
+        if ou_markets:
+            ou_dict = {item['type']: item for item in ou_markets if item['handicap'] == '2.5'}
+            if 'Over' in ou_dict and 'Under' in ou_dict:
+                row['goals_over_under'] = '2.5'
+                row['odd_goals_over1'] = ou_dict['Over']['odds']
+                row['odd_goals_under1'] = ou_dict['Under']['odds']
+
+        for i, ah in enumerate(odds.get('asian_handicap', []), 1):
+            row[f'asian_handicap{i}'] = ah['handicap']
+            row[f'team_ah{i}'] = ah['team']
+            row[f'odds_ah{i}'] = ah['odds']
+
+        for i, gl in enumerate(odds.get('goal_line', []), 1):
+            row[f'goal_line{i}'] = gl['handicap']
+            row[f'type_gl{i}'] = 1 if gl['type'] == 'Over' else 2
+            row[f'odds_gl{i}'] = gl['odds']
+
+        for i, dc in enumerate(odds.get('double_chance', []), 1):
+            row[f'double_chance{i}'] = dc['type']
+            row[f'odds_dc{i}'] = dc['odds']
+
+        for i, dnb in enumerate(odds.get('draw_no_bet', []), 1):
+            row[f'draw_no_bet_team{i}'] = dnb['team']
+            row[f'odds_dnb{i}'] = dnb['odds']
+
+        rows.append(row)
+
+    return pd.DataFrame(rows)
+
+def dia_anterior():
+    return (datetime.now() - timedelta(days=1)).strftime("%Y%m%d")
+
+def processar_dia_anterior():
+    dia = dia_anterior()
+    print(f"🔄 Processando jogos do dia {dia}")
+
+    try:
+        ids, dicio = apiclient.getAllOlds(leagues=apiclient.leagues_ids, day=int(dia))
+        odds_data = apiclient.filtraOddsNovo(ids=ids)
+        df_odds = transform_betting_data(odds_data)
+
+        novos_dados = []
+        for dados_evento in dicio:
+            event_id = dados_evento.get('id')
+            odds_transformadas = df_odds[df_odds['id'] == event_id].to_dict('records')
+
+            if odds_transformadas:
+                merged = {**dados_evento, **odds_transformadas[0], "event_day": dia}
+            else:
+                merged = {**dados_evento, "event_day": dia}
+
+            novos_dados.append(merged)
+
+        if novos_dados:
+            df_novo = pd.DataFrame(novos_dados)
+            colunas_ordenadas = ['id', 'event_day'] + [col for col in df_novo.columns if col not in ['id', 'event_day']]
+            df_novo = df_novo[colunas_ordenadas]
+
+            if os.path.exists(CSV_FILE):
+                df_existente = pd.read_csv(CSV_FILE, dtype={"event_day": str})
+
+                # Adiciona os dados novos
+                df_final = pd.concat([df_existente, df_novo], ignore_index=True)
+
+                # Ordena cronologicamente
+                df_final = df_final.sort_values(by="event_day").reset_index(drop=True)
+
+                # Remove o primeiro (mais antigo) dia
+                primeiro_dia = df_final["event_day"].min()
+                df_final = df_final[df_final["event_day"] != primeiro_dia]
+            else:
+                df_final = df_novo
+
+            df_final.to_csv(CSV_FILE, index=False)
+            print(f"✅ Dados atualizados com sucesso! Dia {primeiro_dia} removido, dia {dia} adicionado.")
+        else:
+            print(f"⚠️ Nenhum dado encontrado para o dia {dia}")
+
+    except Exception as e:
+        print(f"❌ Erro ao processar dia {dia}: {e}")

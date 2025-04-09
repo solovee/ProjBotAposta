@@ -163,7 +163,7 @@ def dia_anterior():
 def ultimos_60_dias(data_str: str):
     """Retorna uma lista com todos os dias dos últimos 60 dias anteriores à data fornecida no formato YYYYMMDD."""
     data = datetime.strptime(data_str, "%Y%m%d")
-    return [(data - timedelta(days=i)).strftime("%Y%m%d") for i in range(1, 61)]
+    return [(data - timedelta(days=i)).strftime("%Y%m%d") for i in range(3, 61)]
 
 # Carregar dias já processados
 if os.path.exists(CSV_FILE):

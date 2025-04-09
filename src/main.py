@@ -18,6 +18,7 @@ api = os.getenv("API_KEY")
 apiclient = BetsAPIClient(api_key=api)
 
 #df = pd.read_csv('src\resultados_novo.csv')
+CSV_FILE = "resultados.csv"
 
 
 #pega uma vez ao dia, provavelmente umas 00:30
@@ -53,7 +54,7 @@ def acao_do_jogo(jogo_id):
     df_odds = apiclient.transform_betting_data(odds)
     df_odds = NN.preProcessGeneral(df_odds)
     #implementar as previsões e requisitos (threshold e odd)
-    preve()
+    preve(df_linha=df_odds)
 
 
 def criaTodasNNs(df):
@@ -68,11 +69,66 @@ def preve(lista, df_linha):
     model_double_chance = tf.keras.models.load_model('mode_double_chance.keras')
     model_draw_no_bet = tf.keras.models.load_model('model_binario_draw_no_bet.keras')
 
+    prepOverUnder = NN.prepNNOver_under(df_linha)
+    prepHandicap = NN.prepNNHandicap(df_linha)
+    prepGoal_line = NN.prepNNGoal_line(df_linha)
+    prepDouble_chance = NN.prepNNDouble_chance(df_linha)
+    prepDraw_no_bet = NN.prepNNDraw_no_bet(df_linha)
+
     pred_over_under = model_over_under.predict(NN.preProcessOverUnder(df_linha))
     pred_handicap = model_handicap.predict(NN.preProcessHandicap(df_linha))
     pred_goal_line = model_goal_line.predict(NN.preProcessGoalLine(df_linha))
     pred_double_chance = model_double_chance.predict(NN.preProcessDoubleChance(df_linha))
     pred_draw_no_bet = model_draw_no_bet.predict(NN.preProcessDrawNoBet(df_linha))
+
+def processar_dia_anterior():
+    dia = apiclient.dia_anterior()
+    print(f"🔄 Processando jogos do dia {dia}")
+
+    try:
+        ids, dicio = apiclient.getAllOlds(leagues=apiclient.leagues_ids, day=int(dia))
+        odds_data = apiclient.filtraOddsNovo(ids=ids)
+        df_odds = apiclient.transform_betting_data(odds_data)
+
+        novos_dados = []
+        for dados_evento in dicio:
+            event_id = dados_evento.get('id')
+            odds_transformadas = df_odds[df_odds['id'] == event_id].to_dict('records')
+
+            if odds_transformadas:
+                merged = {**dados_evento, **odds_transformadas[0], "event_day": dia}
+            else:
+                merged = {**dados_evento, "event_day": dia}
+
+            novos_dados.append(merged)
+
+        if novos_dados:
+            df_novo = pd.DataFrame(novos_dados)
+            colunas_ordenadas = ['id', 'event_day'] + [col for col in df_novo.columns if col not in ['id', 'event_day']]
+            df_novo = df_novo[colunas_ordenadas]
+
+            if os.path.exists(CSV_FILE):
+                df_existente = pd.read_csv(CSV_FILE, dtype={"event_day": str})
+
+                # Adiciona os dados novos
+                df_final = pd.concat([df_existente, df_novo], ignore_index=True)
+
+                # Ordena cronologicamente
+                df_final = df_final.sort_values(by="event_day").reset_index(drop=True)
+
+                # Remove o primeiro (mais antigo) dia
+                primeiro_dia = df_final["event_day"].min()
+                df_final = df_final[df_final["event_day"] != primeiro_dia]
+            else:
+                df_final = df_novo
+
+            df_final.to_csv(CSV_FILE, index=False)
+            print(f"✅ Dados atualizados com sucesso! Dia {primeiro_dia} removido, dia {dia} adicionado.")
+        else:
+            print(f"⚠️ Nenhum dado encontrado para o dia {dia}")
+
+    except Exception as e:
+        print(f"❌ Erro ao processar dia {dia}: {e}")
 
 day_ids = pegaJogosDoDia()
 print(day_ids)
