@@ -228,13 +228,15 @@ class BetsAPIClient:
 
         results = []
         ts_list = []
+        times = []
         for league in leagues:
             pages = self.pages(league_id=league)
             for page in range(1, pages+1):
-                res, ts = self.get_fifa_matches(league_id = league, page = page)
+                res, ts, tm = self.get_fifa_matches(league_id = league, page = page)
                 results.extend(res)
                 ts_list.extend(ts)
-        return results, ts_list
+                times.extend(tm)
+        return results, ts_list, times
 
         
         
@@ -283,9 +285,15 @@ class BetsAPIClient:
         
         res = [x['id'] for x in resp['results'] if (x.get('ss') is None) or x.get('time_status') == 0]
         ts = [x['time'] for x in resp['results'] if (x.get('ss') is None) or x.get('time_status') == 0]
+        times = [
+            (x['home']['name'], x['away']['name'])
+            for x in resp['results']
+            if (x.get('ss') is None) or (x.get('time_status') == '0')
+        ]
+
         
         if response.status_code == 200:
-            return res, ts
+            return res, ts, times
         else:
             raise Exception(f"Erro ao obter dados da API: {response.status_code}")
         

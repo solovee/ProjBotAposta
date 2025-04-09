@@ -915,7 +915,8 @@ def NN_draw_no_bet(df=df_temp):
     return melhor_z_positivo
     '''
 
-
+'''
 df_temp = preProcessGeneral(df_temp)
 lista = criaNNs(df_temp)
 print(lista)
+'''
