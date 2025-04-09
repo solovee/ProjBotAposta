@@ -427,14 +427,12 @@ def classify_draw_no_bet(team, home_goals, away_goals):
 #criar nn 1 e 2
 
 
-#threshold
-def encontrar_melhor_z_binario_positivo(y_true, y_pred_probs, min_percent=0.05):
+import numpy as np
 
+def encontrar_melhor_z_binario_positivo(y_true, y_pred_probs, min_percent=0.05):
     thresholds_pos = np.arange(0.5, 1.01, 0.05)
     # Total de previsões positivas (com qualquer confiança)
     total_pred_positivas = np.sum(y_pred_probs >= 0.5)
-    
-
 
     melhor_z = None
     melhor_acc = 0
@@ -443,7 +441,7 @@ def encontrar_melhor_z_binario_positivo(y_true, y_pred_probs, min_percent=0.05):
     for z in thresholds_pos:
         # Previsões com probabilidade ≥ z (alta confiança na classe positiva)
         mask = (y_pred_probs >= z)
-        mask = mask.ravel()  # Alternativa a flatten
+        mask = mask.ravel()
         n = np.sum(mask)
         correct = np.sum(y_true[mask] == 1)
         acc = correct / n if n > 0 else 0
@@ -456,6 +454,7 @@ def encontrar_melhor_z_binario_positivo(y_true, y_pred_probs, min_percent=0.05):
                 melhor_n = n
 
     return melhor_z
+
 
 
 def encontrar_melhor_z_binario_negativo(y_true, y_pred_probs, min_percent=0.05):
@@ -550,18 +549,18 @@ def preparar_df_handicaps(df):
 
     # Seleciona e renomeia o df_temporario1
     df1 = df[['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean',
-              'asian_handicap1_1', 'asian_handicap1_2', 'odds_ah1',
+              'asian_handicap1_1', 'asian_handicap1_2','team_ah1', 'odds_ah1',
               'ah1_indefinido', 'ah1_negativo', 'ah1_positivo', 'ah1_reembolso']].copy()
     df1.columns = ['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean',
-                   'asian_handicap_1', 'asian_handicap_2', 'odds',
+                   'asian_handicap_1', 'asian_handicap_2','team_ah', 'odds',
                    'indefinido', 'negativo', 'positivo', 'reembolso']
 
     # Seleciona e renomeia o df_temporario2
     df2 = df[['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean',
-              'asian_handicap2_1', 'asian_handicap2_2', 'odds_ah2',
+              'asian_handicap2_1', 'asian_handicap2_2','team_ah2', 'odds_ah2',
               'ah2_indefinido', 'ah2_negativo', 'ah2_positivo', 'ah2_reembolso']].copy()
     df2.columns = ['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean',
-                   'asian_handicap_1', 'asian_handicap_2', 'odds',
+                   'asian_handicap_1', 'asian_handicap_2','team_ah', 'odds',
                    'indefinido', 'negativo', 'positivo', 'reembolso']
 
     # Concatena os dois dataframes
@@ -576,26 +575,59 @@ def NN_handicap(df=df_temp):
     
     # Agora pode prosseguir com a seleção das colunas
     df_temporario = df[['media_goals_home', 'media_goals_away','home_h2h_mean', 'away_h2h_mean',
-                       'asian_handicap1_1', 'asian_handicap1_2','odds_ah1', 
+                       'asian_handicap1_1', 'asian_handicap1_2','team_ah1','odds_ah1', 
                        'ah1_indefinido','ah1_negativo', 'ah1_positivo','ah1_reembolso', 
-                       'asian_handicap2_1', 'asian_handicap2_2','odds_ah2', 
+                       'asian_handicap2_1', 'asian_handicap2_2','team_ah2','odds_ah2', 
                        'ah2_indefinido','ah2_negativo', 'ah2_positivo','ah2_reembolso']].copy()
     df_temporario = preparar_df_handicaps(df_temporario)
+
+    df_temporario = pd.get_dummies(df_temporario, columns=['team_ah'], prefix='team_ah')
     
     
     df_temporario = df_temporario[df_temporario['indefinido'] == False]
     
     
-    
     df_temporario.dropna(inplace=True)
-   
-    
-
     X = df_temporario[['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds']]
-    print(f'shape: {X.shape}')
+    X = normalizacao(X)
+    X = pd.DataFrame(X, columns=['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds']).reset_index(drop=True)
+    type_df = df_temporario[['team_ah_1.0',	'team_ah_2.0']]
+    type_df = type_df.reset_index(drop=True)
+    X_final = pd.concat([X, type_df], axis=1)
     y = df_temporario[['negativo', 'positivo', 'reembolso']].copy()
-    print(f'shape: {y.shape[0]}')
-    x_train, x_test, y_train, y_test = normalizacao_and_split(X, y)
+    x_train, x_test, y_train, y_test = split(X_final, y)
+
+    # 1. Criando o y binário: positivo (1) ou não (0)
+    y_binario = df_temporario['positivo'].astype(int)
+
+    # 2. Reutilizando o X_final já preparado e normalizado
+    x_train_bin, x_test_bin, y_train_bin, y_test_bin = split(X_final, y_binario)
+
+        # 3. Criando o modelo binário
+    modelo_binario = tf.keras.Sequential([
+        tf.keras.layers.Dense(64, activation='relu', input_shape=(x_train_bin.shape[1],)),
+        tf.keras.layers.Dropout(0.3),
+        tf.keras.layers.Dense(32, activation='relu'),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Dense(1, activation='sigmoid')  # Saída binária
+    ])
+
+    modelo_binario.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001), loss='binary_crossentropy', metrics=['accuracy'])
+
+    # 4. Treinamento
+    hist_bin = modelo_binario.fit(x_train_bin, y_train_bin, epochs=30, validation_split=0.1)
+    y_pred_probs = modelo_binario.predict(x_test_bin)
+    melhor_z_positivo = encontrar_melhor_z_binario_positivo(y_test_bin, y_pred_probs )
+
+    modelo_binario.save("model_handicap_binario.keras")  # Salva em formato nativo do Keras
+
+    return melhor_z_positivo
+
+    # 5. Previsões
+    
+    
+    '''
+  
     model_handicap = tf.keras.Sequential([
         tf.keras.layers.Dense(64, activation='relu', input_shape=(x_train.shape[1],)),
         tf.keras.layers.BatchNormalization(),
@@ -614,6 +646,7 @@ def NN_handicap(df=df_temp):
     model_handicap.save("model_handicap.keras")  # Salva em formato nativo do Keras
 
     return melhor_z_positivo
+    '''
 
 
 #junta goal_lines
@@ -725,7 +758,7 @@ def NN_double_chance(df=df_temp):
                              'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']).reset_index(drop=True)
     type_df = df_temporario[['double_chance_type_1', 'double_chance_type_2','double_chance_type_3' ]]
     type_df = type_df.reset_index(drop=True)
-    X_final = pd.concat([X, type_df], axis=1)
+    
     
     X_final = pd.concat([X, type_df], axis=1)
 
@@ -819,10 +852,7 @@ def NN_draw_no_bet(df=df_temp):
 
     return melhor_z_positivo
 
-df_uso = preProcessGeneral(df_temp)
-lista = criaNNs(df_uso)
+df_temp = preProcessEstatisticasGerais(df_temp)
+df_temp = preProcessHandicap
+lista = NN_handicap(df_temp)
 print(lista)
-
-
-
-
