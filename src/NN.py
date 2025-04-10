@@ -589,7 +589,7 @@ def prepNNHandicap(df=df_temp):
     df_temporario = df_temporario[df_temporario['indefinido'] == False]
     df_temporario.dropna(inplace=True)
     
-    z = df_temporario[['home','away','asian_handicap_1', 'asian_handicap_2', 'odds']]
+    z = df_temporario[['home','away','team_ah','asian_handicap_1', 'asian_handicap_2', 'odds']]
     df_temporario = pd.get_dummies(df_temporario, columns=['team_ah'], prefix='team_ah')
     X = df_temporario[['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds']]
     X = normalizacao(X)
@@ -712,7 +712,7 @@ def prepNNGoal_line(df=df_temp):
     
     df_temporario = df_temporario[df_temporario['indefinido'] == False]
     df_temporario.dropna(inplace=True)
-    z = df_temporario[['home','away','goal_line_1', 'goal_line_2','odds_gl']].copy()
+    z = df_temporario[['home','away','goal_line_1', 'goal_line_2','type_gl', 'odds_gl']].copy()
     df_temporario = pd.get_dummies(df_temporario, columns=['type_gl'], prefix='type_gl')
     X = df_temporario[['h2h_mean', 'media_goals_home', 'media_goals_away','odds_gl', 'goal_line_1', 'goal_line_2']].copy()
     X = normalizacao(X)
