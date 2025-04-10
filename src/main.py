@@ -70,11 +70,10 @@ def criaTodasNNs(df):
 
 def preve(df_linha):
     
-    model_over_under = tf.keras.models.load_model('model_over_under.keras')
-    model_handicap = tf.keras.models.load_model('model_handicap_binario.keras')
-    model_goal_line = tf.keras.models.load_model('mode_binario_goal_line.keras')
-    model_double_chance = tf.keras.models.load_model('mode_double_chance.keras')
-    model_draw_no_bet = tf.keras.models.load_model('model_binario_draw_no_bet.keras')
+    
+    
+    
+    
     
     prepOverUnder, dados_OU = NN.prepNNOver_under(df_linha)
     prepHandicap, dados_ah = NN.prepNNHandicap(df_linha)
@@ -82,17 +81,63 @@ def preve(df_linha):
     prepDouble_chance, dados_dc = NN.prepNNDouble_chance(df_linha)
     prepDraw_no_bet, dados_dnb = NN.prepNNDraw_no_bet(df_linha)
    
-    
+    predicta_over_under(prepOverUnder, dados_OU)
+    predicta_handicap(prepHandicap, dados_ah)
+    predicta_goal_line(prepGoal_line, dados_gl)
+    predicta_double_chance(prepDouble_chance, dados_dc)
+    predicta_draw_no_bet(prepDraw_no_bet, dados_dnb)
+    '''
     pred_over_under_pos, pred_over_under_neg = model_over_under.predict(prepOverUnder)
     pred_handicap = model_handicap.predict(prepHandicap)
     pred_goal_line = model_goal_line.predict(prepGoal_line)
     pred_double_chance = model_double_chance.predict(prepDouble_chance)
     pred_draw_no_bet = model_draw_no_bet.predict(prepDraw_no_bet)
+    '''
     lista_resultados = [prepOverUnder, prepHandicap, prepGoal_line, prepDouble_chance, prepDraw_no_bet]
     return lista_resultados
 
-def predicta_over_under():
-    pass
+def predicta_over_under(prepOverUnder_df, dados):
+    model_over_under = tf.keras.models.load_model('model_over_under.keras')
+    pred_over_under_pos, pred_over_under_neg = model_over_under.predict(prepOverUnder_df)
+    if (pred_over_under_pos >= lista_th[0]) and (dados['odd_goals_over1'] > 1.6):
+        return ['over', True]
+    elif (pred_over_under_neg <= lista_th[1]) and (dados['odd_goals_under1'] > 1.6):
+        return ['under', True]
+    else:
+        return [None, False]
+def predicta_handicap(prepHandicap_df, dados):
+    model_handicap = tf.keras.models.load_model('model_handicap_binario.keras')
+    pred_handicap = model_handicap.predict(prepHandicap_df)
+    if (pred_handicap >= lista_th[2]) and (dados['odds'] > 1.6):
+        return True
+    else:
+        return False
+def predicta_goal_line(prepGoal_line_df, dados):
+    model_goal_line = tf.keras.models.load_model('mode_binario_goal_line.keras')
+    pred_goal_line = model_goal_line.predict(prepGoal_line_df)
+    if (pred_goal_line >= lista_th[3]) and (dados['odds_gl'] > 1.6):
+        return True
+    else:
+        return False
+def predicta_double_chance(pred_double_chance_df, dados):
+    model_double_chance = tf.keras.models.load_model('mode_double_chance.keras')
+    pred_double_chance = model_double_chance.predict(pred_double_chance_df)
+    if (pred_double_chance >= lista_th[4]) and (dados['odds'] > 1.6):
+        return True
+    else:
+        return False
+def predicta_draw_no_bet(pred_draw_no_bet_df, dados):
+    model_draw_no_bet = tf.keras.models.load_model('model_binario_draw_no_bet.keras')
+    pred_draw_no_bet = model_draw_no_bet.predict(pred_draw_no_bet_df)
+    if (pred_draw_no_bet >= lista_th[5]) and (dados['odds'] > 1.6):
+        return True
+    else:
+        return False
+
+
+
+
+
 
 def processar_dia_anterior():
     dia = apiclient.dia_anterior()
