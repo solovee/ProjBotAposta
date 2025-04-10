@@ -19,18 +19,24 @@ apiclient = BetsAPIClient(api_key=api)
 
 #df = pd.read_csv('src\resultados_novo.csv')
 CSV_FILE = "resultados.csv"
-
-
-#pega uma vez ao dia, provavelmente umas 00:30
-def pegaJogosDoDia():
+#lista dos thresholds das nns
+lista_th = []
+#guarda jogos programados do dia, deve zerar ao mudar o dia
+programado = []
+#pega uma vez ao virar o dia e depois de 20 em 20 min pra testar
+def pegaJogosDoDia(programado):
     ids , tempo, time = apiclient.getUpcoming(leagues=apiclient.leagues_ids)
+    # adicionar tratamento pra no caso de vazio
     dados = [{"id_jogo": i, "horario": h, "times": k} for i, h, k in zip(ids, tempo, time)]
     
     dados_dataframe = pd.DataFrame(dados)
+    dados_dataframe = dados_dataframe[~dados_dataframe['id_jogo'].isin(programado)]
     print(dados_dataframe.columns)
     dados_dataframe['horario'] = dados_dataframe['horario'].astype(int)
     dados_dataframe['send_time'] = dados_dataframe['horario'] - 350
     dados_dataframe = dados_dataframe.sort_values(by="horario").reset_index(drop=True)
+    programados = [dados['id_jogo'] for dado in dados]
+    programado.extend(programados)
     return dados_dataframe
 
 
@@ -58,28 +64,35 @@ def acao_do_jogo(jogo_id):
 
 
 def criaTodasNNs(df):
-    lista = NN.criaNNs(df)
-    return lista
+    lista_th = NN.criaNNs(df)
+    
 
 
-def preve(lista, df_linha):
+def preve(df_linha):
+    
     model_over_under = tf.keras.models.load_model('model_over_under.keras')
     model_handicap = tf.keras.models.load_model('model_handicap_binario.keras')
     model_goal_line = tf.keras.models.load_model('mode_binario_goal_line.keras')
     model_double_chance = tf.keras.models.load_model('mode_double_chance.keras')
     model_draw_no_bet = tf.keras.models.load_model('model_binario_draw_no_bet.keras')
+    
+    prepOverUnder, dados_OU = NN.prepNNOver_under(df_linha)
+    prepHandicap, dados_ah = NN.prepNNHandicap(df_linha)
+    prepGoal_line, dados_gl = NN.prepNNGoal_line(df_linha)
+    prepDouble_chance, dados_dc = NN.prepNNDouble_chance(df_linha)
+    prepDraw_no_bet, dados_dnb = NN.prepNNDraw_no_bet(df_linha)
+   
+    
+    pred_over_under_pos, pred_over_under_neg = model_over_under.predict(prepOverUnder)
+    pred_handicap = model_handicap.predict(prepHandicap)
+    pred_goal_line = model_goal_line.predict(prepGoal_line)
+    pred_double_chance = model_double_chance.predict(prepDouble_chance)
+    pred_draw_no_bet = model_draw_no_bet.predict(prepDraw_no_bet)
+    lista_resultados = [prepOverUnder, prepHandicap, prepGoal_line, prepDouble_chance, prepDraw_no_bet]
+    return lista_resultados
 
-    prepOverUnder = NN.prepNNOver_under(df_linha)
-    prepHandicap = NN.prepNNHandicap(df_linha)
-    prepGoal_line = NN.prepNNGoal_line(df_linha)
-    prepDouble_chance = NN.prepNNDouble_chance(df_linha)
-    prepDraw_no_bet = NN.prepNNDraw_no_bet(df_linha)
-
-    pred_over_under = model_over_under.predict(NN.preProcessOverUnder(df_linha))
-    pred_handicap = model_handicap.predict(NN.preProcessHandicap(df_linha))
-    pred_goal_line = model_goal_line.predict(NN.preProcessGoalLine(df_linha))
-    pred_double_chance = model_double_chance.predict(NN.preProcessDoubleChance(df_linha))
-    pred_draw_no_bet = model_draw_no_bet.predict(NN.preProcessDrawNoBet(df_linha))
+def predicta_over_under():
+    pass
 
 def processar_dia_anterior():
     dia = apiclient.dia_anterior()
@@ -130,6 +143,5 @@ def processar_dia_anterior():
     except Exception as e:
         print(f"❌ Erro ao processar dia {dia}: {e}")
 
-day_ids = pegaJogosDoDia()
-print(day_ids)
-#lista = criaTodasNNs(df)
+df = pegaJogosDoDia()
+print(df)

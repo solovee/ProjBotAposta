@@ -55,7 +55,7 @@ def criaNNs(df=df_temp):
     z_goal_line = NN_goal_line(df)
     z_double_chance = NN_double_chance(df)
     z_draw_no_bet = NN_draw_no_bet(df)
-    lista = [[z_over_under_positivo, z_over_under_negativo], z_handicap, z_goal_line, z_double_chance , z_draw_no_bet]
+    lista = [z_over_under_positivo, z_over_under_negativo, z_handicap, z_goal_line, z_double_chance , z_draw_no_bet]
     return lista
 
 
@@ -454,7 +454,7 @@ def encontrar_melhor_z_binario_positivo(y_true, y_pred_probs, min_percent=0.05):
                 melhor_n = n
     
 
-    return melhor_z, melhor_acc
+    return melhor_z
 
 
 
@@ -483,7 +483,7 @@ def encontrar_melhor_z_binario_negativo(y_true, y_pred_probs, min_percent=0.05):
                 melhor_z = z
                 melhor_n = n
 
-    return melhor_z, melhor_acc
+    return melhor_z
 
 def encontrar_melhor_z_softmax_positivo(y_test, y_pred_probs, min_percent=0.05):
 
@@ -523,7 +523,7 @@ def encontrar_melhor_z_softmax_positivo(y_test, y_pred_probs, min_percent=0.05):
 def prepNNOver_under(df=df_temp):
     df_temporario = df[['home','away','odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean','res_goals_over_under']].copy()
     df_temporario.dropna(inplace=True)
-    z = df_temporario['home','away','odd_goals_over1', 'odd_goals_under1'].copy()
+    z = df_temporario[['home','away','odd_goals_over1', 'odd_goals_under1']].copy()
     X = df[['odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean']]
     X = normalizacao(X)
     X = pd.DataFrame(X, columns=['odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean'])
@@ -546,12 +546,11 @@ def NN_over_under(df=df_temp):
     model_over_under.fit(x_train, y_train, epochs=30)
     y_pred_probs = model_over_under.predict(x_test)
     
-    melhor_z_positivo, melhor_acc_positivo = encontrar_melhor_z_binario_positivo(y_test, y_pred_probs)
-    melhor_z_negativo, melhor_acc_negativo = encontrar_melhor_z_binario_negativo(y_test, y_pred_probs)
-    posi = [melhor_z_positivo, melhor_acc_positivo]
-    neg = [ melhor_z_negativo, melhor_acc_negativo]
+    melhor_z_positivo = encontrar_melhor_z_binario_positivo(y_test, y_pred_probs)
+    melhor_z_negativo = encontrar_melhor_z_binario_negativo(y_test, y_pred_probs)
+ 
     model_over_under.save("model_over_under.keras")  # Salva em formato nativo do Keras
-    return posi, neg
+    return melhor_z_positivo, melhor_z_negativo
 
 
 #junta handicaps
@@ -649,11 +648,11 @@ def NN_handicap(df=df_temp):
     # 4. Treinamento
     hist_bin = modelo_binario.fit(x_train_bin, y_train_bin, epochs=30)
     y_pred_probs = modelo_binario.predict(x_test_bin)
-    melhor_z_positivo, melhor_acc = encontrar_melhor_z_binario_positivo(y_test_bin, y_pred_probs )
+    melhor_z_positivo = encontrar_melhor_z_binario_positivo(y_test_bin, y_pred_probs )
 
     modelo_binario.save("model_handicap_binario.keras")  # Salva em formato nativo do Keras
 
-    return melhor_z_positivo, melhor_acc
+    return melhor_z_positivo
 
     # 5. Previsões
     
@@ -688,7 +687,7 @@ def preparar_df_goallines(df):
               'goal_line1_1', 'goal_line1_2', 'type_gl1','odds_gl1',
               'gl1_indefinido', 'gl1_negativo', 'gl1_positivo', 'gl1_reembolso']].copy()
     df1.columns = ['home','away','h2h_mean', 'media_goals_home', 'media_goals_away',
-                   'goal_line_1', 'goal_line_2', 'type_gl','odds_gl'
+                   'goal_line_1', 'goal_line_2', 'type_gl','odds_gl',
                    'indefinido', 'negativo', 'positivo', 'reembolso']
 
     # Seleciona e renomeia as colunas relacionadas à goal line 2
@@ -696,7 +695,7 @@ def preparar_df_goallines(df):
               'goal_line2_1', 'goal_line2_2', 'type_gl2','odds_gl2',
               'gl2_indefinido', 'gl2_negativo', 'gl2_positivo', 'gl2_reembolso']].copy()
     df2.columns = ['home','away','h2h_mean', 'media_goals_home', 'media_goals_away',
-                   'goal_line_1', 'goal_line_2', 'type_gl','odds_gl'
+                   'goal_line_1', 'goal_line_2', 'type_gl','odds_gl',
                    'indefinido', 'negativo', 'positivo', 'reembolso']
 
     # Concatena os dois dataframes
@@ -706,6 +705,7 @@ def preparar_df_goallines(df):
 
 def prepNNGoal_line(df=df_temp):
     df_temporario = df[['home','away','h2h_mean' ,'media_goals_home' ,'media_goals_away','goal_line1_1','goal_line1_2','type_gl1','odds_gl1', 'odds_gl2', 'goal_line2_1','goal_line2_2','type_gl2', 'gl1_indefinido','gl1_negativo', 'gl1_positivo', 'gl1_reembolso', 'gl2_indefinido', 'gl2_negativo', 'gl2_positivo', 'gl2_reembolso']].copy()
+
     df_temporario = preparar_df_goallines(df_temporario)
     
     
@@ -716,7 +716,7 @@ def prepNNGoal_line(df=df_temp):
     df_temporario = pd.get_dummies(df_temporario, columns=['type_gl'], prefix='type_gl')
     X = df_temporario[['h2h_mean', 'media_goals_home', 'media_goals_away','odds_gl', 'goal_line_1', 'goal_line_2']].copy()
     X = normalizacao(X)
-    X = pd.DataFrame(X, columns=['h2h_mean', 'media_goals_home', 'media_goals_away', 'goal_line_1', 'goal_line_2']).reset_index(drop=True)
+    X = pd.DataFrame(X, columns=['h2h_mean', 'media_goals_home', 'media_goals_away','odds_gl', 'goal_line_1', 'goal_line_2']).reset_index(drop=True)
     type_df = df_temporario[['type_gl_1.0', 'type_gl_2.0']]
     type_df = type_df.reset_index(drop=True)
     X_final = pd.concat([X, type_df], axis=1)
@@ -725,7 +725,7 @@ def prepNNGoal_line(df=df_temp):
 #NN goal_line
 def NN_goal_line(df=df_temp):
     
-    df_temporario = df[['h2h_mean' ,'media_goals_home' ,'media_goals_away','goal_line1_1','goal_line1_2','type_gl1', 'odds_gl1','odds_gl2','goal_line2_1','goal_line2_2','type_gl2', 'gl1_indefinido','gl1_negativo', 'gl1_positivo', 'gl1_reembolso', 'gl2_indefinido', 'gl2_negativo', 'gl2_positivo', 'gl2_reembolso']].copy()
+    df_temporario = df[['home','away','h2h_mean' ,'media_goals_home' ,'media_goals_away','goal_line1_1','goal_line1_2','type_gl1', 'odds_gl1','odds_gl2','goal_line2_1','goal_line2_2','type_gl2', 'gl1_indefinido','gl1_negativo', 'gl1_positivo', 'gl1_reembolso', 'gl2_indefinido', 'gl2_negativo', 'gl2_positivo', 'gl2_reembolso']].copy()
     df_temporario = preparar_df_goallines(df_temporario)
     
     df_temporario = pd.get_dummies(df_temporario, columns=['type_gl'], prefix='type_gl')
@@ -762,11 +762,11 @@ def NN_goal_line(df=df_temp):
     # 4. Treinamento
     hist_bin = modelo_binario_goal_line.fit(x_train_bin, y_train_bin, epochs=30)
     y_pred_probs = modelo_binario_goal_line.predict(x_test_bin)
-    melhor_z_positivo, melhor_acc = encontrar_melhor_z_binario_positivo(y_test_bin, y_pred_probs )
+    melhor_z_positivo = encontrar_melhor_z_binario_positivo(y_test_bin, y_pred_probs )
 
     modelo_binario_goal_line.save("model_binario_goal_line.keras")  # Salva em formato nativo do Keras
 
-    return melhor_z_positivo, melhor_acc
+    return melhor_z_positivo
 
 
 '''
@@ -883,11 +883,11 @@ def NN_double_chance(df=df_temp):
     model_double_chance.fit(x_train, y_train, epochs=30)
 
     y_pred_probs = model_double_chance.predict(x_test)
-    melhor_z_positivo, melhor_acc = encontrar_melhor_z_binario_positivo(y_test, y_pred_probs)
+    melhor_z_positivo = encontrar_melhor_z_binario_positivo(y_test, y_pred_probs)
 
     model_double_chance.save("model_double_chance.keras")  # Salva em formato nativo do Keras
 
-    return melhor_z_positivo, melhor_acc
+    return melhor_z_positivo
 
 #junta draw_no_bet
 def preparar_df_draw_no_bet(df):
@@ -943,7 +943,7 @@ def prepNNDraw_no_bet(df=df_temp):
 #NN draw_no_bet
 def NN_draw_no_bet(df=df_temp):
 
-    df_temporario = df[['home_goals', 'away_goals','media_goals_home', 
+    df_temporario = df[['home','away','home_goals', 'away_goals','media_goals_home', 
        'media_goals_away', 'media_victories_home','media_victories_away', 'home_h2h_mean','away_h2h_mean', 'draw_no_bet_team1', 'odds_dnb1', 'draw_no_bet_team2', 'odds_dnb2', 'dnb1_indefinido' , 'dnb1_perde','dnb1_ganha', 'dnb1_reembolso',
        'dnb2_indefinido', 'dnb2_perde', 'dnb2_ganha', 'dnb2_reembolso']]
     df_temporario = preparar_df_draw_no_bet(df_temporario)
@@ -985,11 +985,11 @@ def NN_draw_no_bet(df=df_temp):
     # 4. Treinamento
     hist_bin = modelo_binario_draw_no_bet.fit(x_train_bin, y_train_bin, epochs=30, validation_split=0.1)
     y_pred_probs = modelo_binario_draw_no_bet.predict(x_test_bin)
-    melhor_z_positivo, melhor_acc = encontrar_melhor_z_binario_positivo(y_test_bin, y_pred_probs )
+    melhor_z_positivo = encontrar_melhor_z_binario_positivo(y_test_bin, y_pred_probs )
 
     modelo_binario_draw_no_bet.save("model_binario_draw_no_bet.keras")  # Salva em formato nativo do Keras
 
-    return melhor_z_positivo, melhor_acc
+    return melhor_z_positivo
     '''
     y = df_temporario[['perde', 'ganha', 'reembolso']].copy()
 
@@ -1011,8 +1011,3 @@ def NN_draw_no_bet(df=df_temp):
 
     return melhor_z_positivo
     '''
-
-
-df_temp = preProcessGeneral(df_temp)
-lista, b = prepNNHandicap(df_temp)
-print(b)
