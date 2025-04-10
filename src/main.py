@@ -7,24 +7,80 @@ from dotenv import load_dotenv
 import os
 import threading
 import NN
+import telegramBot as tb
 
 
 load_dotenv()
 
 api = os.getenv("API_KEY")
+chat_id = os.getenv("CHAT_ID")
 
 
 
 apiclient = BetsAPIClient(api_key=api)
 
 #df = pd.read_csv('src\resultados_novo.csv')
-CSV_FILE = "resultados.csv"
+CSV_FILE = "resultados_novo.csv"
 #lista dos thresholds das nns
 lista_th = []
-#guarda jogos programados do dia, deve zerar ao mudar o dia
+
+#!reseta todo dia as 00:00, guarda jogos programados do dia, deve zerar ao mudar o dia
 programado = []
-#pega uma vez ao virar o dia e depois de 20 em 20 min pra testar
-def pegaJogosDoDia(programado):
+#!pega uma vez ao virar o dia e depois de 20 em 20 min pra testar
+data_hoje = datetime.now().date()
+programado = []
+
+def checa_virada_do_dia():
+    global data_hoje, programado
+    while True:
+        if datetime.now().date() != data_hoje:
+            data_hoje = datetime.now().date()
+            programado = []
+            print("🔄 Novo dia detectado, resetando variáveis...")
+        time.sleep(60)
+
+def agendar_processar_dia_anterior():
+    agora = datetime.now()
+    alvo = datetime.combine(agora.date(), datetime.min.time()) + timedelta(hours=0, minutes=5)
+    delay = (alvo - agora).total_seconds()
+    threading.Timer(delay, processar_dia_anterior).start()
+
+def agendar_criacao_nns():
+    agora = datetime.now()
+    alvo = datetime.combine(agora.date(), datetime.min.time()) + timedelta(hours=0, minutes=15)
+    delay = (alvo - agora).total_seconds()
+
+    def tarefa():
+        df = pd.read_csv(CSV_FILE)
+        criaTodasNNs(df)
+    threading.Timer(delay, tarefa).start()
+
+def loop_pega_jogos():
+    while True:
+        print("🔎 Pegando jogos do dia...")
+        df_jogos = pegaJogosDoDia()
+        if not df_jogos.empty:
+            pegaOddsEvento(df_jogos)
+        time.sleep(20 * 60)  # 20 minutos
+
+def main():
+    # Thread para verificar virada do dia e resetar programado
+    threading.Thread(target=checa_virada_do_dia, daemon=True).start()
+
+    # Agendar processamento do dia anterior
+    agendar_processar_dia_anterior()
+
+    # Agendar criação das NNs
+    agendar_criacao_nns()
+
+    # Iniciar loop que pega os jogos de tempos em tempos
+    threading.Thread(target=loop_pega_jogos, daemon=True).start()
+    threading.Thread(target=tb.start_bot, daemon=True).start()
+    # Mantém o programa vivo
+    while True:
+        time.sleep(60)
+
+def pegaJogosDoDia():
     ids , tempo, time = apiclient.getUpcoming(leagues=apiclient.leagues_ids)
     # adicionar tratamento pra no caso de vazio
     dados = [{"id_jogo": i, "horario": h, "times": k} for i, h, k in zip(ids, tempo, time)]
@@ -35,12 +91,12 @@ def pegaJogosDoDia(programado):
     dados_dataframe['horario'] = dados_dataframe['horario'].astype(int)
     dados_dataframe['send_time'] = dados_dataframe['horario'] - 350
     dados_dataframe = dados_dataframe.sort_values(by="horario").reset_index(drop=True)
-    programados = [dados['id_jogo'] for dado in dados]
+    programados = [dado['id_jogo'] for dado in dados]
     programado.extend(programados)
     return dados_dataframe
 
 
-#roda apos pegar os jogos do dia, mas cada acao do jogo sera executada em seu tempo send_timer
+#!roda apos pegajogosDoDia, mas cada acao do jogo sera executada em seu tempo send_timer
 def pegaOddsEvento(df):
     agora = time.time()  # timestamp atual em segundos
 
@@ -59,18 +115,21 @@ def acao_do_jogo(jogo_id):
     odds = apiclient.filtraOddsNovo([jogo_id])
     df_odds = apiclient.transform_betting_data(odds)
     df_odds = NN.preProcessGeneral(df_odds)
+    print(df_odds)
     #implementar as previsões e requisitos (threshold e odd)
-    lista_bets_a_enviar_df = preve(df_linha=df_odds)
+    lista_bets_a_enviar = preve(df_linha=df_odds)
+    if len(lista_bets_a_enviar) != 0:
+        tb.sendMessage(chat_id, lista_bets_a_enviar)
+    else:
+        return 0
     
 
-
+#! roda todo dia as 00:15
 def criaTodasNNs(df):
     global lista_th 
     lista_th = NN.criaNNs(df)
 
 def preve(df_linha):
-    
-    
     prepOverUnder, dados_OU = NN.prepNNOver_under(df_linha)
     prepHandicap, dados_ah = NN.prepNNHandicap(df_linha)
     prepGoal_line, dados_gl = NN.prepNNGoal_line(df_linha)
@@ -86,31 +145,51 @@ def preve(df_linha):
     list_true = []
     if lista_preds_true[0] and lista_preds_true[1]:
         dados_OU['tipo'] = lista_preds_true[0]
+        dados_OU['linha'] = '2.5'
+        dados_OU = dados_OU.rename(columns={'odds_goals_over1': 'odds_over'})
+        dados_OU = dados_OU.rename(columns={'odd_goals_under1': 'odds_under'})
         list_true.append(dados_OU)
     if lista_preds_true[2] and lista_preds_true[3]:
         if (lista_preds_true[2] == 1):
-            dados_temp = dados_ah.iloc[0,:].copy()      
+            dados_temp = dados_ah.iloc[0,:].copy()     
+            dados_temp = dados_temp['linha'] = dados_temp['asian_handicap_1'] + ' , ' + dados_temp['asian_handicap_2']
+            dados_temp = dados_temp.drop(columns=['asian_handicap_1', 'asian_handicap_2'])
+            dados_temp = dados_temp.rename(columns={'team_ah': 'time'})
             list_true.append(dados_temp)
         elif (lista_preds_true[2] == 2):
             dados_temp = dados_ah.iloc[1,:].copy()
+            dados_temp = dados_temp['linha'] = dados_temp['asian_handicap_1'] + ' , ' + dados_temp['asian_handicap_2']
+            dados_temp = dados_temp.drop(columns=['asian_handicap_1', 'asian_handicap_2'])
+            dados_temp = dados_temp.rename(columns={'team_ah': 'time'})
             list_true.append(dados_temp) 
     if lista_preds_true[4] and lista_preds_true[5]:
         if (lista_preds_true[4] == 1):
-            dados_temp = dados_gl.iloc[0,:].copy()      
+            dados_temp = dados_gl.iloc[0,:].copy()   
+            dados_temp = dados_temp['linha'] = dados_temp['goal_line_1'] + ' , ' + dados_temp['goal_line_2']
+            dados_temp = dados_temp.drop(columns=['goal_line_1', 'goal_line_2'])
+            dados_temp = dados_temp.rename(columns={'type_gl': 'tipo over(0)/under(1)'})  
+            dados_temp = dados_temp.rename(columns={'odds_gl': 'odds'})  
             list_true.append(dados_temp)
         elif (lista_preds_true[4] == 2):
-            dados_temp = dados_gl.iloc[1,:].copy()      
+            dados_temp = dados_gl.iloc[1,:].copy()   
+            dados_temp = dados_temp['linha'] = dados_temp['goal_line_1'] + ' , ' + dados_temp['goal_line_2']
+            dados_temp = dados_temp.drop(columns=['goal_line_1', 'goal_line_2'])
+            dados_temp = dados_temp.rename(columns={'type_gl': 'tipo over(0)/under(1)'})  
+            dados_temp = dados_temp.rename(columns={'odds_gl': 'odds'})     
             list_true.append(dados_temp)
         
     if lista_preds_true[6] and lista_preds_true[7]:
         if (lista_preds_true[6] == 1):
             dados_temp = dados_dc.iloc[0,:].copy()
+            dados_temp = dados_temp.rename(columns={'double_chance': 'double_chance(home=1,away=2,both=3)'})  
             list_true.append(dados_temp)
         elif (lista_preds_true[6] == 2):
             dados_temp = dados_dc.iloc[1,:].copy()
+            dados_temp = dados_temp.rename(columns={'double_chance': 'double_chance(home=1,away=2,both=3)'})  
             list_true.append(dados_temp)
         elif (lista_preds_true[6] == 3):
             dados_temp = dados_dc.iloc[2,:].copy()
+            dados_temp = dados_temp.rename(columns={'double_chance': 'double_chance(home=1,away=2,both=3)'})  
             list_true.append(dados_temp)
     if lista_preds_true[8] and lista_preds_true[9]:
         if (lista_preds_true[8] == 1):
@@ -118,11 +197,25 @@ def preve(df_linha):
             list_true.append(dados_temp)
         elif (lista_preds_true[8] == 2):
             dados_temp = dados_dnb.iloc[1,:].copy()
+            dados_temp = dados_temp.rename(columns={'draw_no_bet_team': 'draw_no_bet_team(home=1,away=2)'})  
             list_true.append(dados_temp)
-        
-    return list_true
+    list_final = []
+    for df in list_true:
+        men = df_para_string(df)
+        list_final.append(men)
+    return list_final
 
 
+def df_para_string(df):
+    mensagens = []
+
+    for _, row in df.iterrows():
+        msg = ""
+        for col in df.columns:
+            msg += f"{col}: {row[col]}\n"
+        mensagens.append(msg.strip())  # remove o \n final
+
+    return mensagens
 
 
 def predicta_over_under(prepOverUnder_df, dados):
@@ -195,10 +288,7 @@ def predicta_draw_no_bet(pred_draw_no_bet_df, dados):
         return None, False
 
 
-
-
-
-
+#! roda as 00:05
 def processar_dia_anterior():
     dia = apiclient.dia_anterior()
     print(f"🔄 Processando jogos do dia {dia}")
@@ -248,5 +338,5 @@ def processar_dia_anterior():
     except Exception as e:
         print(f"❌ Erro ao processar dia {dia}: {e}")
 
-df = pegaJogosDoDia()
-print(df)
+if __name__ == "__main__":
+    main()
