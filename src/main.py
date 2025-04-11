@@ -10,6 +10,9 @@ import NN
 import telegramBot as tb
 import logging
 
+#PREPROCESS PROCESSA COM CLASSIFICAÇAO, PRA PREVISAO NAO SERVE, DEVE CRIAR OUTRA
+#ALTERAR O GET_FIFA_MATCHES PRA RETORNAR O ID DOS TIMES
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,

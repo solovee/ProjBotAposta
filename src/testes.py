@@ -170,6 +170,7 @@ df_ultimos_5 = df_filtrado.tail(10)
 print(df_ultimos_5[['home', 'away', 'gols_time']])  # Exibir só as colunas principais
 
 '''
+'''
 import time
 import os
 import pandas as pd
@@ -270,3 +271,26 @@ def processar_dia_anterior():
 
     except Exception as e:
         print(f"❌ Erro ao processar dia {dia}: {e}")
+'''
+import pandas as pd
+import requests
+from api import BetsAPIClient
+from dotenv import load_dotenv
+import os
+from datetime import datetime, timedelta
+import numpy as np
+import NN
+import tensorflow as tf
+#'10048705', 'Esoccer GT Leagues - 12 mins play' ;'10047781', 'Esoccer Battle - 8 mins play'
+
+#testar pegar evento 171732570 mais tarde   171790606  172006772 9723272 172006783
+load_dotenv()
+
+api = os.getenv("API_KEY")
+
+
+
+apiclient = BetsAPIClient(api_key=api)
+
+ups = apiclient.getUpcoming(leagues=apiclient.leagues_ids, day='20250409')
+print(ups)

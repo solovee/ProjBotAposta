@@ -227,8 +227,10 @@ class BetsAPIClient:
         results = []
         ts_list = []
         times = []
-
+        print('entrei')
+        print(leagues)
         for league in leagues:
+            print('entrastes')
             page = 1
             while True:
                 res, ts, tm, total_pages = self.get_fifa_matches_with_total(league_id=league, page=page, day=day)
@@ -250,6 +252,7 @@ class BetsAPIClient:
 
 
     def get_fifa_matches_with_total(self, sport_id: int = 1, league_id: int = 10048705, day: str = data_atual(), page: int = 1):
+        print(day)
         url = f'{self.base_url}upcoming'
         params = {
             'token': self.api_key,
@@ -597,7 +600,7 @@ class BetsAPIClient:
 
         return linhas_desreguladas
     
-    def transform_betting_data(odds_data):
+    def transform_betting_data(self, odds_data):
         """Transforma os dados de odds em um DataFrame estruturado."""
         rows = []
         
