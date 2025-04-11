@@ -171,7 +171,7 @@ def acao_do_jogo(row):
         df_odds = apiclient.transform_betting_data(odds)
         df_odds['home'] = row['home']
         df_odds['away'] = row['away']
-        df_odds = NN.preProcessGeneral(df_odds)
+        df_odds = NN.preProcessGeneral_x(df_odds)
         
         #implementar as previsões e requisitos (threshold e odd)
         lista_bets_a_enviar = preve(df_odds)
@@ -185,7 +185,6 @@ def acao_do_jogo(row):
     except Exception as e:
         logger.error(f"❌ Erro ao processar jogo {row['id_jogo']}: {str(e)}")
         return 0
-    
 
 #! roda todo dia as 00:15
 def criaTodasNNs(df):
@@ -201,11 +200,11 @@ def preve(df_linha):
         if not lista_th:
             logger.warning("⚠️ Thresholds de modelos ainda não definidos")
             return []
-        prepOverUnder, dados_OU = NN.prepNNOver_under(df_linha)
-        prepHandicap, dados_ah = NN.prepNNHandicap(df_linha)
-        prepGoal_line, dados_gl = NN.prepNNGoal_line(df_linha)
-        prepDouble_chance, dados_dc = NN.prepNNDouble_chance(df_linha)
-        prepDraw_no_bet, dados_dnb = NN.prepNNDraw_no_bet(df_linha)
+        prepOverUnder, dados_OU = NN.prepNNOver_under_X(df_linha)
+        prepHandicap, dados_ah = NN.prepNNHandicap_X(df_linha)
+        prepGoal_line, dados_gl = NN.prepNNGoal_line_X(df_linha)
+        prepDouble_chance, dados_dc = NN.prepNNDouble_chance_X(df_linha)
+        prepDraw_no_bet, dados_dnb = NN.prepNNDraw_no_bet_X(df_linha)
 
         tipo_over_under, res_under_over = predicta_over_under(prepOverUnder, dados_OU)
         time_handicap, res_handicap = predicta_handicap(prepHandicap, dados_ah)
