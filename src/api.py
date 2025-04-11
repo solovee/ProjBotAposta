@@ -10,9 +10,17 @@ import pandas as pd
 
 
 # Obter a data atual e formatar como YYYYMMDD
-data_atual = datetime.now().strftime('%Y%m%d')
+def data_atual():
+
+    data_atual = datetime.now().strftime('%Y%m%d')
+    return data_atual
 
 # upcoming(ids jogos) -> filtraOdds(id, odds) -> getHist(historico) -> calculaMedia(team_stats(mediaTotal, statsDosTimes)) -> encontraLinhasDesreguladas
+
+def dia_anterior():
+    """Retorna o dia anterior ao atual no formato YYYYMMDD."""
+    ontem = datetime.now() - timedelta(days=1)
+    return ontem.strftime("%Y%m%d")
 
 
 class BetsAPIClient:
@@ -43,11 +51,7 @@ class BetsAPIClient:
 
 
     #DATES
-
-    def dia_anterior():
-        """Retorna o dia anterior ao atual no formato YYYYMMDD."""
-        ontem = datetime.now() - timedelta(days=1)
-        return ontem.strftime("%Y%m%d")
+    
     
 
     def ultimos_90_dias(data_str: str):
@@ -103,7 +107,7 @@ class BetsAPIClient:
                     for a in r:
                         results.append(a['id'])
 
-        print(results)
+        #print(results)
         return results, di
 
     
@@ -181,7 +185,7 @@ class BetsAPIClient:
                 response = self.get_odds_with_retry(event_id)
                 
                 if not response or "results" not in response or not response["results"]:
-                    print(f"{RED}Erro: Dados ausentes para o evento {event_id}{RESET}")
+                    #print(f"{RED}Erro: Dados ausentes para o evento {event_id}{RESET}")
                     return event_id, None
 
                 odds_data = response["results"][0]
@@ -193,7 +197,7 @@ class BetsAPIClient:
                     odds = odds_data["main"]["sp"]["goals_over_under"]
                 
                 if not odds or "odds" not in odds or len(odds["odds"]) < 2:
-                    print(f"{RED}Odds não encontradas para o evento {event_id}{RESET}")
+                    #print(f"{RED}Odds não encontradas para o evento {event_id}{RESET}")
                     return event_id, None
                 
                 games = {
@@ -216,32 +220,64 @@ class BetsAPIClient:
                     game[event_id] = result
                     done += 1
         
-        print(f"Total de eventos processados: {done}/{len(ids)}")
+        #print(f"Total de eventos processados: {done}/{len(ids)}")
         return game
+    
+    def getUpcoming(self, sport_id: int = 1, leagues: List[Any] = [], day: str = data_atual()) -> List[Any]:
+        results = []
+        ts_list = []
+        times = []
 
+        for league in leagues:
+            page = 1
+            while True:
+                res, ts, tm, total_pages = self.get_fifa_matches_with_total(league_id=league, page=page, day=day)
+                print(total_pages)
+                results.extend(res)
+                ts_list.extend(ts)
+                times.extend(tm)
+                if page >= total_pages:
+                    break
+                page += 1
+
+        print(results)
+
+        return results, ts_list, times
 
 
     #LIVE
 
-    def getUpcoming(self, sport_id: int = 1, leagues: List[Any] = [], day: str = data_atual) -> List[Any]:
-        '''pega jogos futuros'''
 
-        results = []
-        ts_list = []
-        times = []
-        for league in leagues:
-            pages = self.pages(league_id=league)
-            for page in range(1, pages+1):
-                res, ts, tm = self.get_fifa_matches(league_id = league, page = page)
-                results.extend(res)
-                ts_list.extend(ts)
-                times.extend(tm)
-        return results, ts_list, times
 
-        
+    def get_fifa_matches_with_total(self, sport_id: int = 1, league_id: int = 10048705, day: str = data_atual(), page: int = 1):
+        url = f'{self.base_url}upcoming'
+        params = {
+            'token': self.api_key,
+            'sport_id': sport_id,
+            'league_id': league_id,
+            'day': day,
+            'page': page
+        }
+        response = requests.get(url, params=params)
+        self.chamadas += 1
+        resp = response.json()
+
+        pager = resp.get('pager', {})
+        total_pages = ceil(pager.get('total', 0) / pager.get('per_page', 1))
+
+        res = [x['id'] for x in resp['results'] if (x.get('ss') is None) or x.get('time_status') == 0]
+        ts = [x['time'] for x in resp['results'] if (x.get('ss') is None) or x.get('time_status') == 0]
+        times = [
+            (x['home']['name'], x['away']['name'])
+            for x in resp['results']
+            if (x.get('ss') is None) or (x.get('time_status') == 0)
+        ]
+
+        return res, ts, times, total_pages
+
         
     
-    def pages(self, sport_id: int = 1,league_id: int = 10048705, day: str = data_atual) -> int:
+    def pages(self, sport_id: int = 1,league_id: int = 10048705, day: str = data_atual()) -> int:
         '''pega o numero de paginas da requisiçao'''
 
         url = f'{self.base_url}upcoming'
@@ -254,6 +290,8 @@ class BetsAPIClient:
         response = requests.get(url, params=params)
         self.chamadas += 1
         resp = response.json()
+        c = resp['pager']['total']
+        print(f'tot: {c}')
         
         res = ceil(resp['pager']['total'] / resp['pager']['per_page'])
 
@@ -265,7 +303,7 @@ class BetsAPIClient:
     
     
 
-    def get_fifa_matches(self, sport_id: int = 1,league_id: int = 10048705, day: str = data_atual, page: int = 1) -> Dict[str, Any]:
+    def get_fifa_matches(self, sport_id: int = 1,league_id: int = 10048705, day: str = data_atual(), page: int = 1) -> Dict[str, Any]:
         """
         pega jogos de FIFA 8 e 12 minutos da BetsAPI.
         """
@@ -288,7 +326,7 @@ class BetsAPIClient:
         times = [
             (x['home']['name'], x['away']['name'])
             for x in resp['results']
-            if (x.get('ss') is None) or (x.get('time_status') == '0')
+            if (x.get('ss') is None) or (x.get('time_status') == 0)
         ]
 
         
@@ -303,7 +341,7 @@ class BetsAPIClient:
         done = 0
         RED = "\033[31m"
         RESET = "\033[0m"
-        print(ids)
+        
         games = {}
 
         for id in ids:
@@ -322,14 +360,14 @@ class BetsAPIClient:
                     raise KeyError("goals_over_under não encontrado em 'goals' nem em 'main'.")
 
                 games[id] = odds
-                print(f'{RED}{id}{RESET}', odds)
+                #print(f'{RED}{id}{RESET}', odds)
                 done += 1
 
             except KeyError:
                 print(f'KeyError, rever filtragem de odds para o evento {id}')
                 
 
-        print(len(ids) - done)
+        #print(len(ids) - done)
         return games
     
     
@@ -337,7 +375,7 @@ class BetsAPIClient:
         done = 0
         RED = "\033[31m"
         RESET = "\033[0m"
-        print(ids)
+        #print(ids)
         games = {}
 
         for id in ids:
@@ -406,7 +444,7 @@ class BetsAPIClient:
                 game_data = {k: v for k, v in game_data.items() if v}
                 
                 games[id] = game_data
-                print(f'{RED}{id}{RESET}', game_data)
+                #print(f'{RED}{id}{RESET}', game_data)
                 done += 1
 
             except KeyError as e:
@@ -414,7 +452,7 @@ class BetsAPIClient:
             except Exception as e:
                 print(f'Erro inesperado ao processar evento {id}: {e}')
 
-        print(f"Eventos processados: {done}/{len(ids)}")
+        #print(f"Eventos processados: {done}/{len(ids)}")
         return games
 
 

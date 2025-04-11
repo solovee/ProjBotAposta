@@ -524,6 +524,8 @@ def prepNNOver_under(df=df_temp):
     df_temporario = df[['home','away','odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean','res_goals_over_under']].copy()
     df_temporario.dropna(inplace=True)
     z = df_temporario[['home','away','odd_goals_over1', 'odd_goals_under1']].copy()
+    if len(z) == 1:
+        z = z.iloc[[0]].copy()
     X = df[['odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean']]
     X = normalizacao(X)
     X = pd.DataFrame(X, columns=['odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean'])
@@ -590,6 +592,8 @@ def prepNNHandicap(df=df_temp):
     df_temporario.dropna(inplace=True)
     
     z = df_temporario[['home','away','team_ah','asian_handicap_1', 'asian_handicap_2', 'odds']]
+    if len(z) == 1:
+        z = z.iloc[[0]].copy()
     df_temporario = pd.get_dummies(df_temporario, columns=['team_ah'], prefix='team_ah')
     X = df_temporario[['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds']]
     X = normalizacao(X)
@@ -713,6 +717,8 @@ def prepNNGoal_line(df=df_temp):
     df_temporario = df_temporario[df_temporario['indefinido'] == False]
     df_temporario.dropna(inplace=True)
     z = df_temporario[['home','away','goal_line_1', 'goal_line_2','type_gl', 'odds_gl']].copy()
+    if len(z) == 1:
+        z = z.iloc[[0]].copy()
     df_temporario = pd.get_dummies(df_temporario, columns=['type_gl'], prefix='type_gl')
     X = df_temporario[['h2h_mean', 'media_goals_home', 'media_goals_away','odds_gl', 'goal_line_1', 'goal_line_2']].copy()
     X = normalizacao(X)
@@ -829,6 +835,8 @@ def prepNNDouble_chance(df=df_temp):
 
     df_temporario.dropna(inplace=True)
     z = df_temporario[['home','away','double_chance', 'odds']].copy()
+    if len(z) == 1:
+        z = z.iloc[[0]].copy()
     df_temporario = pd.get_dummies(df_temporario, columns=['double_chance'], prefix='double_chance_type')
 
     X = df_temporario[['media_goals_home', 'media_goals_away', 'media_victories_home',
@@ -925,6 +933,8 @@ def prepNNDraw_no_bet(df=df_temp):
 
     df_temporario.dropna(inplace=True)
     z = df_temporario[['home','away','draw_no_bet_team','odds']].copy()
+    if len(z) == 1:
+        z = z.iloc[[0]].copy()
     df_temporario = pd.get_dummies(df_temporario, columns=['draw_no_bet_team'], prefix='draw_no_bet_team')
     
 

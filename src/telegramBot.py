@@ -33,6 +33,3 @@ def start_bot():
 
     print("🤖 Bot rodando...")
     app.run_polling()
-
-if __name__ == "__main__":
-    main()
