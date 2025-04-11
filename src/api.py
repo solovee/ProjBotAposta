@@ -227,24 +227,26 @@ class BetsAPIClient:
         results = []
         ts_list = []
         times = []
+        times_id = []
         print('entrei')
         print(leagues)
         for league in leagues:
             print('entrastes')
             page = 1
             while True:
-                res, ts, tm, total_pages = self.get_fifa_matches_with_total(league_id=league, page=page, day=day)
+                res, ts, tm, ti, total_pages = self.get_fifa_matches_with_total(league_id=league, page=page, day=day)
                 print(total_pages)
                 results.extend(res)
                 ts_list.extend(ts)
                 times.extend(tm)
+                times_id.extend(ti)
                 if page >= total_pages:
                     break
                 page += 1
 
         print(results)
 
-        return results, ts_list, times
+        return results, ts_list, times, times_id
 
 
     #LIVE
@@ -270,13 +272,19 @@ class BetsAPIClient:
 
         res = [x['id'] for x in resp['results'] if (x.get('ss') is None) or x.get('time_status') == 0]
         ts = [x['time'] for x in resp['results'] if (x.get('ss') is None) or x.get('time_status') == 0]
+
         times = [
             (x['home']['name'], x['away']['name'])
             for x in resp['results']
             if (x.get('ss') is None) or (x.get('time_status') == 0)
         ]
+        times_id = [
+            (x['home']['id'], x['away']['id'])
+            for x in resp['results']
+            if (x.get('ss') is None) or (x.get('time_status') == 0)
+        ]
 
-        return res, ts, times, total_pages
+        return res, ts, times, times_id, total_pages
 
         
     

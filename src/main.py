@@ -118,13 +118,13 @@ def main():
 
 def pegaJogosDoDia():
     try:
-        ids , tempo, time = apiclient.getUpcoming(leagues=apiclient.leagues_ids)
-                
+        ids , tempo, time, times_id = apiclient.getUpcoming(leagues=apiclient.leagues_ids)
+               
         if not ids:
             logger.warning("⚠️ Nenhum ID de jogo retornado pela API")
             return pd.DataFrame()
         # adicionar tratamento pra no caso de vazio
-        dados = [{"id_jogo": i, "horario": h, "times": k} for i, h, k in zip(ids, tempo, time)]
+        dados = [{"id_jogo": i, "horario": h, "times": k, "home": z, "away": t} for i, h, k, z, t in zip(ids, tempo, time, times_id[0], times_id[1])]
         
         dados_dataframe = pd.DataFrame(dados)
         dados_dataframe = dados_dataframe[~dados_dataframe['id_jogo'].isin(programado)]
@@ -154,21 +154,23 @@ def pegaOddsEvento(df):
         delay = row['send_time'] - agora  # tempo até a ação acontecer
         delay = max(0, delay)  # evita delays negativos
 
-        threading.Timer(delay, acao_do_jogo, args=(row['id_jogo'],)).start()
+        threading.Timer(delay, acao_do_jogo, args=(row,)).start()
         print(f"Agendado jogo {row['id_jogo']} para {datetime.fromtimestamp(row['send_time'])}")
 
 
 
 
 # Função que será executada para cada jogo
-def acao_do_jogo(jogo_id):
+def acao_do_jogo(row):
     try:
-        logger.info(f"⚽ Processando jogo {jogo_id}")
-        odds = apiclient.filtraOddsNovo([jogo_id])
+        logger.info(f"⚽ Processando jogo {row['id_jogo']}")
+        odds = apiclient.filtraOddsNovo([row['id_jogo']])
         if not odds:
-            logger.warning(f"⚠️ Nenhuma odd encontrada para o jogo {jogo_id}")
+            logger.warning(f"⚠️ Nenhuma odd encontrada para o jogo {row['id_jogo']}")
             return 0
         df_odds = apiclient.transform_betting_data(odds)
+        df_odds['home'] = row['home']
+        df_odds['away'] = row['away']
         df_odds = NN.preProcessGeneral(df_odds)
         
         #implementar as previsões e requisitos (threshold e odd)
@@ -181,7 +183,7 @@ def acao_do_jogo(jogo_id):
             logger.info("ℹ️ Nenhuma aposta recomendada para este jogo")
 
     except Exception as e:
-        logger.error(f"❌ Erro ao processar jogo {jogo_id}: {str(e)}")
+        logger.error(f"❌ Erro ao processar jogo {row['id_jogo']}: {str(e)}")
         return 0
     
 
