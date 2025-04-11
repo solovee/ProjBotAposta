@@ -10,8 +10,8 @@ import NN
 import telegramBot as tb
 import logging
 
-#PREPROCESS PROCESSA COM CLASSIFICAÇAO, PRA PREVISAO NAO SERVE, DEVE CRIAR OUTRA
-#ALTERAR O GET_FIFA_MATCHES PRA RETORNAR O ID DOS TIMES
+#tentar arrumar as estatisticas
+#ver os team_ah e type_gl
 
 # Configure logging
 logging.basicConfig(
@@ -194,7 +194,7 @@ def criaTodasNNs(df):
     logger.info(f"📊 Thresholds definidos: {lista_th}")
 
 def preve(df_linha):
-    
+
     logger.debug("🔮 Fazendo previsões para o jogo atual...")
     try:
         if not lista_th:

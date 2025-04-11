@@ -65,12 +65,13 @@ def criaNNs(df=df_temp):
     return lista
 
 
-def preProcessEstatisticasGerais(df=df_temp):
+def preProcessEstatisticasGerais(df):
+    df_temp = pd.read_csv(r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_novo.csv")
 
     df[['media_goals_home', 'media_victories_home', 'media_goals_away', 'media_victories_away']] = df.apply(lambda row: estatisticas_ultimos_5(row['home'], row['away']), axis=1)
     # Aplicar a função ao DataFrame
     medias = df.apply(
-        lambda row: calcular_medias_h2h(df_temp, row['home'], row['away'], row.name),
+        lambda row: calcular_medias_h2h(row['home'], row['away'], row.name),
         axis=1
     )
     # Adicionar as novas colunas
@@ -207,6 +208,8 @@ def split(X_standardized, y):
 
 def estatisticas_ultimos_5(home_team, away_team):
     # Filtrar os últimos 10 jogos do home_team apenas como mandante
+    df_temp = pd.read_csv(r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_novo.csv")
+
     df_home = df_temp[df_temp['home'] == home_team].head(5)
     media_gols_home = df_home['home_goals'].mean() if not df_home.empty else None
     vitorias_home = (df_home['home_goals'] > df_home['away_goals']).mean() if not df_home.empty else None
@@ -220,7 +223,7 @@ def estatisticas_ultimos_5(home_team, away_team):
 
 
 
-def calcular_medias_h2h(df, home_id, away_id, index):
+def calcular_medias_h2h(home_id, away_id, index):
     """
     Calcula três estatísticas de confronto direto:
     - h2h_mean: média de gols totais (home_goals + away_goals) nos confrontos anteriores
@@ -229,8 +232,11 @@ def calcular_medias_h2h(df, home_id, away_id, index):
     
     Considera apenas jogos anteriores (linhas abaixo no DataFrame)
     """
+    df = pd.read_csv(r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_novo.csv")
+
     # Filtrar todos os confrontos entre os times
-    confrontos = df[((df['home'] == home_id) & (df['away'] == away_id))]
+    confrontos = df[((df['home'] == home_id) & (df['away'] == away_id))
+                    | ((df['home'] == away_id) & (df['away'] == home_id))]
     if confrontos.empty:
         confrontos = df[(((df['home'] == home_id) & (df['away'] == away_id)) | ((df['home'] == away_id) & (df['away'] == home_id)))]
     
@@ -566,7 +572,6 @@ def prepNNOver_under_X(df=df_temp):
     if len(z) == 1:
         z = z.iloc[[0]].copy()
     X = df[['odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean']]
-    print(f'over_under {df}')
     try:
         X = normalizacao(X)
         X = pd.DataFrame(X, columns=['odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean'])
@@ -668,11 +673,13 @@ def preparar_df_handicaps_X(df):
     return df_final
 
 def prepNNHandicap_X(df=df_temp):
-    print(df.columns)
     df_temporario = df[['home','away','media_goals_home', 'media_goals_away','home_h2h_mean', 'away_h2h_mean',
                        'asian_handicap1_1', 'asian_handicap1_2','team_ah1','odds_ah1', 
                        'asian_handicap2_1', 'asian_handicap2_2','team_ah2','odds_ah2']].copy()
+    print('vendo nulls')
+    print(df_temporario)
     df_temporario = preparar_df_handicaps_X(df_temporario)
+ 
 
     df_temporario.dropna(inplace=True)
     
@@ -680,6 +687,12 @@ def prepNNHandicap_X(df=df_temp):
     if len(z) == 1:
         z = z.iloc[[0]].copy()
     df_temporario = pd.get_dummies(df_temporario, columns=['team_ah'], prefix='team_ah')
+   
+
+    for col in ['team_ah_1', 'team_ah_2']:
+        if col not in df_temporario.columns:
+            df_temporario[col] = type(col[-1])
+
     X = df_temporario[['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds']]
 
     try:
@@ -687,8 +700,7 @@ def prepNNHandicap_X(df=df_temp):
         X = pd.DataFrame(X, columns=['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds']).reset_index(drop=True)
     except:
         print('faltou dados handicap')
-    print(df_temporario.columns)
-    type_df = df_temporario[['team_ah_1.0',	'team_ah_2.0']]
+        type_df = df_temporario[['team_ah_1',	'team_ah_2']]
     type_df = type_df.reset_index(drop=True)
     X_final = pd.concat([X, type_df], axis=1)
     return X_final, z
