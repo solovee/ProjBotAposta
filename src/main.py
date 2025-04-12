@@ -84,6 +84,7 @@ def agendar_criacao_nns():
         df = pd.read_csv(CSV_FILE)
         criaTodasNNs(df)
         logger.info("✅ Modelos de rede neural criados com sucesso")
+        print(lista_th)
 
     threading.Timer(delay, tarefa).start()
 
@@ -125,7 +126,8 @@ def pegaJogosDoDia():
             return pd.DataFrame()
         # adicionar tratamento pra no caso de vazio
         dados = [{"id_jogo": i, "horario": h, "times": k, "home": z, "away": t} for i, h, k, z, t in zip(ids, tempo, time, times_id[0], times_id[1])]
-        
+        print(dados)
+        print(programado)
         dados_dataframe = pd.DataFrame(dados)
         dados_dataframe = dados_dataframe[~dados_dataframe['id_jogo'].isin(programado)]
         if dados_dataframe.empty:
@@ -201,25 +203,52 @@ def preve(df_linha):
         if not lista_th:
             logger.warning("⚠️ Thresholds de modelos ainda não definidos")
             return []
+        
         prepOverUnder, dados_OU = NN.prepNNOver_under_X(df_linha)
+        if prepOverUnder is None:
+            tipo_over_under, res_under_over = None, None
+        else:
+            tipo_over_under, res_under_over = predicta_over_under(prepOverUnder, dados_OU)
+        
         prepHandicap, dados_ah = NN.prepNNHandicap_X(df_linha)
+        if prepHandicap is None:
+            time_handicap, res_handicap = None, None
+        else:
+            time_handicap, res_handicap = predicta_handicap(prepHandicap, dados_ah)
+        
         prepGoal_line, dados_gl = NN.prepNNGoal_line_X(df_linha)
+        if prepGoal_line is None:
+            linha_gl, res_goal_line = None, None
+        else:
+            linha_gl, res_goal_line = predicta_goal_line(prepGoal_line, dados_gl)
+        
         prepDouble_chance, dados_dc = NN.prepNNDouble_chance_X(df_linha)
+        if prepDouble_chance is None:
+            type_dc, res_double_chance = None, None
+        else:
+            type_dc, res_double_chance = predicta_double_chance(prepDouble_chance, dados_dc)
+        
         prepDraw_no_bet, dados_dnb = NN.prepNNDraw_no_bet_X(df_linha)
+        if prepDraw_no_bet is None:
+            res_draw_no_bet = None
+        else:
+            res_draw_no_bet = predicta_draw_no_bet(prepDraw_no_bet, dados_dnb)
 
-        tipo_over_under, res_under_over = predicta_over_under(prepOverUnder, dados_OU)
-        time_handicap, res_handicap = predicta_handicap(prepHandicap, dados_ah)
-        linha_gl, res_goal_line = predicta_goal_line(prepGoal_line, dados_gl)
-        type_dc, res_double_chance = predicta_double_chance(prepDouble_chance, dados_dc)
-        res_draw_no_bet = predicta_draw_no_bet(prepDraw_no_bet, dados_dnb)
-        lista_preds_true = [tipo_over_under, res_under_over,time_handicap, res_handicap, linha_gl, res_goal_line, type_dc, res_double_chance, res_draw_no_bet]
+        lista_preds_true = [tipo_over_under, res_under_over, time_handicap, res_handicap, linha_gl, res_goal_line, type_dc, res_double_chance, res_draw_no_bet]
+        
+        print('PREVE')
+        print(df_linha)
+        print(lista_preds_true)
+        
         list_true = []
+        
         if lista_preds_true[0] and lista_preds_true[1]:
             dados_OU['tipo'] = lista_preds_true[0]
             dados_OU['linha'] = '2.5'
             dados_OU = dados_OU.rename(columns={'odds_goals_over1': 'odds_over'})
             dados_OU = dados_OU.rename(columns={'odd_goals_under1': 'odds_under'})
             list_true.append(dados_OU)
+        
         if lista_preds_true[2] and lista_preds_true[3]:
             if (lista_preds_true[2] == 1):
                 dados_temp = dados_ah.iloc[[0]].copy()     
@@ -233,6 +262,7 @@ def preve(df_linha):
                 dados_temp = dados_temp.drop(columns=['asian_handicap_1', 'asian_handicap_2'])
                 dados_temp = dados_temp.rename(columns={'team_ah': 'time'})
                 list_true.append(dados_temp) 
+        
         if lista_preds_true[4] and lista_preds_true[5]:
             if (lista_preds_true[4] == 1):
                 dados_temp = dados_gl.iloc[[0]].copy()   
@@ -248,7 +278,7 @@ def preve(df_linha):
                 dados_temp = dados_temp.rename(columns={'type_gl': 'tipo over(0)/under(1)'})  
                 dados_temp = dados_temp.rename(columns={'odds_gl': 'odds'})     
                 list_true.append(dados_temp)
-            
+        
         if lista_preds_true[6] and lista_preds_true[7]:
             if (lista_preds_true[6] == 1):
                 dados_temp = dados_dc.iloc[[0]].copy()
@@ -262,6 +292,7 @@ def preve(df_linha):
                 dados_temp = dados_dc.iloc[[2]].copy()
                 dados_temp = dados_temp.rename(columns={'double_chance': 'double_chance(home=1,away=2,both=3)'})  
                 list_true.append(dados_temp)
+        
         if lista_preds_true[8] and lista_preds_true[9]:
             if (lista_preds_true[8] == 1):
                 dados_temp = dados_dnb.iloc[[0]].copy()
@@ -270,15 +301,18 @@ def preve(df_linha):
                 dados_temp = dados_dnb.iloc[[1]].copy()
                 dados_temp = dados_temp.rename(columns={'draw_no_bet_team': 'draw_no_bet_team(home=1,away=2)'})  
                 list_true.append(dados_temp)
+
         list_final = []
         for df in list_true:
             men = df_para_string(df)
             list_final.append(men)
+        
         return list_final
-    
+
     except Exception as e:
-        logger.error(f"❌ Erro durante a previsão: {str(e)}")
+        logger.error(f"❌ Erro durante a previsão: {str(e)} {df_linha}")
         return []
+
 
 
 def df_para_string(df):
@@ -317,7 +351,7 @@ def predicta_handicap(prepHandicap_df, dados):
     else:
         return (None, False)
 def predicta_goal_line(prepGoal_line_df, dados):
-    model_goal_line = tf.keras.models.load_model('mode_binario_goal_line.keras')
+    model_goal_line = tf.keras.models.load_model('model_binario_goal_line.keras')
 
     preds = model_goal_line.predict(prepGoal_line_df)
 
@@ -331,7 +365,7 @@ def predicta_goal_line(prepGoal_line_df, dados):
     else:
         return (None, False)
 def predicta_double_chance(pred_double_chance_df, dados):
-    model_double_chance = tf.keras.models.load_model('mode_double_chance.keras')
+    model_double_chance = tf.keras.models.load_model('model_double_chance.keras')
     preds = model_double_chance.predict(pred_double_chance_df)
 
     pred_double_chance_1 = preds[0]  
