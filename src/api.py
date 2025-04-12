@@ -228,14 +228,11 @@ class BetsAPIClient:
         ts_list = []
         times = []
         times_id = []
-        print('entrei')
-        print(leagues)
         for league in leagues:
-            print('entrastes')
             page = 1
             while True:
                 res, ts, tm, ti, total_pages = self.get_fifa_matches_with_total(league_id=league, page=page, day=day)
-                print(total_pages)
+                
                 results.extend(res)
                 ts_list.extend(ts)
                 times.extend(tm)
@@ -244,7 +241,7 @@ class BetsAPIClient:
                     break
                 page += 1
 
-        print(results)
+ 
 
         return results, ts_list, times, times_id
 
@@ -254,7 +251,6 @@ class BetsAPIClient:
 
 
     def get_fifa_matches_with_total(self, sport_id: int = 1, league_id: int = 10048705, day: str = data_atual(), page: int = 1):
-        print(day)
         url = f'{self.base_url}upcoming'
         params = {
             'token': self.api_key,
@@ -270,23 +266,22 @@ class BetsAPIClient:
         pager = resp.get('pager', {})
         total_pages = ceil(pager.get('total', 0) / pager.get('per_page', 1))
 
-        res = [x['id'] for x in resp['results'] if (x.get('ss') is None) or x.get('time_status') == 0]
-        ts = [x['time'] for x in resp['results'] if (x.get('ss') is None) or x.get('time_status') == 0]
+        res = []
+        ts = []
+        times = []
+        home_ids = []
+        away_ids = []
 
-        times = [
-            (x['home']['name'], x['away']['name'])
-            for x in resp['results']
-            if (x.get('ss') is None) or (x.get('time_status') == 0)
-        ]
-        times_id = [
-            (x['home']['id'], x['away']['id'])
-            for x in resp['results']
-            if (x.get('ss') is None) or (x.get('time_status') == 0)
-        ]
+        for x in resp['results']:
+            if (x.get('ss') is None) or (x.get('time_status') == 0):
+                res.append(x['id'])
+                ts.append(x['time'])
+                times.append((x['home']['name'], x['away']['name']))
+                home_ids.append(x['home']['id'])
+                away_ids.append(x['away']['id'])
 
-        return res, ts, times, times_id, total_pages
-
-        
+        return res, ts, times, (home_ids, away_ids), total_pages
+  
     
     def pages(self, sport_id: int = 1,league_id: int = 10048705, day: str = data_atual()) -> int:
         '''pega o numero de paginas da requisiçao'''

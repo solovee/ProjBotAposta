@@ -119,7 +119,7 @@ def main():
 def pegaJogosDoDia():
     try:
         ids , tempo, time, times_id = apiclient.getUpcoming(leagues=apiclient.leagues_ids)
-               
+        
         if not ids:
             logger.warning("⚠️ Nenhum ID de jogo retornado pela API")
             return pd.DataFrame()
@@ -138,6 +138,7 @@ def pegaJogosDoDia():
         programados = dados_dataframe['id_jogo'].tolist()
         programado.extend(programados)
         logger.info(f"📌 Adicionados {len(programados)} novos jogos à lista de programados")
+        dados_dataframe.to_csv('oque_sai_do_dadosDataframe.csv')
         return dados_dataframe
     
     except Exception as e:

@@ -32,24 +32,17 @@ df_temp = pd.read_csv(r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_no
 
 
 def preProcessGeneral(df=df_temp):
-
     df = preProcessEstatisticasGerais(df)
-    print(len(df.columns))
     df = preProcessOverUnder(df)
-    print(len(df.columns))
     df = preProcessHandicap(df)
-    print(len(df.columns))
     df = preProcessGoalLine(df)
-    print(len(df.columns))
     df = preProcessDoubleChance(df)
-    print(len(df.columns))
     df = preProcessDrawNoBet(df)
-    print(len(df.columns))
-    df.to_csv('resultados_novo_expandidoNN.csv')
     return df
 
-def preProcessGeneral_x(df=df_temp):
-    df = preProcessEstatisticasGerais(df)
+def preProcessGeneral_x(df):
+    df.to_csv('df_que_chega_pra_preProcessGeneral_X.csv')
+    df = preProcessEstatisticasGerais_X(df)
     df = preProcessHandicap_X(df)
     df = preProcessGoalLine_X(df)
     return df
@@ -63,15 +56,43 @@ def criaNNs(df=df_temp):
     z_draw_no_bet = NN_draw_no_bet(df)
     lista = [z_over_under_positivo, z_over_under_negativo, z_handicap, z_goal_line, z_double_chance , z_draw_no_bet]
     return lista
+def estatisticas_ultimos_10(home_team, away_team):
+    df = df_temp.copy()
+    # Filtrar os últimos 10 jogos do home_team apenas como mandante
+    df_home = df[df['home'] == home_team].head(10)
 
+    media_gols_home = df_home['home_goals'].mean() if not df_home.empty else None
+    vitorias_home = (df_home['home_goals'] > df_home['away_goals']).mean() if not df_home.empty else None
+
+    # Filtrar os últimos 10 jogos do away_team apenas como visitante
+    df_away = df[df['away'] == away_team].head(10)
+    media_gols_away = df_away['away_goals'].mean() if not df_away.empty else None
+    vitorias_away = (df_away['away_goals'] > df_away['home_goals']).mean() if not df_away.empty else None
+
+    return media_gols_home, vitorias_home, media_gols_away, vitorias_away, df_away
 
 def preProcessEstatisticasGerais(df):
-    df_temp = pd.read_csv(r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_novo.csv")
+
 
     df[['media_goals_home', 'media_victories_home', 'media_goals_away', 'media_victories_away']] = df.apply(lambda row: estatisticas_ultimos_5(row['home'], row['away']), axis=1)
     # Aplicar a função ao DataFrame
     medias = df.apply(
         lambda row: calcular_medias_h2h(row['home'], row['away'], row.name),
+        axis=1
+    )
+    # Adicionar as novas colunas
+    df['h2h_mean'] = medias.apply(lambda x: x['h2h_mean'])
+    df['home_h2h_mean'] = medias.apply(lambda x: x['home_h2h_mean'])
+    df['away_h2h_mean'] = medias.apply(lambda x: x['away_h2h_mean'])
+    return df
+
+def preProcessEstatisticasGerais_X(df):
+    print('preGeneral')
+    print(df)
+    df[['media_goals_home', 'media_victories_home', 'media_goals_away', 'media_victories_away']] = df.apply(lambda row: estatisticas_ultimos_5(row['home'], row['away']), axis=1)
+    # Aplicar a função ao DataFrame
+    medias = df.apply(
+        lambda row: calcular_medias_h2h_X(row['home'], row['away']),
         axis=1
     )
     # Adicionar as novas colunas
@@ -208,9 +229,11 @@ def split(X_standardized, y):
 
 def estatisticas_ultimos_5(home_team, away_team):
     # Filtrar os últimos 10 jogos do home_team apenas como mandante
-    df_temp = pd.read_csv(r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_novo.csv")
+    
+    print(df_temp[df_temp['home'] == home_team])
 
-    df_home = df_temp[df_temp['home'] == home_team].head(5)
+    df_home = df_temp[df_temp['home'] == home_team].tail(5)
+    df_home.to_csv('oq_chega_depois_de_tail(5).csv')
     media_gols_home = df_home['home_goals'].mean() if not df_home.empty else None
     vitorias_home = (df_home['home_goals'] > df_home['away_goals']).mean() if not df_home.empty else None
 
@@ -218,6 +241,7 @@ def estatisticas_ultimos_5(home_team, away_team):
     df_away = df_temp[df_temp['away'] == away_team].head(5)
     media_gols_away = df_away['away_goals'].mean() if not df_away.empty else None
     vitorias_away = (df_away['away_goals'] > df_away['home_goals']).mean() if not df_away.empty else None
+
 
     return pd.Series([media_gols_home, vitorias_home, media_gols_away, vitorias_away])
 
@@ -235,8 +259,7 @@ def calcular_medias_h2h(home_id, away_id, index):
     df = pd.read_csv(r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_novo.csv")
 
     # Filtrar todos os confrontos entre os times
-    confrontos = df[((df['home'] == home_id) & (df['away'] == away_id))
-                    | ((df['home'] == away_id) & (df['away'] == home_id))]
+    confrontos = df[((df['home'] == home_id) & (df['away'] == away_id))]
     if confrontos.empty:
         confrontos = df[(((df['home'] == home_id) & (df['away'] == away_id)) | ((df['home'] == away_id) & (df['away'] == home_id)))]
     
@@ -269,6 +292,51 @@ def calcular_medias_h2h(home_id, away_id, index):
         'home_h2h_mean': home_h2h_mean,
         'away_h2h_mean': away_h2h_mean
     }
+
+def calcular_medias_h2h_X(home_id, away_id):
+    """
+    Calcula três estatísticas de confronto direto:
+    - h2h_mean: média de gols totais (home_goals + away_goals) nos confrontos anteriores
+    - home_h2h_mean: média de gols marcados pelo time da casa (home_id) nos confrontos
+    - away_h2h_mean: média de gols marcados pelo time visitante (away_id) nos confrontos
+    
+    Considera apenas jogos anteriores (linhas abaixo no DataFrame)
+    """
+    df = df_temp.copy()
+
+    # Filtrar todos os confrontos entre os times
+    confrontos = df[((df['home'] == home_id) & (df['away'] == away_id))]
+    if confrontos.empty:
+        confrontos = df[(((df['home'] == home_id) & (df['away'] == away_id)) | ((df['home'] == away_id) & (df['away'] == home_id)))]
+
+    
+    if confrontos.empty:
+        return {'h2h_mean': None, 'home_h2h_mean': None, 'away_h2h_mean': None}
+    
+    # Calcular média geral de gols totais
+    h2h_mean = confrontos['tot_goals'].mean()
+    
+    # Calcular média de gols específicos por time
+    home_goals = []
+    away_goals = []
+    
+    for _, row in confrontos.iterrows():
+        if row['home'] == home_id:
+            home_goals.append(row['home_goals'])
+            away_goals.append(row['away_goals'])
+        else:
+            home_goals.append(row['away_goals'])
+            away_goals.append(row['home_goals'])
+    
+    home_h2h_mean = np.mean(home_goals) if home_goals else None
+    away_h2h_mean = np.mean(away_goals) if away_goals else None
+    
+    return {
+        'h2h_mean': h2h_mean,
+        'home_h2h_mean': home_h2h_mean,
+        'away_h2h_mean': away_h2h_mean
+    }
+
 
 
 
@@ -567,6 +635,11 @@ def prepNNOver_under(df=df_temp):
 #NN over_under
 def prepNNOver_under_X(df=df_temp):
     df_temporario = df[['home','away','odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean']].copy()
+    null_cols = df_temporario.columns[df_temporario.isnull().any()]
+
+    # Printar essas colunas
+    print("Colunas com valores nulos:")
+    print(null_cols)
     df_temporario.dropna(inplace=True)
     z = df_temporario[['home','away','odd_goals_over1', 'odd_goals_under1']].copy()
     if len(z) == 1:
@@ -606,7 +679,7 @@ def NN_over_under(df=df_temp):
 
 #junta handicaps
 def preparar_df_handicaps(df):
-    print(len(df))
+    
 
     # Seleciona e renomeia o df_temporario1
     df1 = df[['home','away','media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean',
@@ -676,22 +749,23 @@ def prepNNHandicap_X(df=df_temp):
     df_temporario = df[['home','away','media_goals_home', 'media_goals_away','home_h2h_mean', 'away_h2h_mean',
                        'asian_handicap1_1', 'asian_handicap1_2','team_ah1','odds_ah1', 
                        'asian_handicap2_1', 'asian_handicap2_2','team_ah2','odds_ah2']].copy()
-    print('vendo nulls')
-    print(df_temporario)
+ 
     df_temporario = preparar_df_handicaps_X(df_temporario)
  
+    null_cols = df_temporario.columns[df_temporario.isnull().any()]
 
+    # Printar essas colunas
+    print("Colunas com valores nulos:")
+    print(null_cols)
     df_temporario.dropna(inplace=True)
     
     z = df_temporario[['home','away','team_ah','asian_handicap_1', 'asian_handicap_2', 'odds']]
     if len(z) == 1:
         z = z.iloc[[0]].copy()
     df_temporario = pd.get_dummies(df_temporario, columns=['team_ah'], prefix='team_ah')
-   
 
-    for col in ['team_ah_1', 'team_ah_2']:
-        if col not in df_temporario.columns:
-            df_temporario[col] = type(col[-1])
+
+
 
     X = df_temporario[['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds']]
 
@@ -853,14 +927,17 @@ def prepNNGoal_line_X(df=df_temp):
     df_temporario = df[['home','away','h2h_mean' ,'media_goals_home' ,'media_goals_away','goal_line1_1','goal_line1_2','type_gl1','odds_gl1', 'odds_gl2', 'goal_line2_1','goal_line2_2','type_gl2']].copy()
 
     df_temporario = preparar_df_goallines_X(df_temporario)
-    
+
+
+
+
     df_temporario.dropna(inplace=True)
     z = df_temporario[['home','away','goal_line_1', 'goal_line_2','type_gl', 'odds_gl']].copy()
     if len(z) == 1:
         z = z.iloc[[0]].copy()
     df_temporario = pd.get_dummies(df_temporario, columns=['type_gl'], prefix='type_gl')
     X = df_temporario[['h2h_mean', 'media_goals_home', 'media_goals_away','odds_gl', 'goal_line_1', 'goal_line_2']].copy()
-    print(f'goal_line {df}')
+
     try:
 
         X = normalizacao(X)
@@ -1033,7 +1110,7 @@ def prepNNDouble_chance_X(df=df_temp):
 
     X = df_temporario[['media_goals_home', 'media_goals_away', 'media_victories_home',
                       'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']].copy()
-    print(f'dc {df}')
+   
     try:
         X = normalizacao(X)
         X = pd.DataFrame(X, columns=['media_goals_home', 'media_goals_away', 'media_victories_home',
@@ -1187,7 +1264,7 @@ def prepNNDraw_no_bet_X(df=df_temp):
     
 
     X = df_temporario[['media_goals_home', 'media_goals_away','media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']].copy()
-    print(f'dnb {df}')
+
     try:
         X = normalizacao(X)
         X = pd.DataFrame(X, columns=['media_goals_home', 'media_goals_away',
