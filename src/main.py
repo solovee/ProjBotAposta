@@ -81,8 +81,8 @@ def agendar_criacao_nns():
 
     def tarefa():
         logger.info("🧠 Iniciando criação de modelos de rede neural...")
-        df = pd.read_csv(CSV_FILE)
-        criaTodasNNs(df)
+        
+        criaTodasNNs()
         logger.info("✅ Modelos de rede neural criados com sucesso")
         print(lista_th)
 
@@ -190,10 +190,10 @@ def acao_do_jogo(row):
         return 0
 
 #! roda todo dia as 00:15
-def criaTodasNNs(df):
+def criaTodasNNs():
     global lista_th 
     logger.info("🔧 Criando todos os modelos de rede neural...")
-    lista_th = NN.criaNNs(df)
+    lista_th = NN.criaNNs()
     logger.info(f"📊 Thresholds definidos: {lista_th}")
 
 def preve(df_linha):

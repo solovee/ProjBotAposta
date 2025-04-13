@@ -38,7 +38,9 @@ def preProcessGeneral_x(df):
     df = preProcessGoalLine_X(df)
     return df
 
-def criaNNs(df=df_temp):
+def criaNNs():
+    df = df_temp.copy()
+    df = preProcessGeneral(df)
     z_over_under_positivo, z_over_under_negativo = NN_over_under(df)
     z_handicap = NN_handicap(df)
     z_goal_line = NN_goal_line(df)
@@ -74,9 +76,12 @@ def preProcessEstatisticasGerais(df):
 def preProcessEstatisticasGerais_X(df):
 
     df[['media_goals_home', 'media_victories_home', 'media_goals_away', 'media_victories_away']] = df.apply(
-    lambda row: pd.Series(estatisticas_ultimos_5(int(row['home']), int(row['away']))),
-    axis=1
+    lambda row: estatisticas_ultimos_5(row['home'], row['away']),
+    axis=1,
+    result_type='expand'
     )
+
+    
     # Aplicar a função ao DataFrame
     medias = df.apply(
         lambda row: calcular_medias_h2h_X(int(row['home']), int(row['away'])),
@@ -193,20 +198,37 @@ def split(X_standardized, y):
     return x_train, x_test, y_train, y_test
 
 #ESTATISTICAS GERAIS DE CONFRONTO
+
+
+
+import pandas as pd
+import numpy as np
+
 def estatisticas_ultimos_5(home_team, away_team):
-    df_home = df_temp[df_temp['home'] == home_team]
-    if df_home.empty:
-        print(f"⚠️ Nenhum jogo encontrado para {home_team} como mandante.")
-    media_gols_home = df_home['home_goals'].mean() if not df_home.empty else None
-    vitorias_home = (df_home['home_goals'] > df_home['away_goals']).mean() if not df_home.empty else None
+    try:
+        df_home = df_temp[df_temp['home'] == home_team]
+        media_gols_home = df_home['home_goals'].mean() if not df_home.empty else np.nan
+        vitorias_home = (df_home['home_goals'] > df_home['away_goals']).mean() if not df_home.empty else np.nan
 
-    df_away = df_temp[df_temp['away'] == away_team]
-    if df_away.empty:
-        print(f"⚠️ Nenhum jogo encontrado para {away_team} como visitante.")
-    media_gols_away = df_away['away_goals'].mean() if not df_away.empty else None
-    vitorias_away = (df_away['away_goals'] > df_away['home_goals']).mean() if not df_away.empty else None
-    return media_gols_home, vitorias_home, media_gols_away, vitorias_away
+        df_away = df_temp[df_temp['away'] == away_team]
+        media_gols_away = df_away['away_goals'].mean() if not df_away.empty else np.nan
+        vitorias_away = (df_away['away_goals'] > df_away['home_goals']).mean() if not df_away.empty else np.nan
 
+        return pd.Series({
+            'media_goals_home': media_gols_home,
+            'media_victories_home': vitorias_home,
+            'media_goals_away': media_gols_away,
+            'media_victories_away': vitorias_away
+        })
+
+    except Exception as e:
+        print(f"❌ Erro em estatisticas_ultimos_5 para {home_team} x {away_team}: {e}")
+        return pd.Series({
+            'media_goals_home': np.nan,
+            'media_victories_home': np.nan,
+            'media_goals_away': np.nan,
+            'media_victories_away': np.nan
+        })
 
 
 
@@ -731,7 +753,7 @@ def prepNNOver_under_X(df=df_temp):
     
     return X, z
 '''
-def NN_over_under(df=df_temp):
+def NN_over_under(df):
     df_temporario = df[['odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean','res_goals_over_under']].copy()
     df_temporario.dropna(inplace=True)
     X = df[['odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean']]
