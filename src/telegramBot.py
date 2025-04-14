@@ -2,10 +2,14 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 import os
 from dotenv import load_dotenv
+from telegram import Bot
+
+
 
 load_dotenv()
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
+bot = Bot(token=TELEGRAM_TOKEN)
 #chatid 7815720131
 
 # Comando /start
@@ -33,3 +37,8 @@ def start_bot():
 
     print("🤖 Bot rodando...")
     app.run_polling()
+
+
+
+def sendMessage(chat_id, text):
+    bot.send_message(chat_id=chat_id, text=text)

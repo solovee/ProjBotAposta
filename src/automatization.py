@@ -111,7 +111,7 @@ load_dotenv()
 
 api = os.getenv("API_KEY")
 apiclient = BetsAPIClient(api_key=api)
-CSV_FILE = "resultados_novo.csv"
+CSV_FILE = "resultados_60.csv"
 
 def transform_betting_data(odds_data):
     """Transforma os dados de odds em um DataFrame estruturado."""
@@ -163,7 +163,7 @@ def dia_anterior():
 def ultimos_60_dias(data_str: str):
     """Retorna uma lista com todos os dias dos últimos 60 dias anteriores à data fornecida no formato YYYYMMDD."""
     data = datetime.strptime(data_str, "%Y%m%d")
-    return [(data - timedelta(days=i)).strftime("%Y%m%d") for i in range(3, 61)]
+    return [(data - timedelta(days=i)).strftime("%Y%m%d") for i in range(1, 61)]
 
 # Carregar dias já processados
 if os.path.exists(CSV_FILE):
@@ -175,7 +175,7 @@ else:
 dias_todos = ultimos_60_dias(dia_anterior())
 
 while dias_processados != set(dias_todos):
-    dias_pendentes = [dia for dia in dias_todos if dia not in dias_processados][:5]
+    dias_pendentes = [dia for dia in dias_todos if dia not in dias_processados][:6]
     
     if not dias_pendentes:
         print("✅ Todos os dias já foram processados!")
@@ -186,7 +186,7 @@ while dias_processados != set(dias_todos):
 
     for dia in dias_pendentes:
         try:
-            ids, dicio = apiclient.getAllOlds(leagues=apiclient.leagues_ids, day=int(dia))
+            ids, dicio = apiclient.getAllOlds(leagues=apiclient.leagues_ids, day=dia)
             odds_data = apiclient.filtraOddsNovo(ids=ids)
             
             # Transformar os dados de odds

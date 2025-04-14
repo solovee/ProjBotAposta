@@ -9,6 +9,7 @@ import threading
 import NN
 import telegramBot as tb
 import logging
+import random
 
 #tentar arrumar as estatisticas
 #ver os team_ah e type_gl
@@ -38,7 +39,7 @@ apiclient = BetsAPIClient(api_key=api)
 #df = pd.read_csv('src\resultados_novo.csv')
 CSV_FILE = r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_novo.csv"
 #lista dos thresholds das nns
-lista_th = [0.7,0.2,0.7,0.8,0.8,0.9]
+lista_th = [0.5,0.2,0.625,0.575,0.9,0.85]
 
 
 
@@ -301,7 +302,7 @@ def preve(df_linha):
                 dados_temp = dados_dnb.iloc[[1]].copy()
                 dados_temp = dados_temp.rename(columns={'draw_no_bet_team': 'draw_no_bet_team(home=1,away=2)'})  
                 list_true.append(dados_temp)
-
+        
         list_final = []
         for df in list_true:
             men = df_para_string(df)
@@ -315,16 +316,21 @@ def preve(df_linha):
 
 
 
+
+
 def df_para_string(df):
+    emojis = ['🔥', '⚽', '📊', '📈', '🔍', '🧠', '🕹️', '✅', '❗', '🧮', '🏆', '💡', '📉', '🔎', '💥', '📝', '🚀']
     mensagens = []
 
     for _, row in df.iterrows():
-        msg = ""
+        msg = "🔎 *LINHA IDENTIFICADA:*\n"
         for col in df.columns:
-            msg += f"{col}: {row[col]}\n"
-        mensagens.append(msg.strip())  # remove o \n final
+            emoji = random.choice(emojis)
+            msg += f"{emoji} {col}: {row[col]}\n"
+        mensagens.append(msg.strip())
 
     return mensagens
+
 
 
 def predicta_over_under(prepOverUnder_df, dados):

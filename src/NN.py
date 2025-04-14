@@ -760,20 +760,22 @@ def NN_over_under(df):
     y = df['res_goals_over_under']
     x_train, x_test, y_train, y_test = normalizacao_and_split(X,y)
     model_over_under = tf.keras.Sequential([
-        tf.keras.layers.Dense(64, activation='relu', input_shape=(x_train.shape[1],)),
+        tf.keras.layers.Dense(128, activation='relu', input_shape=(x_train.shape[1],)),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Dropout(0.4),
+        tf.keras.layers.Dense(64, activation='relu'),
+        tf.keras.layers.BatchNormalization(),
         tf.keras.layers.Dropout(0.3),
-        tf.keras.layers.Dense(32, activation='relu'),
-        tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(1, activation='sigmoid')  # Saída binária
     ])
     model_over_under.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001), loss=tf.keras.losses.BinaryCrossentropy(), metrics=['accuracy'])
-    model_over_under.fit(x_train, y_train, epochs=30)
+    hist_bin = model_over_under.fit(x_train, y_train, epochs=30)
     y_pred_probs = model_over_under.predict(x_test)
     
     melhor_z_positivo = encontrar_melhor_z_binario_positivo(y_test, y_pred_probs)
     melhor_z_negativo = encontrar_melhor_z_binario_negativo(y_test, y_pred_probs)
  
-    model_over_under.save("model_over_under.keras")  # Salva em formato nativo do Keras
+    model_over_under.save("model_binario_over_under.keras")  # Salva em formato nativo do Keras
     return melhor_z_positivo, melhor_z_negativo
 
 
@@ -913,10 +915,12 @@ def NN_handicap(df=df_temp):
 
         # 3. Criando o modelo binário
     modelo_binario = tf.keras.Sequential([
-        tf.keras.layers.Dense(64, activation='relu', input_shape=(x_train_bin.shape[1],)),
+        tf.keras.layers.Dense(128, activation='relu', input_shape=(x_train_bin.shape[1],)),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Dropout(0.4),
+        tf.keras.layers.Dense(64, activation='relu'),
+        tf.keras.layers.BatchNormalization(),
         tf.keras.layers.Dropout(0.3),
-        tf.keras.layers.Dense(32, activation='relu'),
-        tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(1, activation='sigmoid')  # Saída binária
     ])
 
@@ -1074,10 +1078,12 @@ def NN_goal_line(df=df_temp):
 
         # 3. Criando o modelo binário
     modelo_binario_goal_line = tf.keras.Sequential([
-        tf.keras.layers.Dense(64, activation='relu', input_shape=(x_train_bin.shape[1],)),
+        tf.keras.layers.Dense(128, activation='relu', input_shape=(x_train_bin.shape[1],)),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Dropout(0.4),
+        tf.keras.layers.Dense(64, activation='relu'),
+        tf.keras.layers.BatchNormalization(),
         tf.keras.layers.Dropout(0.3),
-        tf.keras.layers.Dense(32, activation='relu'),
-        tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(1, activation='sigmoid')  # Saída binária
     ])
 
@@ -1247,21 +1253,21 @@ def NN_double_chance(df=df_temp):
     x_train, x_test, y_train, y_test = split(X_final, y)
     
     model_double_chance = tf.keras.Sequential([
+        tf.keras.layers.Dense(128, activation='relu'),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Dropout(0.4),
         tf.keras.layers.Dense(64, activation='relu'),
+        tf.keras.layers.BatchNormalization(),
         tf.keras.layers.Dropout(0.3),
-        tf.keras.layers.Dense(64, activation='relu'),
-        tf.keras.layers.Dropout(0.2),
-        tf.keras.layers.Dense(32, activation='relu'),
-        tf.keras.layers.Dropout(0.1),
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
     model_double_chance.compile(optimizer=tf.keras.optimizers.Adam(0.001), loss='binary_crossentropy', metrics=['accuracy'])
-    model_double_chance.fit(x_train, y_train, epochs=30)
+    hist_bin = model_double_chance.fit(x_train, y_train, epochs=30)
 
     y_pred_probs = model_double_chance.predict(x_test)
     melhor_z_positivo = encontrar_melhor_z_binario_positivo(y_test, y_pred_probs)
 
-    model_double_chance.save("model_double_chance.keras")  # Salva em formato nativo do Keras
+    model_double_chance.save("model_binario_double_chance.keras")  # Salva em formato nativo do Keras
 
     return melhor_z_positivo
 
@@ -1405,17 +1411,19 @@ def NN_draw_no_bet(df=df_temp):
             # 3. Criando o modelo binário
 
     modelo_binario_draw_no_bet = tf.keras.Sequential([
-        tf.keras.layers.Dense(64, activation='relu', input_shape=(x_train_bin.shape[1],)),
+        tf.keras.layers.Dense(128, activation='relu', input_shape=(x_train_bin.shape[1],)),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Dropout(0.4),
+        tf.keras.layers.Dense(64, activation='relu'),
+        tf.keras.layers.BatchNormalization(),
         tf.keras.layers.Dropout(0.3),
-        tf.keras.layers.Dense(32, activation='relu'),
-        tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(1, activation='sigmoid')  # Saída binária
     ])
 
     modelo_binario_draw_no_bet.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001), loss='binary_crossentropy', metrics=['accuracy'])
 
     # 4. Treinamento
-    hist_bin = modelo_binario_draw_no_bet.fit(x_train_bin, y_train_bin, epochs=30, validation_split=0.1)
+    hist_bin = modelo_binario_draw_no_bet.fit(x_train_bin, y_train_bin, epochs=30)
     y_pred_probs = modelo_binario_draw_no_bet.predict(x_test_bin)
     melhor_z_positivo = encontrar_melhor_z_binario_positivo(y_test_bin, y_pred_probs )
 
