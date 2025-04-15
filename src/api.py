@@ -227,7 +227,7 @@ class BetsAPIClient:
         results = []
         ts_list = []
         times = []
-        times_id = []
+        times_id = []  # Agora será uma lista de tuplas (home_id, away_id)
         for league in leagues:
             page = 1
             while True:
@@ -236,19 +236,15 @@ class BetsAPIClient:
                 results.extend(res)
                 ts_list.extend(ts)
                 times.extend(tm)
-                times_id.extend(ti)
+                times_id.extend(ti)  # Já são tuplas individuais por jogo
                 if page >= total_pages:
                     break
                 page += 1
 
- 
-
         return results, ts_list, times, times_id
 
 
-    #LIVE
-
-
+# LIVE
 
     def get_fifa_matches_with_total(self, sport_id: int = 1, league_id: int = 10048705, day: str = data_atual(), page: int = 1):
         url = f'{self.base_url}upcoming'
@@ -269,19 +265,17 @@ class BetsAPIClient:
         res = []
         ts = []
         times = []
-        home_ids = []
-        away_ids = []
+        times_id = []  # Lista de tuplas (home_id, away_id)
 
         for x in resp['results']:
             if (x.get('ss') is None) or (x.get('time_status') == 0):
                 res.append(x['id'])
                 ts.append(x['time'])
                 times.append((x['home']['name'], x['away']['name']))
-                home_ids.append(x['home']['id'])
-                away_ids.append(x['away']['id'])
+                times_id.append((x['home']['id'], x['away']['id']))  # Coleta diretamente o par de IDs
 
-        return res, ts, times, (home_ids, away_ids), total_pages
-  
+        return res, ts, times, times_id, total_pages
+
     
     def pages(self, sport_id: int = 1,league_id: int = 10048705, day: str = data_atual()) -> int:
         '''pega o numero de paginas da requisiçao'''
@@ -305,7 +299,7 @@ class BetsAPIClient:
             return res
         else:
             raise Exception(f"Erro ao obter dados da API: {response.status_code}")
-        
+
     
     
 
@@ -375,8 +369,83 @@ class BetsAPIClient:
 
         #print(len(ids) - done)
         return games
-    
-    
+    def filtraOddsNovo1(self, ids: List[Any] = []):
+        games = {}
+        
+        for id in ids:
+            try:
+                odds_data = self.get_odds(FI=id)['results'][0]
+                game_data = {
+                    "goals_over_under": [],
+                    "asian_handicap": [],
+                    "goal_line": [],
+                    "double_chance": [],
+                    "draw_no_bet": []
+                }
+
+                # --- Asian Handicap --- (Mantendo exatamente como estava)
+                if 'asian_lines' in odds_data and 'asian_handicap' in odds_data['asian_lines']['sp']:
+                    for odd in odds_data['asian_lines']['sp']['asian_handicap']['odds']:
+                        game_data["asian_handicap"].append({
+                            "handicap": odd["handicap"],
+                            "team": odd["header"],
+                            "odds": odd["odds"]
+                        })
+                
+                # --- Goal Line --- (Mantendo exatamente como estava)
+                if 'asian_lines' in odds_data and 'goal_line' in odds_data['asian_lines']['sp']:
+                    for odd in odds_data['asian_lines']['sp']['goal_line']['odds']:
+                        game_data["goal_line"].append({
+                            "handicap": odd.get("name", "N/A"),
+                            "type": odd["header"],
+                            "odds": odd["odds"]
+                        })
+
+                # --- Goals Over/Under --- (Mantendo exatamente como estava)
+                if 'goals' in odds_data and 'goals_over_under' in odds_data['goals']['sp']:
+                    for odd in odds_data['goals']['sp']['goals_over_under']['odds']:
+                        game_data["goals_over_under"].append({
+                            "handicap": odd.get("name", odd.get("handicap", "N/A")),
+                            "type": odd["header"],
+                            "odds": odd["odds"]
+                        })
+                elif 'main' in odds_data and 'goals_over_under' in odds_data['main']['sp']:
+                    for odd in odds_data['main']['sp']['goals_over_under']['odds']:
+                        game_data["goals_over_under"].append({
+                            "handicap": odd.get("name", odd.get("handicap", "N/A")),
+                            "type": odd["header"],
+                            "odds": odd["odds"]
+                        })
+
+                # --- Double Chance --- (Mantendo exatamente como estava)
+                if 'main' in odds_data and 'double_chance' in odds_data['main']['sp']:
+                    for odd in odds_data['main']['sp']['double_chance']['odds']:
+                        game_data["double_chance"].append({
+                            "type": odd["name"],
+                            "odds": odd["odds"]
+                        })
+                
+                # --- Draw No Bet --- (Mantendo exatamente como estava)
+                if 'main' in odds_data and 'draw_no_bet' in odds_data['main']['sp']:
+                    for odd in odds_data['main']['sp']['draw_no_bet']['odds']:
+                        game_data["draw_no_bet"].append({
+                            "team": odd["name"],
+                            "odds": odd["odds"]
+                        })
+
+                games[id] = game_data
+                
+            except Exception as e:
+                print(f'Erro ao processar evento {id}: {str(e)}')
+                games[id] = {  # Mantém estrutura vazia
+                    "goals_over_under": [],
+                    "asian_handicap": [],
+                    "goal_line": [],
+                    "double_chance": [],
+                    "draw_no_bet": []
+                }
+        
+        return games
     def filtraOddsNovo(self, ids: List[Any] = []):
         done = 0
         RED = "\033[31m"

@@ -6,3 +6,9 @@ df especifico com cada linha (handicap, over/under) e suas colunas adicionais (s
 testar o split e classificaçao do goal_line
 [np.float64(0.5), None, np.float64(0.6750000000000002), np.float64(0.6750000000000002), np.float64(0.9000000000000004), np.float64(0.5)]
 [np.float64(0.5), None, np.float64(0.6500000000000001), np.float64(0.6500000000000001), np.float64(0.8500000000000003), np.float64(0.5)]
+
+
+
+
+id,event_day,home,away,home_goals,away_goals,tot_goals,goals_over_under,odd_goals_over1,odd_goals_under1,double_chance1,odds_dc1,double_chance2,odds_dc2,double_chance3,odds_dc3,draw_no_bet_team1,odds_dnb1,draw_no_bet_team2,odds_dnb2,asian_handicap1,team_ah1,odds_ah1,asian_handicap2,team_ah2,odds_ah2,goal_line1,type_gl1,odds_gl1,goal_line2,type_gl2,odds_gl2
+171350067,20250315,11226202,11224382,4.0,1.0,5.0,2.5,1.142,5.0,"0.0, -0.5",1.0,1.875,"0.0, +0.5",2,1.825,4.5,1.0,1.825,4.5,2.0,1.875,Bologna (Salfour) or Draw,1.444,Draw or Roma (jAke),1.615,Bologna (Salfour) or Roma (jAke),1.166,1.0,1.666,2.0,2.1

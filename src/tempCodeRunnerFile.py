@@ -1,1 +1,1 @@
-int(d
+th_odd

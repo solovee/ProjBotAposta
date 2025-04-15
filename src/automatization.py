@@ -111,7 +111,22 @@ load_dotenv()
 
 api = os.getenv("API_KEY")
 apiclient = BetsAPIClient(api_key=api)
-CSV_FILE = "resultados_60.csv"
+CSV_FILE = "resultados_60_ofc.csv"
+
+# Lista de colunas esperadas no CSV final, mesmo que estejam vazias
+COLUNAS_PADRAO = [
+    'id', 'event_day', 'home', 'away', 'home_goals', 'away_goals', 'tot_goals',
+    'goals_over_under', 'odd_goals_over1', 'odd_goals_under1',
+    'asian_handicap1', 'team_ah1', 'odds_ah1',
+    'asian_handicap2', 'team_ah2', 'odds_ah2',
+    'goal_line1', 'type_gl1', 'odds_gl1',
+    'goal_line2', 'type_gl2', 'odds_gl2',
+    'double_chance1', 'odds_dc1',
+    'double_chance2', 'odds_dc2',
+    'double_chance3', 'odds_dc3',
+    'draw_no_bet_team1', 'odds_dnb1',
+    'draw_no_bet_team2', 'odds_dnb2',
+]
 
 def transform_betting_data(odds_data):
     """Transforma os dados de odds em um DataFrame estruturado."""
@@ -172,7 +187,16 @@ if os.path.exists(CSV_FILE):
 else:
     dias_processados = set()
 
-dias_todos = ultimos_60_dias(dia_anterior())
+
+# Configuração: pular os N dias mais recentes (ex: já processados)
+DIAS_JA_PROCESSADOS = 0  # você pode alterar isso
+
+# Obter os últimos 60 dias
+todos_os_dias = ultimos_60_dias(dia_anterior())
+
+# Pegar apenas os dias que ainda não foram processados (os mais antigos)
+dias_todos = todos_os_dias[DIAS_JA_PROCESSADOS:]
+
 
 while dias_processados != set(dias_todos):
     dias_pendentes = [dia for dia in dias_todos if dia not in dias_processados][:6]
@@ -215,8 +239,13 @@ while dias_processados != set(dias_todos):
         df_novo = pd.DataFrame(novos_dados)
         
         # Reordenar colunas para consistência
-        colunas_ordenadas = ['id', 'event_day'] + [col for col in df_novo.columns if col not in ['id', 'event_day']]
-        df_novo = df_novo[colunas_ordenadas]
+        # Preencher colunas ausentes e garantir a ordem correta
+        for col in COLUNAS_PADRAO:
+            if col not in df_novo.columns:
+                df_novo[col] = None
+
+        df_novo = df_novo[COLUNAS_PADRAO]
+
         
         if not os.path.exists(CSV_FILE):
             df_novo.to_csv(CSV_FILE, index=False)

@@ -7,6 +7,12 @@ from dotenv import load_dotenv
 import os
 from datetime import datetime, timedelta
 from sklearn.model_selection import train_test_split
+import logging
+
+
+
+
+logger = logging.getLogger(__name__)
 
 #'10048705', 'Esoccer GT Leagues - 12 mins play' ;'10047781', 'Esoccer Battle - 8 mins play'
 #testar pegar evento 171732570 mais tarde   171790606  172006772 9723272 172006783
@@ -20,7 +26,8 @@ def dia_anterior():
         return ontem.strftime("%Y%m%d")
 
 
-df_temp = pd.read_csv(r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_novo.csv")
+#df_temp = pd.read_csv(r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_novo.csv")
+df_temp = pd.read_csv(r"C:\Users\Leoso\Downloads\projBotAposta\resultados_60.csv")
 
 def preProcessGeneral(df=df_temp):
     df = preProcessEstatisticasGerais(df)
@@ -73,26 +80,35 @@ def preProcessEstatisticasGerais(df):
     df['away_h2h_mean'] = medias.apply(lambda x: x['away_h2h_mean'])
     return df
 
+
+
 def preProcessEstatisticasGerais_X(df):
+    logger.info("🧮 Iniciando preProcessEstatisticasGerais_X")
+    try:
+        
 
-    df[['media_goals_home', 'media_victories_home', 'media_goals_away', 'media_victories_away']] = df.apply(
-    lambda row: estatisticas_ultimos_5(row['home'], row['away']),
-    axis=1,
-    result_type='expand'
-    )
+        df[['media_goals_home', 'media_victories_home', 'media_goals_away', 'media_victories_away']] = df.apply(
+            lambda row: estatisticas_ultimos_5(row['home'], row['away']),
+            axis=1,
+            result_type='expand'
+        )
+        logger.debug("📊 Estatísticas últimas 5 partidas calculadas com sucesso")
 
-    
-    # Aplicar a função ao DataFrame
-    medias = df.apply(
-        lambda row: calcular_medias_h2h_X(int(row['home']), int(row['away'])),
-        axis=1
-    )
-    # Adicionar as novas colunas
-    df['h2h_mean'] = medias.apply(lambda x: x['h2h_mean'])
-    df['home_h2h_mean'] = medias.apply(lambda x: x['home_h2h_mean'])
-    df['away_h2h_mean'] = medias.apply(lambda x: x['away_h2h_mean'])
-    df.to_csv('oqsaideestasgerais.csv')
-    return df
+        medias = df.apply(
+            lambda row: calcular_medias_h2h_X(int(row['home']), int(row['away'])),
+            axis=1
+        )
+        df['h2h_mean'] = medias.apply(lambda x: x['h2h_mean'])
+        df['home_h2h_mean'] = medias.apply(lambda x: x['home_h2h_mean'])
+        df['away_h2h_mean'] = medias.apply(lambda x: x['away_h2h_mean'])
+
+        logger.debug("📊 Estatísticas H2H calculadas")
+        return df
+
+    except Exception as e:
+        logger.exception("❌ Erro em preProcessEstatisticasGerais_X")
+        return df
+
 
 def preProcessOverUnder(df=df_temp):
     df['res_goals_over_under'] = df['tot_goals'] > df['goals_over_under']
@@ -123,11 +139,26 @@ def preProcessHandicap(df=df_temp):
             df[col_name] = None
     return df
 
-def preProcessHandicap_X(df=df_temp):
-    # Aplicar a transformação para ambas as colunas
-    df[['asian_handicap1_1', 'asian_handicap1_2']] = df['asian_handicap1'].apply(lambda x: pd.Series(split_handicap(x)))
-    df[['asian_handicap2_1', 'asian_handicap2_2']] = df['asian_handicap2'].apply(lambda x: pd.Series(split_handicap(x)))
-    return df
+
+def preProcessHandicap_X(df):
+    logger.info("🧮 Iniciando preProcessHandicap_X")
+    try:
+        required_cols = ['asian_handicap1', 'asian_handicap2']
+        missing_cols = [col for col in required_cols if col not in df.columns]
+        if missing_cols:
+            logger.error(f"❌ Colunas ausentes em preProcessHandicap_X: {missing_cols}")
+            return df
+
+        df[['asian_handicap1_1', 'asian_handicap1_2']] = df['asian_handicap1'].apply(lambda x: pd.Series(split_handicap(x)))
+        df[['asian_handicap2_1', 'asian_handicap2_2']] = df['asian_handicap2'].apply(lambda x: pd.Series(split_handicap(x)))
+
+        logger.debug("📊 Colunas de handicap divididas com sucesso")
+        return df
+
+    except Exception as e:
+        logger.exception("❌ Erro em preProcessHandicap_X")
+        return df
+
 
 
 def preProcessGoalLine(df=df_temp):
@@ -148,13 +179,26 @@ def preProcessGoalLine(df=df_temp):
     df = pd.get_dummies(df, columns=['classificacao_gl2'], prefix='gl2')
     return df
 
-def preProcessGoalLine_X(df=df_temp):
-    # Para goal_line1
-    df[['goal_line1_1', 'goal_line1_2']] = df['goal_line1'].apply(lambda x: pd.Series(split_goal_line(x)))
-    # Para goal_line2
-    df[['goal_line2_1', 'goal_line2_2']] = df['goal_line2'].apply(lambda x: pd.Series(split_goal_line(x)))
-    # Aplicando ao DataFrame
-    return df
+
+def preProcessGoalLine_X(df):
+    logger.info("🧮 Iniciando preProcessGoalLine_X")
+    try:
+        required_cols = ['goal_line1', 'goal_line2']
+        missing_cols = [col for col in required_cols if col not in df.columns]
+        if missing_cols:
+            logger.error(f"❌ Colunas ausentes em preProcessGoalLine_X: {missing_cols}")
+            return df
+
+        df[['goal_line1_1', 'goal_line1_2']] = df['goal_line1'].apply(lambda x: pd.Series(split_goal_line(x)))
+        df[['goal_line2_1', 'goal_line2_2']] = df['goal_line2'].apply(lambda x: pd.Series(split_goal_line(x)))
+
+        logger.debug("📊 Colunas de goal line divididas com sucesso")
+        return df
+
+    except Exception as e:
+        logger.exception("❌ Erro em preProcessGoalLine_X")
+        return df
+
 
 
 def preProcessDoubleChance(df=df_temp):
@@ -201,16 +245,14 @@ def split(X_standardized, y):
 
 
 
-import pandas as pd
-import numpy as np
 
 def estatisticas_ultimos_5(home_team, away_team):
     try:
-        df_home = df_temp[df_temp['home'] == home_team]
+        df_home = df_temp[df_temp['home'] == home_team].tail(5)
         media_gols_home = df_home['home_goals'].mean() if not df_home.empty else np.nan
         vitorias_home = (df_home['home_goals'] > df_home['away_goals']).mean() if not df_home.empty else np.nan
 
-        df_away = df_temp[df_temp['away'] == away_team]
+        df_away = df_temp[df_temp['away'] == away_team].tail(5)
         media_gols_away = df_away['away_goals'].mean() if not df_away.empty else np.nan
         vitorias_away = (df_away['away_goals'] > df_away['home_goals']).mean() if not df_away.empty else np.nan
 
@@ -245,7 +287,7 @@ def calcular_medias_h2h(home_id, away_id, index):
     if confrontos.empty:
         confrontos = df[(((df['home'] == home_id) & (df['away'] == away_id)) | ((df['home'] == away_id) & (df['away'] == home_id)))]
     # Considerar apenas confrontos anteriores (linhas abaixo da atual)
-    confrontos_passados = confrontos.loc[index+1:]
+    confrontos_passados = confrontos.loc[index-1:]
     if confrontos_passados.empty:
         return {'h2h_mean': None, 'home_h2h_mean': None, 'away_h2h_mean': None}
     # Calcular média geral de gols totais
@@ -593,8 +635,7 @@ def prepNNOver_under_X(df=df_temp):
         X = normalizacao(X)
         X = pd.DataFrame(X, columns=['odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean']).reset_index(drop=True)
     except Exception as e:
-        print(f'Erro over_under em: {df_temporario_original}')
-        print(e)
+        print('Erro over_under')
         return None, None
     return X, z
 
@@ -621,8 +662,7 @@ def prepNNHandicap_X(df=df_temp):
         X = pd.DataFrame(X, columns=['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds']).reset_index(drop=True)
         type_df = df_temporario[['team_ah_1','team_ah_2']].reset_index(drop=True)
     except Exception as e:
-        print(f'Erro handicap em: {df_temporario_original}')
-        print(e)
+        print('Erro handicap')
         return None, None
     X_final = pd.concat([X, type_df], axis=1)
     return X_final, z
@@ -650,8 +690,7 @@ def prepNNGoal_line_X(df=df_temp):
         X = pd.DataFrame(X, columns=['h2h_mean', 'media_goals_home', 'media_goals_away','odds_gl', 'goal_line_1', 'goal_line_2']).reset_index(drop=True)
         type_df = df_temporario[['type_gl_1', 'type_gl_2']].reset_index(drop=True)
     except Exception as e:
-        print(f'Erro goal_line em: {df_temporario_original}')
-        print(e)
+        print('Erro goal_line')
         return None, None
     X_final = pd.concat([X, type_df], axis=1)
     return X_final, z
@@ -680,8 +719,7 @@ def prepNNDouble_chance_X(df=df_temp):
                                      'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']).reset_index(drop=True)
         type_df = df_temporario[['double_chance_type_1', 'double_chance_type_2','double_chance_type_3']].reset_index(drop=True)
     except Exception as e:
-        print(f'Erro double_chance em: {df_temporario_original}')
-        print(e)
+        print('Erro double_chance')
         return None, None
     X_final = pd.concat([X, type_df], axis=1)
     return X_final, z
@@ -700,7 +738,7 @@ def prepNNDraw_no_bet_X(df=df_temp):
     z = df_temporario[['home','away','draw_no_bet', 'odds']].copy()
     if len(z) == 1:
         z = z.iloc[[0]].copy()
-    df_temporario = pd.get_dummies(df_temporario, columns=['draw_no_bet'], prefix='draw_no_bet_type')
+    df_temporario = pd.get_dummies(df_temporario, columns=['draw_no_bet_team'], prefix='draw_no_bet_type')
     X = df_temporario[['media_goals_home', 'media_goals_away', 'media_victories_home','media_victories_away', 
                       'home_h2h_mean', 'away_h2h_mean', 'odds']].copy()
     try:
@@ -709,8 +747,7 @@ def prepNNDraw_no_bet_X(df=df_temp):
                                      'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']).reset_index(drop=True)
         type_df = df_temporario[['draw_no_bet_type_1', 'draw_no_bet_type_2']].reset_index(drop=True)
     except Exception as e:
-        print(f'Erro draw_no_bet em: {df_temporario_original}')
-        print(e)
+        print('Erro draw_no_bet')
         return None, None
     X_final = pd.concat([X, type_df], axis=1)
     return X_final, z
@@ -721,7 +758,6 @@ def prepNNDraw_no_bet_X(df=df_temp):
 def prepNNOver_under(df=df_temp):
     df_temporario = df[['home','away','odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean','res_goals_over_under']].copy()
     df_temporario.dropna(inplace=True)
-    print(len(df_temporario))
     z = df_temporario[['home','away','odd_goals_over1', 'odd_goals_under1']].copy()
     if len(z) == 1:
         z = z.iloc[[0]].copy()

@@ -37,9 +37,10 @@ chat_id = os.getenv("CHAT_ID")
 apiclient = BetsAPIClient(api_key=api)
 
 #df = pd.read_csv('src\resultados_novo.csv')
-CSV_FILE = r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_novo.csv"
+#CSV_FILE = r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_novo.csv"
+CSV_FILE = r"C:\Users\Leoso\Downloads\projBotAposta\resultados_60.csv"
 #lista dos thresholds das nns
-lista_th = [0.5,0.2,0.625,0.575,0.9,0.85]
+lista_th = [0.5,0.2,0.5,0.5,0.5,0.5]
 
 
 
@@ -99,7 +100,7 @@ def loop_pega_jogos():
             pegaOddsEvento(df_jogos)
         else:
             logger.info("ℹ️ Nenhum jogo encontrado por agora")
-        time.sleep(20 * 60)  # 20 minutos
+        time.sleep(10 * 60)  # 20 minutos
 
 def main():
     logger.info("🚀 Iniciando aplicação de apostas esportivas")
@@ -121,14 +122,12 @@ def main():
 def pegaJogosDoDia():
     try:
         ids , tempo, time, times_id = apiclient.getUpcoming(leagues=apiclient.leagues_ids)
-        
         if not ids:
             logger.warning("⚠️ Nenhum ID de jogo retornado pela API")
             return pd.DataFrame()
         # adicionar tratamento pra no caso de vazio
-        dados = [{"id_jogo": i, "horario": h, "times": k, "home": z, "away": t} for i, h, k, z, t in zip(ids, tempo, time, times_id[0], times_id[1])]
+        dados = [{"id_jogo": i, "horario": h, "times": k, "home": z, "away": t} for i, h, k, (z, t) in zip(ids, tempo, time, times_id)]
         print(dados)
-        print(programado)
         dados_dataframe = pd.DataFrame(dados)
         dados_dataframe = dados_dataframe[~dados_dataframe['id_jogo'].isin(programado)]
         if dados_dataframe.empty:
@@ -136,7 +135,7 @@ def pegaJogosDoDia():
             return dados_dataframe
         
         dados_dataframe['horario'] = dados_dataframe['horario'].astype(int)
-        dados_dataframe['send_time'] = dados_dataframe['horario'] - 350
+        dados_dataframe['send_time'] = dados_dataframe['horario'] - 300
         dados_dataframe = dados_dataframe.sort_values(by="horario").reset_index(drop=True)
         programados = dados_dataframe['id_jogo'].tolist()
         programado.extend(programados)
@@ -173,10 +172,13 @@ def acao_do_jogo(row):
             logger.warning(f"⚠️ Nenhuma odd encontrada para o jogo {row['id_jogo']}")
             return 0
         df_odds = apiclient.transform_betting_data(odds)
-        df_odds['home'] = row['home']
-        df_odds['away'] = row['away']
+
+        df_odds['home'] = int(row['home'])
+        df_odds['away'] = int(row['away'])
         df_odds = NN.preProcessGeneral_x(df_odds)
-        
+                # Caminho de saída
+ 
+
         #implementar as previsões e requisitos (threshold e odd)
         lista_bets_a_enviar = preve(df_odds)
         if lista_bets_a_enviar:
@@ -231,26 +233,29 @@ def preve(df_linha):
         
         prepDraw_no_bet, dados_dnb = NN.prepNNDraw_no_bet_X(df_linha)
         if prepDraw_no_bet is None:
-            res_draw_no_bet = None
+            time_draw_no_bet, res_draw_no_bet = None, None
         else:
-            res_draw_no_bet = predicta_draw_no_bet(prepDraw_no_bet, dados_dnb)
+            time_draw_no_bet, res_draw_no_bet = predicta_draw_no_bet(prepDraw_no_bet, dados_dnb)
 
-        lista_preds_true = [tipo_over_under, res_under_over, time_handicap, res_handicap, linha_gl, res_goal_line, type_dc, res_double_chance, res_draw_no_bet]
-        
-        print('PREVE')
-        print(df_linha)
+        lista_preds_true = [tipo_over_under, res_under_over, time_handicap, res_handicap, linha_gl, res_goal_line, type_dc, res_double_chance,time_draw_no_bet, res_draw_no_bet]
+        print('predicoes')
         print(lista_preds_true)
+        logger.info(f"🧠 Predições retornadas: {lista_preds_true}")
+
+        
+        
+    
         
         list_true = []
         
-        if lista_preds_true[0] and lista_preds_true[1]:
+        if (lista_preds_true[0] is not None and lista_preds_true[1] is not None):
             dados_OU['tipo'] = lista_preds_true[0]
             dados_OU['linha'] = '2.5'
             dados_OU = dados_OU.rename(columns={'odds_goals_over1': 'odds_over'})
             dados_OU = dados_OU.rename(columns={'odd_goals_under1': 'odds_under'})
             list_true.append(dados_OU)
         
-        if lista_preds_true[2] and lista_preds_true[3]:
+        if (lista_preds_true[2] is not None and lista_preds_true[3] is not None):
             if (lista_preds_true[2] == 1):
                 dados_temp = dados_ah.iloc[[0]].copy()     
                 dados_temp['linha'] = dados_temp['asian_handicap_1'] + ' , ' + dados_temp['asian_handicap_2']
@@ -264,7 +269,7 @@ def preve(df_linha):
                 dados_temp = dados_temp.rename(columns={'team_ah': 'time'})
                 list_true.append(dados_temp) 
         
-        if lista_preds_true[4] and lista_preds_true[5]:
+        if (lista_preds_true[4] is not None and lista_preds_true[5] is not None):
             if (lista_preds_true[4] == 1):
                 dados_temp = dados_gl.iloc[[0]].copy()   
                 dados_temp['linha'] = dados_temp['goal_line_1'] + ' , ' + dados_temp['goal_line_2']
@@ -280,7 +285,7 @@ def preve(df_linha):
                 dados_temp = dados_temp.rename(columns={'odds_gl': 'odds'})     
                 list_true.append(dados_temp)
         
-        if lista_preds_true[6] and lista_preds_true[7]:
+        if (lista_preds_true[6] is not None and lista_preds_true[7] is not None):
             if (lista_preds_true[6] == 1):
                 dados_temp = dados_dc.iloc[[0]].copy()
                 dados_temp = dados_temp.rename(columns={'double_chance': 'double_chance(home=1,away=2,both=3)'})  
@@ -294,7 +299,7 @@ def preve(df_linha):
                 dados_temp = dados_temp.rename(columns={'double_chance': 'double_chance(home=1,away=2,both=3)'})  
                 list_true.append(dados_temp)
         
-        if lista_preds_true[8] and lista_preds_true[9]:
+        if (lista_preds_true[8] is not None and lista_preds_true[9] is not None):
             if (lista_preds_true[8] == 1):
                 dados_temp = dados_dnb.iloc[[0]].copy()
                 list_true.append(dados_temp)
@@ -302,16 +307,23 @@ def preve(df_linha):
                 dados_temp = dados_dnb.iloc[[1]].copy()
                 dados_temp = dados_temp.rename(columns={'draw_no_bet_team': 'draw_no_bet_team(home=1,away=2)'})  
                 list_true.append(dados_temp)
-        
         list_final = []
         for df in list_true:
             men = df_para_string(df)
             list_final.append(men)
-        
+
+        if list_final:
+            logger.info("✅ Previsões recomendadas:")
+            for recomendacao in list_final:
+                logger.info(f"👉 {recomendacao}")
+        else:
+            logger.info("❌ Nenhuma previsão foi considerada válida.")
+
         return list_final
+       
 
     except Exception as e:
-        logger.error(f"❌ Erro durante a previsão: {str(e)} {df_linha}")
+        logger.error(f"❌ Erro durante a previsão: {str(e)}")
         return []
 
 
@@ -337,70 +349,100 @@ def predicta_over_under(prepOverUnder_df, dados):
     model_over_under = tf.keras.models.load_model('model_over_under.keras')
     preds = model_over_under.predict(prepOverUnder_df)
 
-    if (preds >= lista_th[0]) and (dados['odd_goals_over1'] > 1.6):
+    logger.info(f"📊 Over/Under - Predição: {preds[0]}, Odd Over: {dados['odd_goals_over1']}, Odd Under: {dados['odd_goals_under1']}")
+    th_odd = 1.0
+    if (preds >= lista_th[0]) and (float(dados['odd_goals_over1']) > th_odd):
+        logger.info("✅ Over recomendado")
         return ('over', True)
-    elif (preds <= lista_th[1]) and (dados['odd_goals_under1'] > 1.6):
+    elif (preds <= lista_th[1]) and (float(dados['odd_goals_under1']) > th_odd):
+        logger.info("✅ Under recomendado")
         return ('under', True)
     else:
+        logger.info("❌ Nenhuma recomendação em Over/Under")
         return (None, False)
+
 def predicta_handicap(prepHandicap_df, dados):
     model_handicap = tf.keras.models.load_model('model_handicap_binario.keras')
-    
     preds = model_handicap.predict(prepHandicap_df)
 
-    pred_handicap_1 = preds[0]  
-    pred_handicap_2 = preds[1] 
-    if (pred_handicap_1 >= lista_th[2]) and (dados['odds'] > 1.6):
+    pred_handicap_1 = preds[0]
+    pred_handicap_2 = preds[1]
+    th_odd = 1.0
+    logger.info(f"📊 Handicap - Predição 1: {pred_handicap_1}, Predição 2: {pred_handicap_2}, Odds: {dados['odds']}")
+
+    if (pred_handicap_1 >= lista_th[2]) and (float(dados['odds'].iloc[0]) > th_odd):
+        logger.info("✅ Handicap opção 1 recomendada")
         return (1, True)
-    elif (pred_handicap_2 >= lista_th[2]) and (dados['odds'] > 1.6):
+    elif (pred_handicap_2 >= lista_th[2]) and (float(dados['odds'].iloc[1]) > th_odd):
+        logger.info("✅ Handicap opção 2 recomendada")
         return (2, True)
     else:
+        logger.info("❌ Nenhuma recomendação em Handicap")
         return (None, False)
+
 def predicta_goal_line(prepGoal_line_df, dados):
     model_goal_line = tf.keras.models.load_model('model_binario_goal_line.keras')
-
     preds = model_goal_line.predict(prepGoal_line_df)
 
-    pred_goal_line_1 = preds[0]  
-    pred_goal_line_2 = preds[1] 
-
-    if (pred_goal_line_1 >= lista_th[3]) and (dados['odds_gl'] > 1.6):
+    pred_goal_line_1 = preds[0]
+    pred_goal_line_2 = preds[1]
+    th_odd = 1.0
+    logger.info(f"📊 Goal Line - Predição 1: {pred_goal_line_1}, Predição 2: {pred_goal_line_2}, Odds GL: {dados['odds_gl']}")
+    
+    if (pred_goal_line_1 >= lista_th[3]) and (float(dados['odds_gl'].iloc[0]) > th_odd):
+        logger.info("✅ Goal Line opção 1 recomendada")
         return (1, True)
-    if (pred_goal_line_2 >= lista_th[3]) and (dados['odds_gl'] > 1.6):
+    elif (pred_goal_line_2 >= lista_th[3]) and (float(dados['odds_gl'].iloc[1]) > th_odd):
+        logger.info("✅ Goal Line opção 2 recomendada")
         return (2, True)
     else:
+        logger.info("❌ Nenhuma recomendação em Goal Line")
         return (None, False)
+
 def predicta_double_chance(pred_double_chance_df, dados):
     model_double_chance = tf.keras.models.load_model('model_double_chance.keras')
     preds = model_double_chance.predict(pred_double_chance_df)
 
-    pred_double_chance_1 = preds[0]  
-    pred_double_chance_2 = preds[1] 
-    pred_double_chance_3 = preds[2] 
+    pred_double_chance_1 = preds[0]
+    pred_double_chance_2 = preds[1]
+    pred_double_chance_3 = preds[2]
+    th_odd = 1.0
 
-    if (pred_double_chance_1 >= lista_th[4]) and (dados['odds'] > 1.6):
+    logger.info(f"📊 Double Chance - Predições: {preds}, Odds: {dados['odds']}")
+
+    if (pred_double_chance_1 >= lista_th[4]) and (float(dados['odds'].iloc[0]) > th_odd):
+        logger.info("✅ Double Chance opção 1 recomendada")
         return (1, True)
-    elif (pred_double_chance_2 >= lista_th[4]) and (dados['odds'] > 1.6):
+    elif (pred_double_chance_2 >= lista_th[4]) and (float(dados['odds'].iloc[1]) > th_odd):
+        logger.info("✅ Double Chance opção 2 recomendada")
         return (2, True)
-    elif (pred_double_chance_3 >= lista_th[4]) and (dados['odds'] > 1.6):
+    elif (pred_double_chance_3 >= lista_th[4]) and (float(dados['odds'].iloc[2]) > th_odd):
+        logger.info("✅ Double Chance opção 3 recomendada")
         return (3, True)
     else:
+        logger.info("❌ Nenhuma recomendação em Double Chance")
         return (None, False)
+
     
 def predicta_draw_no_bet(pred_draw_no_bet_df, dados):
     model_draw_no_bet = tf.keras.models.load_model('model_binario_draw_no_bet.keras')
-    
     preds = model_draw_no_bet.predict(pred_draw_no_bet_df)
 
-    pred_draw_no_bet_1 = preds[0]  
-    pred_draw_no_bet_2 = preds[1] 
- 
-    if (pred_draw_no_bet_1 >= lista_th[5]) and (dados['odds'] > 1.6):
+    pred_draw_no_bet_1 = preds[0]
+    pred_draw_no_bet_2 = preds[1]
+    th_odd = 1.0
+    logger.info(f"📊 Draw No Bet - Predição 1: {pred_draw_no_bet_1}, Predição 2: {pred_draw_no_bet_2}, Odds: {dados['odds']}")
+
+    if (pred_draw_no_bet_1 >= lista_th[5]) and (float(dados['odds'].iloc[0]) > th_odd):
+        logger.info("✅ Draw No Bet opção 1 recomendada")
         return (1, True)
-    if (pred_draw_no_bet_2 >= lista_th[5]) and (dados['odds'] > 1.6):
+    elif (pred_draw_no_bet_2 >= lista_th[5]) and (float(dados['odds'].iloc[1]) > th_odd):
+        logger.info("✅ Draw No Bet opção 2 recomendada")
         return (2, True)
     else:
+        logger.info("❌ Nenhuma recomendação em Draw No Bet")
         return (None, False)
+
 
 
 #! roda as 00:05
