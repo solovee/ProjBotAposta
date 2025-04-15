@@ -183,7 +183,6 @@ def acao_do_jogo(row):
         
        
         df_odds = NN.preProcessGeneral_x(df_odds)
-        print(df_odds)
         lista_bets_a_enviar = preve(df_odds)
         if lista_bets_a_enviar:
             logger.info(f"📩 Enviando {len(lista_bets_a_enviar)} previsões para o Telegram")
@@ -205,37 +204,42 @@ def criaTodasNNs():
 
 def preve(df_linha):
 
-    logger.debug("🔮 Fazendo previsões para o jogo atual...")
+    logger.info("🔮 Fazendo previsões para o jogo atual...")
     try:
         if not lista_th:
             logger.warning("⚠️ Thresholds de modelos ainda não definidos")
             return []
-        
+        print(df_linha.columns)
         prepOverUnder, dados_OU = NN.prepNNOver_under_X(df_linha)
+
         if prepOverUnder is None:
             tipo_over_under, res_under_over = None, None
         else:
             tipo_over_under, res_under_over = predicta_over_under(prepOverUnder, dados_OU)
         
         prepHandicap, dados_ah = NN.prepNNHandicap_X(df_linha)
+
         if prepHandicap is None:
             time_handicap, res_handicap = None, None
         else:
             time_handicap, res_handicap = predicta_handicap(prepHandicap, dados_ah)
         
         prepGoal_line, dados_gl = NN.prepNNGoal_line_X(df_linha)
+
         if prepGoal_line is None:
             linha_gl, res_goal_line = None, None
         else:
             linha_gl, res_goal_line = predicta_goal_line(prepGoal_line, dados_gl)
         
         prepDouble_chance, dados_dc = NN.prepNNDouble_chance_X(df_linha)
+
         if prepDouble_chance is None:
             type_dc, res_double_chance = None, None
         else:
             type_dc, res_double_chance = predicta_double_chance(prepDouble_chance, dados_dc)
         
         prepDraw_no_bet, dados_dnb = NN.prepNNDraw_no_bet_X(df_linha)
+
         if prepDraw_no_bet is None:
             time_draw_no_bet, res_draw_no_bet = None, None
         else:
@@ -252,10 +256,10 @@ def preve(df_linha):
         list_true = []
         
         if (lista_preds_true[0] is not None and lista_preds_true[1] is not None):
+            dados_OU = dados_OU.rename(columns={'odd_goals_over1': 'odds_over'})
+            dados_OU = dados_OU.rename(columns={'odd_goals_under1': 'odds_under'})
             dados_OU['tipo'] = lista_preds_true[0]
             dados_OU['linha'] = '2.5'
-            dados_OU = dados_OU.rename(columns={'odds_goals_over1': 'odds_over'})
-            dados_OU = dados_OU.rename(columns={'odd_goals_under1': 'odds_under'})
             list_true.append(dados_OU)
         
         if (lista_preds_true[2] is not None and lista_preds_true[3] is not None):
@@ -323,8 +327,6 @@ def preve(df_linha):
             logger.info("❌ Nenhuma previsão foi considerada válida.")
 
         return list_final
-       
-
     except Exception as e:
         logger.error(f"❌ Erro durante a previsão: {str(e)}")
         return []
@@ -338,7 +340,7 @@ def df_para_string(df):
     mensagens = []
 
     for _, row in df.iterrows():
-        msg = "🔎 *LINHA IDENTIFICADA:*\n"
+        msg = "🔎 *LINHA IDENTIFICADA:*\n\n"
         for col in df.columns:
             emoji = random.choice(emojis)
             msg += f"{emoji} {col}: {row[col]}\n"
