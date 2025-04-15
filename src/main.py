@@ -350,7 +350,7 @@ def predicta_over_under(prepOverUnder_df, dados):
     preds = model_over_under.predict(prepOverUnder_df)
 
     logger.info(f"📊 Over/Under - Predição: {preds[0]}, Odd Over: {dados['odd_goals_over1']}, Odd Under: {dados['odd_goals_under1']}")
-    th_odd = 1.0
+    th_odd = 1.6
     if (preds >= lista_th[0]) and (float(dados['odd_goals_over1']) > th_odd):
         logger.info("✅ Over recomendado")
         return ('over', True)
@@ -367,7 +367,7 @@ def predicta_handicap(prepHandicap_df, dados):
 
     pred_handicap_1 = preds[0]
     pred_handicap_2 = preds[1]
-    th_odd = 1.0
+    th_odd = 1.6
     logger.info(f"📊 Handicap - Predição 1: {pred_handicap_1}, Predição 2: {pred_handicap_2}, Odds: {dados['odds']}")
 
     if (pred_handicap_1 >= lista_th[2]) and (float(dados['odds'].iloc[0]) > th_odd):
@@ -386,7 +386,7 @@ def predicta_goal_line(prepGoal_line_df, dados):
 
     pred_goal_line_1 = preds[0]
     pred_goal_line_2 = preds[1]
-    th_odd = 1.0
+    th_odd = 1.6
     logger.info(f"📊 Goal Line - Predição 1: {pred_goal_line_1}, Predição 2: {pred_goal_line_2}, Odds GL: {dados['odds_gl']}")
     
     if (pred_goal_line_1 >= lista_th[3]) and (float(dados['odds_gl'].iloc[0]) > th_odd):
@@ -406,7 +406,7 @@ def predicta_double_chance(pred_double_chance_df, dados):
     pred_double_chance_1 = preds[0]
     pred_double_chance_2 = preds[1]
     pred_double_chance_3 = preds[2]
-    th_odd = 1.0
+    th_odd = 1.6
 
     logger.info(f"📊 Double Chance - Predições: {preds}, Odds: {dados['odds']}")
 
@@ -430,7 +430,7 @@ def predicta_draw_no_bet(pred_draw_no_bet_df, dados):
 
     pred_draw_no_bet_1 = preds[0]
     pred_draw_no_bet_2 = preds[1]
-    th_odd = 1.0
+    th_odd = 1.6
     logger.info(f"📊 Draw No Bet - Predição 1: {pred_draw_no_bet_1}, Predição 2: {pred_draw_no_bet_2}, Odds: {dados['odds']}")
 
     if (pred_draw_no_bet_1 >= lista_th[5]) and (float(dados['odds'].iloc[0]) > th_odd):

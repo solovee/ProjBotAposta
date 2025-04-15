@@ -128,6 +128,7 @@ COLUNAS_PADRAO = [
     'draw_no_bet_team2', 'odds_dnb2',
 ]
 
+
 def transform_betting_data(odds_data):
     """Transforma os dados de odds em um DataFrame estruturado."""
     rows = []

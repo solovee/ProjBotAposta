@@ -27,7 +27,7 @@ def dia_anterior():
 
 
 #df_temp = pd.read_csv(r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_novo.csv")
-df_temp = pd.read_csv(r"C:\Users\Leoso\Downloads\projBotAposta\resultados_60.csv")
+df_temp = pd.read_csv(r"C:\Users\Leoso\Downloads\projBotAposta\resultados_60_ofc.csv")
 
 def preProcessGeneral(df=df_temp):
     df = preProcessEstatisticasGerais(df)
@@ -111,7 +111,7 @@ def preProcessEstatisticasGerais_X(df):
 
 
 def preProcessOverUnder(df=df_temp):
-    df['res_goals_over_under'] = df['tot_goals'] > df['goals_over_under']
+    df['res_goals_over_under'] = df['tot_goals'] > df['goals_over_under'].astype(float)
     return df
 
 def preProcessHandicap(df=df_temp):
@@ -287,7 +287,7 @@ def calcular_medias_h2h(home_id, away_id, index):
     if confrontos.empty:
         confrontos = df[(((df['home'] == home_id) & (df['away'] == away_id)) | ((df['home'] == away_id) & (df['away'] == home_id)))]
     # Considerar apenas confrontos anteriores (linhas abaixo da atual)
-    confrontos_passados = confrontos.loc[index-1:]
+    confrontos_passados = confrontos[confrontos.index < index]
     if confrontos_passados.empty:
         return {'h2h_mean': None, 'home_h2h_mean': None, 'away_h2h_mean': None}
     # Calcular média geral de gols totais
@@ -533,7 +533,6 @@ def encontrar_melhor_z_binario_positivo(y_true, y_pred_probs, min_percent=0.05):
     thresholds_pos = np.arange(0.5, 1.01, 0.025)
     # Total de previsões positivas (com qualquer confiança)
     total_pred_positivas = np.sum(y_pred_probs >= 0.5)
-
     melhor_z = None
     melhor_acc = 0
     melhor_n = 0
@@ -735,7 +734,7 @@ def prepNNDraw_no_bet_X(df=df_temp):
     df_temporario_original = df_temporario.copy()
     df_temporario = preparar_df_draw_no_bet_X(df_temporario)
     df_temporario.dropna(inplace=True)
-    z = df_temporario[['home','away','draw_no_bet', 'odds']].copy()
+    z = df_temporario[['home','away','draw_no_bet_team', 'odds']].copy()
     if len(z) == 1:
         z = z.iloc[[0]].copy()
     df_temporario = pd.get_dummies(df_temporario, columns=['draw_no_bet_team'], prefix='draw_no_bet_type')
@@ -790,11 +789,14 @@ def prepNNOver_under_X(df=df_temp):
     return X, z
 '''
 def NN_over_under(df):
+
     df_temporario = df[['odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean','res_goals_over_under']].copy()
     df_temporario.dropna(inplace=True)
-    X = df[['odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean']]
-    y = df['res_goals_over_under']
+    df_temporario.to_csv('df_temporario.csv')
+    X = df_temporario[['odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean']]
+    y = df_temporario['res_goals_over_under']
     x_train, x_test, y_train, y_test = normalizacao_and_split(X,y)
+
     model_over_under = tf.keras.Sequential([
         tf.keras.layers.Dense(128, activation='relu', input_shape=(x_train.shape[1],)),
         tf.keras.layers.BatchNormalization(),

@@ -6,6 +6,7 @@ df especifico com cada linha (handicap, over/under) e suas colunas adicionais (s
 testar o split e classificaçao do goal_line
 [np.float64(0.5), None, np.float64(0.6750000000000002), np.float64(0.6750000000000002), np.float64(0.9000000000000004), np.float64(0.5)]
 [np.float64(0.5), None, np.float64(0.6500000000000001), np.float64(0.6500000000000001), np.float64(0.8500000000000003), np.float64(0.5)]
+[None, np.float64(0.5), np.float64(0.5750000000000001), np.float64(0.55), np.float64(0.8250000000000003), np.float64(0.6750000000000002)]
 
 
 
