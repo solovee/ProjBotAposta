@@ -10,6 +10,7 @@ import NN
 import telegramBot as tb
 import logging
 import random
+import ast
 
 #tentar arrumar as estatisticas
 #ver os team_ah e type_gl
@@ -30,7 +31,7 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 api = os.getenv("API_KEY")
-chat_id = os.getenv("CHAT_ID")
+chat_id = int(os.getenv("CHAT_ID"))
 
 
 
@@ -130,6 +131,7 @@ def pegaJogosDoDia():
         print(dados)
         dados_dataframe = pd.DataFrame(dados)
         dados_dataframe = dados_dataframe[~dados_dataframe['id_jogo'].isin(programado)]
+        
         if dados_dataframe.empty:
             logger.info("ℹ️ Todos os jogos já estão programados")
             return dados_dataframe
@@ -137,6 +139,7 @@ def pegaJogosDoDia():
         dados_dataframe['horario'] = dados_dataframe['horario'].astype(int)
         dados_dataframe['send_time'] = dados_dataframe['horario'] - 300
         dados_dataframe = dados_dataframe.sort_values(by="horario").reset_index(drop=True)
+        
         programados = dados_dataframe['id_jogo'].tolist()
         programado.extend(programados)
         logger.info(f"📌 Adicionados {len(programados)} novos jogos à lista de programados")
@@ -172,19 +175,20 @@ def acao_do_jogo(row):
             logger.warning(f"⚠️ Nenhuma odd encontrada para o jogo {row['id_jogo']}")
             return 0
         df_odds = apiclient.transform_betting_data(odds)
-
+        
         df_odds['home'] = int(row['home'])
         df_odds['away'] = int(row['away'])
-        df_odds = NN.preProcessGeneral_x(df_odds)
-                # Caminho de saída
- 
+        df_odds['times'] = str(row['times'])
 
-        #implementar as previsões e requisitos (threshold e odd)
+        
+       
+        df_odds = NN.preProcessGeneral_x(df_odds)
+        print(df_odds)
         lista_bets_a_enviar = preve(df_odds)
         if lista_bets_a_enviar:
             logger.info(f"📩 Enviando {len(lista_bets_a_enviar)} previsões para o Telegram")
             for bet in lista_bets_a_enviar:
-                tb.sendMessage(chat_id, bet)
+                tb.sendMessages(chat_id, bet)
         else:
             logger.info("ℹ️ Nenhuma aposta recomendada para este jogo")
 
@@ -238,8 +242,7 @@ def preve(df_linha):
             time_draw_no_bet, res_draw_no_bet = predicta_draw_no_bet(prepDraw_no_bet, dados_dnb)
 
         lista_preds_true = [tipo_over_under, res_under_over, time_handicap, res_handicap, linha_gl, res_goal_line, type_dc, res_double_chance,time_draw_no_bet, res_draw_no_bet]
-        print('predicoes')
-        print(lista_preds_true)
+        
         logger.info(f"🧠 Predições retornadas: {lista_preds_true}")
 
         
@@ -350,7 +353,7 @@ def predicta_over_under(prepOverUnder_df, dados):
     preds = model_over_under.predict(prepOverUnder_df)
 
     logger.info(f"📊 Over/Under - Predição: {preds[0]}, Odd Over: {dados['odd_goals_over1']}, Odd Under: {dados['odd_goals_under1']}")
-    th_odd = 1.6
+    th_odd = 1.0
     if (preds >= lista_th[0]) and (float(dados['odd_goals_over1']) > th_odd):
         logger.info("✅ Over recomendado")
         return ('over', True)
@@ -367,7 +370,7 @@ def predicta_handicap(prepHandicap_df, dados):
 
     pred_handicap_1 = preds[0]
     pred_handicap_2 = preds[1]
-    th_odd = 1.6
+    th_odd = 1.0
     logger.info(f"📊 Handicap - Predição 1: {pred_handicap_1}, Predição 2: {pred_handicap_2}, Odds: {dados['odds']}")
 
     if (pred_handicap_1 >= lista_th[2]) and (float(dados['odds'].iloc[0]) > th_odd):
@@ -386,7 +389,7 @@ def predicta_goal_line(prepGoal_line_df, dados):
 
     pred_goal_line_1 = preds[0]
     pred_goal_line_2 = preds[1]
-    th_odd = 1.6
+    th_odd = 1.0
     logger.info(f"📊 Goal Line - Predição 1: {pred_goal_line_1}, Predição 2: {pred_goal_line_2}, Odds GL: {dados['odds_gl']}")
     
     if (pred_goal_line_1 >= lista_th[3]) and (float(dados['odds_gl'].iloc[0]) > th_odd):
@@ -406,7 +409,7 @@ def predicta_double_chance(pred_double_chance_df, dados):
     pred_double_chance_1 = preds[0]
     pred_double_chance_2 = preds[1]
     pred_double_chance_3 = preds[2]
-    th_odd = 1.6
+    th_odd = 1.0
 
     logger.info(f"📊 Double Chance - Predições: {preds}, Odds: {dados['odds']}")
 
@@ -430,7 +433,7 @@ def predicta_draw_no_bet(pred_draw_no_bet_df, dados):
 
     pred_draw_no_bet_1 = preds[0]
     pred_draw_no_bet_2 = preds[1]
-    th_odd = 1.6
+    th_odd = 1.0
     logger.info(f"📊 Draw No Bet - Predição 1: {pred_draw_no_bet_1}, Predição 2: {pred_draw_no_bet_2}, Odds: {dados['odds']}")
 
     if (pred_draw_no_bet_1 >= lista_th[5]) and (float(dados['odds'].iloc[0]) > th_odd):

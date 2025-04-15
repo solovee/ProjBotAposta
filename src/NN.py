@@ -618,15 +618,16 @@ def encontrar_melhor_z_softmax_positivo(y_test, y_pred_probs, min_percent=0.05):
     return melhor_z
 
 def prepNNOver_under_X(df=df_temp):
-    required_columns = ['home','away','odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean']
+    required_columns = ['home','away','times','odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean']
     if not all(col in df.columns for col in required_columns):
         missing_cols = [col for col in required_columns if col not in df.columns]
-        raise ValueError(f"❌ Colunas ausentes em 'prepNNOver_under_X': {', '.join(missing_cols)}")
+        print(f"❌ Colunas ausentes em 'prepNNOver_under_X': {', '.join(missing_cols)}")
+        return None, None
     
     df_temporario = df[required_columns].copy()
     df_temporario_original = df_temporario.copy()
     df_temporario.dropna(inplace=True)
-    z = df_temporario[['home','away','odd_goals_over1', 'odd_goals_under1']].copy()
+    z = df_temporario[['times','odd_goals_over1', 'odd_goals_under1']].copy()
     if len(z) == 1:
         z = z.iloc[[0]].copy()
     X = df_temporario[['odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean']]
@@ -639,19 +640,20 @@ def prepNNOver_under_X(df=df_temp):
     return X, z
 
 def prepNNHandicap_X(df=df_temp):
-    required_columns = ['home','away','media_goals_home', 'media_goals_away','home_h2h_mean', 'away_h2h_mean',
+    required_columns = ['home','away','times','media_goals_home', 'media_goals_away','home_h2h_mean', 'away_h2h_mean',
                         'asian_handicap1_1', 'asian_handicap1_2','team_ah1','odds_ah1', 
                         'asian_handicap2_1', 'asian_handicap2_2','team_ah2','odds_ah2']
     if not all(col in df.columns for col in required_columns):
         missing_cols = [col for col in required_columns if col not in df.columns]
-        raise ValueError(f"❌ Colunas ausentes em 'prepNNHandicap_X': {', '.join(missing_cols)}")
+        print(f"❌ Colunas ausentes em 'prepNNHandicap_X': {', '.join(missing_cols)}")
+        return None, None
 
     df_temporario = df[required_columns].copy()
     df_temporario_original = df_temporario.copy()
     df_temporario = preparar_df_handicaps_X(df_temporario)
 
     df_temporario.dropna(inplace=True)
-    z = df_temporario[['home','away','team_ah','asian_handicap_1', 'asian_handicap_2', 'odds']]
+    z = df_temporario[['times','team_ah','asian_handicap_1', 'asian_handicap_2', 'odds']]
     if len(z) == 1:
         z = z.iloc[[0]].copy()
     df_temporario = pd.get_dummies(df_temporario, columns=['team_ah'], prefix='team_ah')
@@ -667,19 +669,20 @@ def prepNNHandicap_X(df=df_temp):
     return X_final, z
 
 def prepNNGoal_line_X(df=df_temp):
-    required_columns = ['home','away','h2h_mean' ,'media_goals_home' ,'media_goals_away',
+    required_columns = ['home','away','times','h2h_mean' ,'media_goals_home' ,'media_goals_away',
                         'goal_line1_1','goal_line1_2','type_gl1','odds_gl1', 'odds_gl2',
                         'goal_line2_1','goal_line2_2','type_gl2']
     if not all(col in df.columns for col in required_columns):
         missing_cols = [col for col in required_columns if col not in df.columns]
-        raise ValueError(f"❌ Colunas ausentes em 'prepNNGoal_line_X': {', '.join(missing_cols)}")
+        print(f"❌ Colunas ausentes em 'prepNNGoal_line_X': {', '.join(missing_cols)}")
+        return None, None
 
     df_temporario = df[required_columns].copy()
     df_temporario_original = df_temporario.copy()
     df_temporario = preparar_df_goallines_X(df_temporario)
     df_temporario.to_csv('prep_goalline.csv')
     df_temporario.dropna(inplace=True)
-    z = df_temporario[['home','away','goal_line_1', 'goal_line_2','type_gl', 'odds_gl']].copy()
+    z = df_temporario[['times','goal_line_1', 'goal_line_2','type_gl', 'odds_gl']].copy()
     if len(z) == 1:
         z = z.iloc[[0]].copy()
     df_temporario = pd.get_dummies(df_temporario, columns=['type_gl'], prefix='type_gl')
@@ -695,18 +698,19 @@ def prepNNGoal_line_X(df=df_temp):
     return X_final, z
 
 def prepNNDouble_chance_X(df=df_temp):
-    required_columns = ['home','away','media_goals_home','media_goals_away','media_victories_home', 'media_victories_away', 
+    required_columns = ['home','away','times','media_goals_home','media_goals_away','media_victories_home', 'media_victories_away', 
                         'home_h2h_mean', 'away_h2h_mean', 'double_chance1','odds_dc1', 
                         'double_chance2', 'odds_dc2', 'double_chance3', 'odds_dc3']
     if not all(col in df.columns for col in required_columns):
         missing_cols = [col for col in required_columns if col not in df.columns]
-        raise ValueError(f"❌ Colunas ausentes em 'prepNNDouble_chance_X': {', '.join(missing_cols)}")
+        print(f"❌ Colunas ausentes em 'prepNNDouble_chance_X': {', '.join(missing_cols)}")
+        return None, None
 
     df_temporario = df[required_columns].copy()
     df_temporario_original = df_temporario.copy()
     df_temporario = preparar_df_double_chance_X(df_temporario)
     df_temporario.dropna(inplace=True)
-    z = df_temporario[['home','away','double_chance', 'odds']].copy()
+    z = df_temporario[['times','double_chance', 'odds']].copy()
     if len(z) == 1:
         z = z.iloc[[0]].copy()
     df_temporario = pd.get_dummies(df_temporario, columns=['double_chance'], prefix='double_chance_type')
@@ -724,17 +728,18 @@ def prepNNDouble_chance_X(df=df_temp):
     return X_final, z
 
 def prepNNDraw_no_bet_X(df=df_temp):
-    required_columns = ['home','away', 'media_goals_home', 'media_goals_away', 'media_victories_home','media_victories_away',
+    required_columns = ['home','away','times', 'media_goals_home', 'media_goals_away', 'media_victories_home','media_victories_away',
                         'home_h2h_mean','away_h2h_mean', 'draw_no_bet_team1', 'odds_dnb1', 'draw_no_bet_team2', 'odds_dnb2']
     if not all(col in df.columns for col in required_columns):
         missing_cols = [col for col in required_columns if col not in df.columns]
-        raise ValueError(f"❌ Colunas ausentes em 'prepNNDraw_no_bet_X': {', '.join(missing_cols)}")
+        print(f"❌ Colunas ausentes em 'prepNNDraw_no_bet_X': {', '.join(missing_cols)}")
+        return None, None
 
     df_temporario = df[required_columns].copy()
     df_temporario_original = df_temporario.copy()
     df_temporario = preparar_df_draw_no_bet_X(df_temporario)
     df_temporario.dropna(inplace=True)
-    z = df_temporario[['home','away','draw_no_bet_team', 'odds']].copy()
+    z = df_temporario[['times','draw_no_bet_team', 'odds']].copy()
     if len(z) == 1:
         z = z.iloc[[0]].copy()
     df_temporario = pd.get_dummies(df_temporario, columns=['draw_no_bet_team'], prefix='draw_no_bet_type')
@@ -757,7 +762,7 @@ def prepNNDraw_no_bet_X(df=df_temp):
 def prepNNOver_under(df=df_temp):
     df_temporario = df[['home','away','odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean','res_goals_over_under']].copy()
     df_temporario.dropna(inplace=True)
-    z = df_temporario[['home','away','odd_goals_over1', 'odd_goals_under1']].copy()
+    z = df_temporario[['home_name','away_name','odd_goals_over1', 'odd_goals_under1']].copy()
     if len(z) == 1:
         z = z.iloc[[0]].copy()
     X = df[['odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean']]

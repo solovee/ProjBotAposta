@@ -3,12 +3,15 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 import os
 from dotenv import load_dotenv
 from telegram import Bot
+import logging
+import requests
 
 
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-CHAT_ID = os.getenv("CHAT_ID")
+CHAT_ID = int(os.getenv("CHAT_ID"))
 bot = Bot(token=TELEGRAM_TOKEN)
 #chatid 7815720131
 
@@ -40,5 +43,35 @@ def start_bot():
 
 
 
-def sendMessage(chat_id, text):
-    bot.send_message(chat_id=chat_id, text=text)
+def sendMessages(chat_id, text):
+    TOKEN = '7857822617:AAH_pNvbi7M1254hwLDeJA4KKyKiZYdHTzM'
+    chat_id = '7815720131'
+    url = f'https://api.telegram.org/bot{TOKEN}/sendMessage'
+    params = {
+        'chat_id': chat_id,
+        'text': text
+    }
+
+    response = requests.get(url, params=params)
+    print(response.json())
+    '''
+    try:
+        bot.send_message(chat_id=chat_id, text=text)  # ou sem parse_mode para testar
+        logger.info(f"✅ Mensagem enviada com sucesso: {text}")
+    except Exception as e:
+        logger.error(f"❌ Falha ao enviar mensagem: {e}")
+import requests
+
+
+
+
+
+url = f'https://api.telegram.org/bot{TOKEN}/sendMessage'
+params = {
+    'chat_id': chat_id,
+    'text': text
+}
+
+response = requests.get(url, params=params)
+print(response.json())
+'''

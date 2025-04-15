@@ -1,1 +1,1 @@
-th_odd
+th_od
