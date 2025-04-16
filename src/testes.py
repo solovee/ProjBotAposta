@@ -138,5 +138,92 @@ while dias_processados != set(dias_todos):
     print("⏳ Aguardando 1 hora para a próxima execução...")
     time.sleep(3600)
     '''
+import time
+from datetime import datetime, timedelta
+import tensorflow as tf
+from api import BetsAPIClient, dia_anterior
+import pandas as pd
+from dotenv import load_dotenv
+import os
+import threading
+import NN
+import telegramBot as tb
+import logging
+import random
+import ast
+load_dotenv()
 
-a = main.criaTodasNNs()
+api = os.getenv("API_KEY")
+chat_id = int(os.getenv("CHAT_ID"))
+
+
+
+apiclient = BetsAPIClient(api_key=api)
+CSV_FILE = r"C:\Users\Leoso\Downloads\projBotAposta\resultados_60_ofc.csv"
+def processar_dois_dias_anteriores():
+    dias = ["20250414", "20250413"]
+    novos_dados = []
+
+    for dia in dias:
+        print(f"🔄 Processando jogos do dia {dia}")
+
+        try:
+            ids, dicio = apiclient.getAllOlds(leagues=apiclient.leagues_ids, day=dia)
+            odds_data = apiclient.filtraOddsNovo(ids=ids)
+            df_odds = apiclient.transform_betting_data(odds_data)
+
+            for dados_evento in dicio:
+                event_id = dados_evento.get('id')
+                odds_transformadas = df_odds[df_odds['id'] == event_id].to_dict('records')
+
+                if odds_transformadas:
+                    merged = {**dados_evento, **odds_transformadas[0], "event_day": dia}
+                else:
+                    merged = {**dados_evento, "event_day": dia}
+
+                novos_dados.append(merged)
+
+        except Exception as e:
+            print(f"❌ Erro ao processar dia {dia}: {e}")
+
+    if novos_dados:
+        df_novo = pd.DataFrame(novos_dados)
+        colunas_ordenadas = ['id', 'event_day'] + [col for col in df_novo.columns if col not in ['id', 'event_day']]
+        df_novo = df_novo[colunas_ordenadas]
+
+        if os.path.exists(CSV_FILE):
+            df_existente = pd.read_csv(CSV_FILE, dtype={"event_day": str})
+            # Adiciona os dados novos no início
+            df_final = pd.concat([df_novo, df_existente], ignore_index=True)
+        else:
+            df_final = df_novo
+
+        df_final.to_csv(CSV_FILE, index=False)
+        print(f"✅ Dados dos dias {dias} adicionados ao início com sucesso!")
+    else:
+        print("⚠️ Nenhum dado foi coletado nos dois dias anteriores.")
+    import pandas as pd
+
+def remover_dois_dias_mais_antigos(CSV_FILE):
+    try:
+        # Lê o CSV e converte a coluna 'event_day' para o tipo string para garantir que as datas fiquem corretas
+        df = pd.read_csv(CSV_FILE, dtype={"event_day": str})
+
+        # Encontra os dois dias mais antigos (mínimos)
+        primeiro_dia = df["event_day"].min()
+        segundo_dia = df[df["event_day"] != primeiro_dia]["event_day"].min()
+
+        # Filtra os registros removendo os dois dias mais antigos
+        df_final = df[~df["event_day"].isin([primeiro_dia, segundo_dia])]
+
+        # Salva o DataFrame de volta no CSV
+        df_final.to_csv(CSV_FILE, index=False)
+
+        print(f"✅ Dois dias mais antigos ({primeiro_dia} e {segundo_dia}) removidos com sucesso. CSV atualizado.")
+
+    except Exception as e:
+        print(f"❌ Erro ao remover os dois dias mais antigos: {e}")
+
+remover_dois_dias_mais_antigos(CSV_FILE)
+
+

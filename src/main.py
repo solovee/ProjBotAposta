@@ -41,7 +41,7 @@ apiclient = BetsAPIClient(api_key=api)
 #CSV_FILE = r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_novo.csv"
 CSV_FILE = r"C:\Users\Leoso\Downloads\projBotAposta\resultados_60.csv"
 #lista dos thresholds das nns
-lista_th = [0.5,0.2,0.5,0.5,0.5,0.5]
+lista_th = [0.875,0.45,0.6,0.525,0.775,0.6]
 
 
 
@@ -355,7 +355,7 @@ def predicta_over_under(prepOverUnder_df, dados):
     preds = model_over_under.predict(prepOverUnder_df)
 
     logger.info(f"📊 Over/Under - Predição: {preds[0]}, Odd Over: {dados['odd_goals_over1']}, Odd Under: {dados['odd_goals_under1']}")
-    th_odd = 1.0
+    th_odd = 1.6
     if (preds >= lista_th[0]) and (float(dados['odd_goals_over1']) > th_odd):
         logger.info("✅ Over recomendado")
         return ('over', True)
@@ -366,90 +366,188 @@ def predicta_over_under(prepOverUnder_df, dados):
         logger.info("❌ Nenhuma recomendação em Over/Under")
         return (None, False)
 
+
 def predicta_handicap(prepHandicap_df, dados):
     model_handicap = tf.keras.models.load_model('model_handicap_binario.keras')
     preds = model_handicap.predict(prepHandicap_df)
 
-    pred_handicap_1 = preds[0]
-    pred_handicap_2 = preds[1]
-    th_odd = 1.0
+    pred_handicap_1 = float(preds[0])
+    pred_handicap_2 = float(preds[1])
+    th_odd = 1.6
     logger.info(f"📊 Handicap - Predição 1: {pred_handicap_1}, Predição 2: {pred_handicap_2}, Odds: {dados['odds']}")
 
+    recomendacoes = []
     if (pred_handicap_1 >= lista_th[2]) and (float(dados['odds'].iloc[0]) > th_odd):
-        logger.info("✅ Handicap opção 1 recomendada")
-        return (1, True)
-    elif (pred_handicap_2 >= lista_th[2]) and (float(dados['odds'].iloc[1]) > th_odd):
-        logger.info("✅ Handicap opção 2 recomendada")
-        return (2, True)
+        recomendacoes.append((1, pred_handicap_1))
+    if (pred_handicap_2 >= lista_th[2]) and (float(dados['odds'].iloc[1]) > th_odd):
+        recomendacoes.append((2, pred_handicap_2))
+
+    if recomendacoes:
+        melhor_opcao = max(recomendacoes, key=lambda x: x[1])
+        logger.info(f"✅ Handicap opção {melhor_opcao[0]} recomendada (maior confiança)")
+        return (melhor_opcao[0], True)
     else:
         logger.info("❌ Nenhuma recomendação em Handicap")
         return (None, False)
+
+
 
 def predicta_goal_line(prepGoal_line_df, dados):
     model_goal_line = tf.keras.models.load_model('model_binario_goal_line.keras')
     preds = model_goal_line.predict(prepGoal_line_df)
 
-    pred_goal_line_1 = preds[0]
-    pred_goal_line_2 = preds[1]
-    th_odd = 1.0
+    pred_goal_line_1 = float(preds[0])
+    pred_goal_line_2 = float(preds[1])
+    th_odd = 1.6
     logger.info(f"📊 Goal Line - Predição 1: {pred_goal_line_1}, Predição 2: {pred_goal_line_2}, Odds GL: {dados['odds_gl']}")
-    
+
+    recomendacoes = []
     if (pred_goal_line_1 >= lista_th[3]) and (float(dados['odds_gl'].iloc[0]) > th_odd):
-        logger.info("✅ Goal Line opção 1 recomendada")
-        return (1, True)
-    elif (pred_goal_line_2 >= lista_th[3]) and (float(dados['odds_gl'].iloc[1]) > th_odd):
-        logger.info("✅ Goal Line opção 2 recomendada")
-        return (2, True)
+        recomendacoes.append((1, pred_goal_line_1))
+    if (pred_goal_line_2 >= lista_th[3]) and (float(dados['odds_gl'].iloc[1]) > th_odd):
+        recomendacoes.append((2, pred_goal_line_2))
+
+    if recomendacoes:
+        melhor_opcao = max(recomendacoes, key=lambda x: x[1])
+        logger.info(f"✅ Goal Line opção {melhor_opcao[0]} recomendada (maior confiança)")
+        return (melhor_opcao[0], True)
     else:
         logger.info("❌ Nenhuma recomendação em Goal Line")
         return (None, False)
+
+
 
 def predicta_double_chance(pred_double_chance_df, dados):
     model_double_chance = tf.keras.models.load_model('model_double_chance.keras')
     preds = model_double_chance.predict(pred_double_chance_df)
 
-    pred_double_chance_1 = preds[0]
-    pred_double_chance_2 = preds[1]
-    pred_double_chance_3 = preds[2]
-    th_odd = 1.0
+    pred_double_chance_1 = float(preds[0])
+    pred_double_chance_2 = float(preds[1])
+    pred_double_chance_3 = float(preds[2])
+    th_odd = 1.6
 
     logger.info(f"📊 Double Chance - Predições: {preds}, Odds: {dados['odds']}")
 
+    recomendacoes = []
     if (pred_double_chance_1 >= lista_th[4]) and (float(dados['odds'].iloc[0]) > th_odd):
-        logger.info("✅ Double Chance opção 1 recomendada")
-        return (1, True)
-    elif (pred_double_chance_2 >= lista_th[4]) and (float(dados['odds'].iloc[1]) > th_odd):
-        logger.info("✅ Double Chance opção 2 recomendada")
-        return (2, True)
-    elif (pred_double_chance_3 >= lista_th[4]) and (float(dados['odds'].iloc[2]) > th_odd):
-        logger.info("✅ Double Chance opção 3 recomendada")
-        return (3, True)
+        recomendacoes.append((1, pred_double_chance_1))
+    if (pred_double_chance_2 >= lista_th[4]) and (float(dados['odds'].iloc[1]) > th_odd):
+        recomendacoes.append((2, pred_double_chance_2))
+    if (pred_double_chance_3 >= lista_th[4]) and (float(dados['odds'].iloc[2]) > th_odd):
+        recomendacoes.append((3, pred_double_chance_3))
+
+    if recomendacoes:
+        melhor_opcao = max(recomendacoes, key=lambda x: x[1])
+        logger.info(f"✅ Double Chance opção {melhor_opcao[0]} recomendada (maior confiança)")
+        return (melhor_opcao[0], True)
     else:
         logger.info("❌ Nenhuma recomendação em Double Chance")
         return (None, False)
 
-    
 def predicta_draw_no_bet(pred_draw_no_bet_df, dados):
     model_draw_no_bet = tf.keras.models.load_model('model_binario_draw_no_bet.keras')
     preds = model_draw_no_bet.predict(pred_draw_no_bet_df)
 
-    pred_draw_no_bet_1 = preds[0]
-    pred_draw_no_bet_2 = preds[1]
-    th_odd = 1.0
+    pred_draw_no_bet_1 = float(preds[0])
+    pred_draw_no_bet_2 = float(preds[1])
+    th_odd = 1.6
+
     logger.info(f"📊 Draw No Bet - Predição 1: {pred_draw_no_bet_1}, Predição 2: {pred_draw_no_bet_2}, Odds: {dados['odds']}")
 
+    recomendacoes = []
     if (pred_draw_no_bet_1 >= lista_th[5]) and (float(dados['odds'].iloc[0]) > th_odd):
-        logger.info("✅ Draw No Bet opção 1 recomendada")
-        return (1, True)
-    elif (pred_draw_no_bet_2 >= lista_th[5]) and (float(dados['odds'].iloc[1]) > th_odd):
-        logger.info("✅ Draw No Bet opção 2 recomendada")
-        return (2, True)
+        recomendacoes.append((1, pred_draw_no_bet_1))
+    if (pred_draw_no_bet_2 >= lista_th[5]) and (float(dados['odds'].iloc[1]) > th_odd):
+        recomendacoes.append((2, pred_draw_no_bet_2))
+
+    if recomendacoes:
+        melhor_opcao = max(recomendacoes, key=lambda x: x[1])
+        logger.info(f"✅ Draw No Bet opção {melhor_opcao[0]} recomendada (maior confiança)")
+        return (melhor_opcao[0], True)
     else:
         logger.info("❌ Nenhuma recomendação em Draw No Bet")
         return (None, False)
 
 
+def processar_dia_anterior():
+    dia = dia_anterior()
+    print(f"🔄 Processando jogos do dia {dia}")
 
+    try:
+        print("🔎 Buscando IDs e dicionário de eventos...")
+        ids, dicio = apiclient.getAllOlds(leagues=apiclient.leagues_ids, day=dia)
+        print(f"✔️ {len(ids)} eventos encontrados.")
+
+        print("📊 Filtrando e transformando odds...")
+        odds_data = apiclient.filtraOddsNovo(ids=ids)
+        df_odds = apiclient.transform_betting_data(odds_data)
+
+        novos_dados = []
+        for dados_evento in dicio:
+            event_id = dados_evento.get('id')
+            odds_transformadas = df_odds[df_odds['id'] == event_id].to_dict('records')
+
+            if odds_transformadas:
+                merged = {**dados_evento, **odds_transformadas[0], "event_day": dia}
+            else:
+                merged = {**dados_evento, "event_day": dia}
+
+            novos_dados.append(merged)
+
+        if novos_dados:
+            print(f"🧩 {len(novos_dados)} eventos com odds processados.")
+            df_novo = pd.DataFrame(novos_dados)
+
+            # Garante que todas as colunas obrigatórias existam
+            colunas_obrigatorias = [
+                'id', 'event_day', 'home', 'away', 'home_goals', 'away_goals', 'tot_goals',
+                'goals_over_under', 'odd_goals_over1', 'odd_goals_under1',
+                'asian_handicap1', 'team_ah1', 'odds_ah1',
+                'asian_handicap2', 'team_ah2', 'odds_ah2',
+                'goal_line1', 'type_gl1', 'odds_gl1',
+                'goal_line2', 'type_gl2', 'odds_gl2',
+                'double_chance1', 'odds_dc1',
+                'double_chance2', 'odds_dc2',
+                'double_chance3', 'odds_dc3',
+                'draw_no_bet_team1', 'odds_dnb1',
+                'draw_no_bet_team2', 'odds_dnb2',
+            ]
+
+            colunas_adicionadas = []
+            for coluna in colunas_obrigatorias:
+                if coluna not in df_novo.columns:
+                    df_novo[coluna] = None
+                    colunas_adicionadas.append(coluna)
+
+            if colunas_adicionadas:
+                print(f"➕ Colunas adicionadas automaticamente: {', '.join(colunas_adicionadas)}")
+
+            colunas_ordenadas = ['id', 'event_day'] + [col for col in colunas_obrigatorias if col not in ['id', 'event_day']]
+            df_novo = df_novo[colunas_ordenadas]
+
+            if os.path.exists(CSV_FILE):
+                print("📂 CSV existente encontrado, mesclando dados...")
+                df_existente = pd.read_csv(CSV_FILE, dtype={"event_day": str})
+
+                df_final = pd.concat([df_existente, df_novo], ignore_index=True)
+                df_final = df_final.sort_values(by="event_day").reset_index(drop=True)
+
+                primeiro_dia = df_final["event_day"].min()
+                df_final = df_final[df_final["event_day"] != primeiro_dia]
+            else:
+                print("📄 Nenhum CSV encontrado, criando novo arquivo...")
+                df_final = df_novo
+                primeiro_dia = "N/A"
+
+            df_final.to_csv(CSV_FILE, index=False)
+            print(f"✅ Dados atualizados com sucesso! Dia {primeiro_dia} removido, dia {dia} adicionado.")
+        else:
+            print(f"⚠️ Nenhum dado encontrado para o dia {dia}")
+
+    except Exception as e:
+        print(f"❌ Erro ao processar dia {dia}: {type(e).__name__}: {e}")
+
+'''
 #! roda as 00:05
 def processar_dia_anterior():
     dia = dia_anterior()
@@ -499,7 +597,7 @@ def processar_dia_anterior():
 
     except Exception as e:
         print(f"❌ Erro ao processar dia {dia}: {e}")
-
+'''
 if __name__ == "__main__":
     main()
 

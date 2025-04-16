@@ -529,7 +529,7 @@ def classify_draw_no_bet(team, home_goals, away_goals):
 
 import numpy as np
 
-def encontrar_melhor_z_binario_positivo(y_true, y_pred_probs, min_percent=0.05):
+def encontrar_melhor_z_binario_positivo(y_true, y_pred_probs, min_percent=0.20):
     thresholds_pos = np.arange(0.5, 1.01, 0.025)
     # Total de previsões positivas (com qualquer confiança)
     total_pred_positivas = np.sum(y_pred_probs >= 0.5)
@@ -557,7 +557,7 @@ def encontrar_melhor_z_binario_positivo(y_true, y_pred_probs, min_percent=0.05):
 
 
 
-def encontrar_melhor_z_binario_negativo(y_true, y_pred_probs, min_percent=0.05):
+def encontrar_melhor_z_binario_negativo(y_true, y_pred_probs, min_percent=0.20):
 
     thresholds_neg = np.arange(0.5, -0.01, -0.025)
     # Total de previsões negativas (com qualquer confiança)
