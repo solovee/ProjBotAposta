@@ -39,9 +39,9 @@ apiclient = BetsAPIClient(api_key=api)
 
 #df = pd.read_csv('src\resultados_novo.csv')
 #CSV_FILE = r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_novo.csv"
-CSV_FILE = r"C:\Users\Leoso\Downloads\projBotAposta\resultados_60.csv"
+CSV_FILE = r"C:\Users\Leoso\Downloads\projBotAposta\resultados_60_ofc.csv"
 #lista dos thresholds das nns
-lista_th = [0.875,0.45,0.6,0.525,0.775,0.6]
+lista_th = [0.525,0.3,0.525,0.525,0.575,0.525]
 
 
 
@@ -355,11 +355,11 @@ def predicta_over_under(prepOverUnder_df, dados):
     preds = model_over_under.predict(prepOverUnder_df)
 
     logger.info(f"📊 Over/Under - Predição: {preds[0]}, Odd Over: {dados['odd_goals_over1']}, Odd Under: {dados['odd_goals_under1']}")
-    th_odd = 1.6
-    if (preds >= lista_th[0]) and (float(dados['odd_goals_over1']) > th_odd):
+    th_odd = 1.4
+    if (preds >= lista_th[0]) and (float(dados['odd_goals_over1']) >= th_odd):
         logger.info("✅ Over recomendado")
         return ('over', True)
-    elif (preds <= lista_th[1]) and (float(dados['odd_goals_under1']) > th_odd):
+    elif (preds <= lista_th[1]) and (float(dados['odd_goals_under1']) >= th_odd):
         logger.info("✅ Under recomendado")
         return ('under', True)
     else:
@@ -377,9 +377,9 @@ def predicta_handicap(prepHandicap_df, dados):
     logger.info(f"📊 Handicap - Predição 1: {pred_handicap_1}, Predição 2: {pred_handicap_2}, Odds: {dados['odds']}")
 
     recomendacoes = []
-    if (pred_handicap_1 >= lista_th[2]) and (float(dados['odds'].iloc[0]) > th_odd):
+    if (pred_handicap_1 >= lista_th[2]) and (float(dados['odds'].iloc[0]) >= th_odd):
         recomendacoes.append((1, pred_handicap_1))
-    if (pred_handicap_2 >= lista_th[2]) and (float(dados['odds'].iloc[1]) > th_odd):
+    if (pred_handicap_2 >= lista_th[2]) and (float(dados['odds'].iloc[1]) >= th_odd):
         recomendacoes.append((2, pred_handicap_2))
 
     if recomendacoes:
@@ -402,9 +402,9 @@ def predicta_goal_line(prepGoal_line_df, dados):
     logger.info(f"📊 Goal Line - Predição 1: {pred_goal_line_1}, Predição 2: {pred_goal_line_2}, Odds GL: {dados['odds_gl']}")
 
     recomendacoes = []
-    if (pred_goal_line_1 >= lista_th[3]) and (float(dados['odds_gl'].iloc[0]) > th_odd):
+    if (pred_goal_line_1 >= lista_th[3]) and (float(dados['odds_gl'].iloc[0]) >= th_odd):
         recomendacoes.append((1, pred_goal_line_1))
-    if (pred_goal_line_2 >= lista_th[3]) and (float(dados['odds_gl'].iloc[1]) > th_odd):
+    if (pred_goal_line_2 >= lista_th[3]) and (float(dados['odds_gl'].iloc[1]) >= th_odd):
         recomendacoes.append((2, pred_goal_line_2))
 
     if recomendacoes:
@@ -429,11 +429,11 @@ def predicta_double_chance(pred_double_chance_df, dados):
     logger.info(f"📊 Double Chance - Predições: {preds}, Odds: {dados['odds']}")
 
     recomendacoes = []
-    if (pred_double_chance_1 >= lista_th[4]) and (float(dados['odds'].iloc[0]) > th_odd):
+    if (pred_double_chance_1 >= lista_th[4]) and (float(dados['odds'].iloc[0]) >= th_odd):
         recomendacoes.append((1, pred_double_chance_1))
-    if (pred_double_chance_2 >= lista_th[4]) and (float(dados['odds'].iloc[1]) > th_odd):
+    if (pred_double_chance_2 >= lista_th[4]) and (float(dados['odds'].iloc[1]) >= th_odd):
         recomendacoes.append((2, pred_double_chance_2))
-    if (pred_double_chance_3 >= lista_th[4]) and (float(dados['odds'].iloc[2]) > th_odd):
+    if (pred_double_chance_3 >= lista_th[4]) and (float(dados['odds'].iloc[2]) >= th_odd):
         recomendacoes.append((3, pred_double_chance_3))
 
     if recomendacoes:
@@ -455,9 +455,9 @@ def predicta_draw_no_bet(pred_draw_no_bet_df, dados):
     logger.info(f"📊 Draw No Bet - Predição 1: {pred_draw_no_bet_1}, Predição 2: {pred_draw_no_bet_2}, Odds: {dados['odds']}")
 
     recomendacoes = []
-    if (pred_draw_no_bet_1 >= lista_th[5]) and (float(dados['odds'].iloc[0]) > th_odd):
+    if (pred_draw_no_bet_1 >= lista_th[5]) and (float(dados['odds'].iloc[0]) >= th_odd):
         recomendacoes.append((1, pred_draw_no_bet_1))
-    if (pred_draw_no_bet_2 >= lista_th[5]) and (float(dados['odds'].iloc[1]) > th_odd):
+    if (pred_draw_no_bet_2 >= lista_th[5]) and (float(dados['odds'].iloc[1]) >= th_odd):
         recomendacoes.append((2, pred_draw_no_bet_2))
 
     if recomendacoes:
