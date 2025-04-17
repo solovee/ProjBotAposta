@@ -45,7 +45,7 @@ apiclient = BetsAPIClient(api_key=api)
 #CSV_FILE = r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_novo.csv"
 CSV_FILE = r"C:\Users\Leoso\Downloads\projBotAposta\resultados_60_ofc.csv"
 #lista dos thresholds das nns
-lista_th = [0.55,0.4,0.5,0.5,0.525,0.5]
+lista_th = [0.55,0.4,0.5,0.5,0.55,0.5]
 
 
 
@@ -289,7 +289,7 @@ def preve(df_linha):
                 dados_temp = dados_gl.iloc[[0]].copy()   
                 dados_temp['linha'] = dados_temp['goal_line_1'].astype(str) + ' , ' + dados_temp['goal_line_2'].astype(str)
                 dados_temp = dados_temp.drop(columns=['goal_line_1', 'goal_line_2'])
-                dados_temp = dados_temp.rename(columns={'type_gl': 'tipo over(0)/under(1)'})  
+                dados_temp = dados_temp.rename(columns={'type_gl': 'tipo over(1)/under(2)'})  
                 dados_temp = dados_temp.rename(columns={'odds_gl': 'odds'})  
                 list_true.append(dados_temp)
             elif (lista_preds_true[4] == 2):
@@ -365,7 +365,7 @@ def predicta_over_under(prepOverUnder_df, dados):
     pred_over = float(preds[0])
     preds = [pred_over]
 
-    th_ve = 1.05  # Valor Esperado mínimo
+    th_ve = 0.95  # Valor Esperado mínimo
     recomendacoes = []
 
     # Odds de over e under
@@ -377,7 +377,7 @@ def predicta_over_under(prepOverUnder_df, dados):
     ve_under = (1 - pred_over) * odd_under
 
     logger.info(f"📊 Over/Under - Predição: {pred_over}, Odd Over: {odd_over}, Odd Under: {odd_under}")
-    th_odd = 1.4
+    th_odd = 1.5
     # Verificar as condições para recomendação
     if (ve_over >= th_ve) and (pred_over >= lista_th[0]) and (odd_over >= th_odd):
         recomendacoes.append(('over', ve_over, pred_over, odd_over))
@@ -401,22 +401,28 @@ def predicta_handicap(prepHandicap_df, dados):
 
     pred_handicap_1 = float(preds[0])
     pred_handicap_2 = float(preds[1])
-    th_odd = 1.6
-    logger.info(f"📊 Handicap - Predição 1: {pred_handicap_1}, Predição 2: {pred_handicap_2}, Odds: {dados['odds']}")
+    preds = [pred_handicap_1, pred_handicap_2]
 
+    th_ve = 0.95  # Valor Esperado mínimo
     recomendacoes = []
-    if (pred_handicap_1 >= lista_th[2]) and (float(dados['odds'].iloc[0]) >= th_odd):
-        recomendacoes.append((1, pred_handicap_1))
-    if (pred_handicap_2 >= lista_th[2]) and (float(dados['odds'].iloc[1]) >= th_odd):
-        recomendacoes.append((2, pred_handicap_2))
+    th_odd = 1.6
+    for i in range(2):
+        prob = preds[i]
+        odd = float(dados['odds'].iloc[i])
+        ve = prob * odd
+        if (ve >= th_ve) and (prob >= lista_th[2]) and (odd >= th_odd):
+            recomendacoes.append((i + 1, ve, prob, odd))
+
+    logger.info(f"📊 Handicap - Predições: {preds}, Odds: {dados['odds']}")
 
     if recomendacoes:
         melhor_opcao = max(recomendacoes, key=lambda x: x[1])
-        logger.info(f"✅ Handicap opção {melhor_opcao[0]} recomendada (maior confiança)")
+        logger.info(f"✅ Handicap opção {melhor_opcao[0]} recomendada (VE: {melhor_opcao[1]:.3f}, Prob: {melhor_opcao[2]:.3f}, Odd: {melhor_opcao[3]:.2f})")
         return (melhor_opcao[0], True)
     else:
         logger.info("❌ Nenhuma recomendação em Handicap")
         return (None, False)
+
 
 
 
@@ -428,14 +434,14 @@ def predicta_goal_line(prepGoal_line_df, dados):
     pred_goal_line_2 = float(preds[1])
     preds = [pred_goal_line_1, pred_goal_line_2]
 
-    th_ve = 1.05  # Valor Esperado mínimo
+    th_ve = 0.95  # Valor Esperado mínimo
     recomendacoes = []
-
+    th_odd = 1.6
     for i in range(2):
         prob = preds[i]
         odd = float(dados['odds_gl'].iloc[i])
         ve = prob * odd
-        if (ve >= th_ve) and (prob >= lista_th[3]):
+        if (ve >= th_ve) and (prob >= lista_th[3]) and (odd >= th_odd):
             recomendacoes.append((i + 1, ve, prob, odd))
 
     logger.info(f"📊 Goal Line - Predições: {preds}, Odds GL: {dados['odds_gl']}")
@@ -462,13 +468,13 @@ def predicta_double_chance(pred_double_chance_df, dados):
 
     preds = [pred_double_chance_1, pred_double_chance_2, pred_double_chance_3]
 
-    th_ve = 1.05
-    
+    th_ve = 0.95
+    th_odd = 1.6
     for i in range(3):
         prob = preds[i]
         odd = float(dados['odds'].iloc[i])
         ve = prob * odd
-        if (ve >= th_ve) and (prob >= lista_th[4]):
+        if (ve >= th_ve) and (prob >= lista_th[4]) and (odd >= th_odd):
             recomendacoes.append((i + 1, ve, prob, odd))
     logger.info(f"📊 Double Chance - Predições: {preds}, Odds: {dados['odds']}")
 
@@ -492,16 +498,16 @@ def predicta_draw_no_bet(pred_draw_no_bet_df, dados):
 
     preds = [pred_draw_no_bet_1, pred_draw_no_bet_2]
 
-    th_ve = 1.05  # Valor esperado mínimo
+    th_ve = 0.95  # Valor esperado mínimo
     recomendacoes = []
 
     for i in range(2):
         prob = preds[i]
         odd = float(dados['odds'].iloc[i])
         ve = prob * odd
-
+        th_odd = 1.6
         # Verifica se o Valor Esperado é maior que o limite e a probabilidade é alta o suficiente
-        if (ve >= th_ve) and (prob >= lista_th[5]):
+        if (ve >= th_ve) and (prob >= lista_th[5]) and (odd >= th_odd):
             recomendacoes.append((i + 1, ve, prob, odd))
 
     logger.info(f"📊 Draw No Bet - Predições: {preds}, Odds: {dados['odds']}")
