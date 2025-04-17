@@ -45,7 +45,6 @@ def start_bot():
 
 def sendMessages(chat_id, text):
     TOKEN = '7857822617:AAH_pNvbi7M1254hwLDeJA4KKyKiZYdHTzM'
-    chat_id = '7815720131'
     url = f'https://api.telegram.org/bot{TOKEN}/sendMessage'
     params = {
         'chat_id': chat_id,

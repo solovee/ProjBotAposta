@@ -33,6 +33,8 @@ load_dotenv()
 api = os.getenv("API_KEY")
 chat_id = int(os.getenv("CHAT_ID"))
 
+chats = [chat_id, -1002610837223]
+
 
 
 apiclient = BetsAPIClient(api_key=api)
@@ -43,7 +45,7 @@ apiclient = BetsAPIClient(api_key=api)
 #CSV_FILE = r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_novo.csv"
 CSV_FILE = r"C:\Users\Leoso\Downloads\projBotAposta\resultados_60_ofc.csv"
 #lista dos thresholds das nns
-lista_th = [0.55,0.3,0.5,0.5,0.575,0.5]
+lista_th = [0.55,0.4,0.5,0.5,0.525,0.5]
 
 
 
@@ -124,12 +126,12 @@ def main():
 
 def pegaJogosDoDia():
     try:
-        ids , tempo, time, times_id = apiclient.getUpcoming(leagues=apiclient.leagues_ids)
+        ids , tempo, nome_time, times_id = apiclient.getUpcoming(leagues=apiclient.leagues_ids)
         if not ids:
             logger.warning("⚠️ Nenhum ID de jogo retornado pela API")
             return pd.DataFrame()
         # adicionar tratamento pra no caso de vazio
-        dados = [{"id_jogo": i, "horario": h, "times": k, "home": z, "away": t} for i, h, k, (z, t) in zip(ids, tempo, time, times_id)]
+        dados = [{"id_jogo": i, "horario": h, "times": k, "home": z, "away": t} for i, h, k, (z, t) in zip(ids, tempo, nome_time, times_id)]
         print(dados)
         dados_dataframe = pd.DataFrame(dados)
         dados_dataframe = dados_dataframe[~dados_dataframe['id_jogo'].isin(programado)]
@@ -138,8 +140,11 @@ def pegaJogosDoDia():
             logger.info("ℹ️ Todos os jogos já estão programados")
             return dados_dataframe
         
+        agora = int(time.time())
+        
         dados_dataframe['horario'] = dados_dataframe['horario'].astype(int)
-        dados_dataframe['send_time'] = dados_dataframe['horario'] - 300
+        dados_dataframe['send_time'] = dados_dataframe['horario'] - 320
+        dados_dataframe = dados_dataframe[dados_dataframe['send_time'] > (agora - (7 * 60))]
         dados_dataframe = dados_dataframe.sort_values(by="horario").reset_index(drop=True)
         
         programados = dados_dataframe['id_jogo'].tolist()
@@ -189,7 +194,8 @@ def acao_do_jogo(row):
         if lista_bets_a_enviar:
             logger.info(f"📩 Enviando {len(lista_bets_a_enviar)} previsões para o Telegram")
             for bet in lista_bets_a_enviar:
-                tb.sendMessages(chat_id, bet)
+                for id in chats:
+                    tb.sendMessages(id, bet)
         else:
             logger.info("ℹ️ Nenhuma aposta recomendada para este jogo")
 
@@ -267,13 +273,13 @@ def preve(df_linha):
         if (lista_preds_true[2] is not None and lista_preds_true[3] is not None):
             if (lista_preds_true[2] == 1):
                 dados_temp = dados_ah.iloc[[0]].copy()     
-                dados_temp['linha'] = dados_temp['asian_handicap_1'] + ' , ' + dados_temp['asian_handicap_2']
+                dados_temp['handicap'] = dados_temp['asian_handicap_1'].astype(str) + ' , ' + dados_temp['asian_handicap_2'].astype(str)
                 dados_temp = dados_temp.drop(columns=['asian_handicap_1', 'asian_handicap_2'])
                 dados_temp = dados_temp.rename(columns={'team_ah': 'time'})
                 list_true.append(dados_temp)
             elif (lista_preds_true[2] == 2):
                 dados_temp = dados_ah.iloc[[1]].copy()
-                dados_temp['linha'] = dados_temp['asian_handicap_1'] + ' , ' + dados_temp['asian_handicap_2']
+                dados_temp['handicap'] = dados_temp['asian_handicap_1'].astype(str) + ' , ' + dados_temp['asian_handicap_2'].astype(str)
                 dados_temp = dados_temp.drop(columns=['asian_handicap_1', 'asian_handicap_2'])
                 dados_temp = dados_temp.rename(columns={'team_ah': 'time'})
                 list_true.append(dados_temp) 
@@ -281,14 +287,14 @@ def preve(df_linha):
         if (lista_preds_true[4] is not None and lista_preds_true[5] is not None):
             if (lista_preds_true[4] == 1):
                 dados_temp = dados_gl.iloc[[0]].copy()   
-                dados_temp['linha'] = dados_temp['goal_line_1'] + ' , ' + dados_temp['goal_line_2']
+                dados_temp['linha'] = dados_temp['goal_line_1'].astype(str) + ' , ' + dados_temp['goal_line_2'].astype(str)
                 dados_temp = dados_temp.drop(columns=['goal_line_1', 'goal_line_2'])
                 dados_temp = dados_temp.rename(columns={'type_gl': 'tipo over(0)/under(1)'})  
                 dados_temp = dados_temp.rename(columns={'odds_gl': 'odds'})  
                 list_true.append(dados_temp)
             elif (lista_preds_true[4] == 2):
                 dados_temp = dados_gl.iloc[[1]].copy()   
-                dados_temp['linha'] = dados_temp['goal_line_1'] + ' , ' + dados_temp['goal_line_2']
+                dados_temp['linha'] = dados_temp['goal_line_1'].astype(str) + ' , ' + dados_temp['goal_line_2'].astype(str)
                 dados_temp = dados_temp.drop(columns=['goal_line_1', 'goal_line_2'])
                 dados_temp = dados_temp.rename(columns={'type_gl': 'tipo over(0)/under(1)'})  
                 dados_temp = dados_temp.rename(columns={'odds_gl': 'odds'})     
@@ -356,17 +362,37 @@ def predicta_over_under(prepOverUnder_df, dados):
     model_over_under = tf.keras.models.load_model('model_over_under.keras')
     preds = model_over_under.predict(prepOverUnder_df)
 
-    logger.info(f"📊 Over/Under - Predição: {preds[0]}, Odd Over: {dados['odd_goals_over1']}, Odd Under: {dados['odd_goals_under1']}")
+    pred_over = float(preds[0])
+    preds = [pred_over]
+
+    th_ve = 1.05  # Valor Esperado mínimo
+    recomendacoes = []
+
+    # Odds de over e under
+    odd_over = float(dados['odd_goals_over1'])
+    odd_under = float(dados['odd_goals_under1'])
+
+    # Cálculo do Valor Esperado para over e under
+    ve_over = pred_over * odd_over
+    ve_under = (1 - pred_over) * odd_under
+
+    logger.info(f"📊 Over/Under - Predição: {pred_over}, Odd Over: {odd_over}, Odd Under: {odd_under}")
     th_odd = 1.4
-    if (preds >= lista_th[0]) and (float(dados['odd_goals_over1']) >= th_odd):
-        logger.info("✅ Over recomendado")
-        return ('over', True)
-    elif (preds <= lista_th[1]) and (float(dados['odd_goals_under1']) >= th_odd):
-        logger.info("✅ Under recomendado")
-        return ('under', True)
+    # Verificar as condições para recomendação
+    if (ve_over >= th_ve) and (pred_over >= lista_th[0]) and (odd_over >= th_odd):
+        recomendacoes.append(('over', ve_over, pred_over, odd_over))
+    if (ve_under >= th_ve) and (pred_over <= lista_th[1]) and (odd_under >= th_odd):
+        recomendacoes.append(('under', ve_under, 1 - pred_over, odd_under))
+
+    if recomendacoes:
+        # Escolher a melhor opção com maior valor esperado
+        melhor_opcao = max(recomendacoes, key=lambda x: x[1])
+        logger.info(f"✅ {melhor_opcao[0]} recomendado (VE: {melhor_opcao[1]:.3f}, Prob: {melhor_opcao[2]:.3f}, Odd: {melhor_opcao[3]:.2f})")
+        return (melhor_opcao[0], True)
     else:
         logger.info("❌ Nenhuma recomendação em Over/Under")
         return (None, False)
+
 
 
 def predicta_handicap(prepHandicap_df, dados):
@@ -400,18 +426,23 @@ def predicta_goal_line(prepGoal_line_df, dados):
 
     pred_goal_line_1 = float(preds[0])
     pred_goal_line_2 = float(preds[1])
-    th_odd = 1.6
-    logger.info(f"📊 Goal Line - Predição 1: {pred_goal_line_1}, Predição 2: {pred_goal_line_2}, Odds GL: {dados['odds_gl']}")
+    preds = [pred_goal_line_1, pred_goal_line_2]
 
+    th_ve = 1.05  # Valor Esperado mínimo
     recomendacoes = []
-    if (pred_goal_line_1 >= lista_th[3]) and (float(dados['odds_gl'].iloc[0]) >= th_odd):
-        recomendacoes.append((1, pred_goal_line_1))
-    if (pred_goal_line_2 >= lista_th[3]) and (float(dados['odds_gl'].iloc[1]) >= th_odd):
-        recomendacoes.append((2, pred_goal_line_2))
+
+    for i in range(2):
+        prob = preds[i]
+        odd = float(dados['odds_gl'].iloc[i])
+        ve = prob * odd
+        if (ve >= th_ve) and (prob >= lista_th[3]):
+            recomendacoes.append((i + 1, ve, prob, odd))
+
+    logger.info(f"📊 Goal Line - Predições: {preds}, Odds GL: {dados['odds_gl']}")
 
     if recomendacoes:
         melhor_opcao = max(recomendacoes, key=lambda x: x[1])
-        logger.info(f"✅ Goal Line opção {melhor_opcao[0]} recomendada (maior confiança)")
+        logger.info(f"✅ Goal Line opção {melhor_opcao[0]} recomendada (VE: {melhor_opcao[1]:.3f}, Prob: {melhor_opcao[2]:.3f}, Odd: {melhor_opcao[3]:.2f})")
         return (melhor_opcao[0], True)
     else:
         logger.info("❌ Nenhuma recomendação em Goal Line")
@@ -419,29 +450,34 @@ def predicta_goal_line(prepGoal_line_df, dados):
 
 
 
+
 def predicta_double_chance(pred_double_chance_df, dados):
     model_double_chance = tf.keras.models.load_model('model_double_chance.keras')
     preds = model_double_chance.predict(pred_double_chance_df)
+    recomendacoes = []
 
     pred_double_chance_1 = float(preds[0])
     pred_double_chance_2 = float(preds[1])
     pred_double_chance_3 = float(preds[2])
-    
-    th_odd = 1.6
 
+    preds = [pred_double_chance_1, pred_double_chance_2, pred_double_chance_3]
+
+    th_ve = 1.05
+    
+    for i in range(3):
+        prob = preds[i]
+        odd = float(dados['odds'].iloc[i])
+        ve = prob * odd
+        if (ve >= th_ve) and (prob >= lista_th[4]):
+            recomendacoes.append((i + 1, ve, prob, odd))
     logger.info(f"📊 Double Chance - Predições: {preds}, Odds: {dados['odds']}")
 
-    recomendacoes = []
-    if (pred_double_chance_1 >= lista_th[4]) and (float(dados['odds'].iloc[0]) >= th_odd):
-        recomendacoes.append((1, pred_double_chance_1))
-    if (pred_double_chance_2 >= lista_th[4]) and (float(dados['odds'].iloc[1]) >= th_odd):
-        recomendacoes.append((2, pred_double_chance_2))
-    if (pred_double_chance_3 >= lista_th[4]) and (float(dados['odds'].iloc[2]) >= th_odd):
-        recomendacoes.append((3, pred_double_chance_3))
+    
+
 
     if recomendacoes:
-        melhor_opcao = max(recomendacoes, key=lambda x: x[1])
-        logger.info(f"✅ Double Chance opção {melhor_opcao[0]} recomendada (maior confiança)")
+        melhor_opcao = max(recomendacoes, key=lambda x: x[1])  # maior VE
+        logger.info(f"✅ Double Chance opção {melhor_opcao[0]} recomendada | VE={melhor_opcao[1]:.3f} | Prob={melhor_opcao[2]:.2f} | Odd={melhor_opcao[3]}")
         return (melhor_opcao[0], True)
     else:
         logger.info("❌ Nenhuma recomendação em Double Chance")
@@ -453,23 +489,31 @@ def predicta_draw_no_bet(pred_draw_no_bet_df, dados):
 
     pred_draw_no_bet_1 = float(preds[0])
     pred_draw_no_bet_2 = float(preds[1])
-    th_odd = 1.6
 
-    logger.info(f"📊 Draw No Bet - Predição 1: {pred_draw_no_bet_1}, Predição 2: {pred_draw_no_bet_2}, Odds: {dados['odds']}")
+    preds = [pred_draw_no_bet_1, pred_draw_no_bet_2]
 
+    th_ve = 1.05  # Valor esperado mínimo
     recomendacoes = []
-    if (pred_draw_no_bet_1 >= lista_th[5]) and (float(dados['odds'].iloc[0]) >= th_odd):
-        recomendacoes.append((1, pred_draw_no_bet_1))
-    if (pred_draw_no_bet_2 >= lista_th[5]) and (float(dados['odds'].iloc[1]) >= th_odd):
-        recomendacoes.append((2, pred_draw_no_bet_2))
+
+    for i in range(2):
+        prob = preds[i]
+        odd = float(dados['odds'].iloc[i])
+        ve = prob * odd
+
+        # Verifica se o Valor Esperado é maior que o limite e a probabilidade é alta o suficiente
+        if (ve >= th_ve) and (prob >= lista_th[5]):
+            recomendacoes.append((i + 1, ve, prob, odd))
+
+    logger.info(f"📊 Draw No Bet - Predições: {preds}, Odds: {dados['odds']}")
 
     if recomendacoes:
         melhor_opcao = max(recomendacoes, key=lambda x: x[1])
-        logger.info(f"✅ Draw No Bet opção {melhor_opcao[0]} recomendada (maior confiança)")
+        logger.info(f"✅ Draw No Bet opção {melhor_opcao[0]} recomendada (maior VE)")
         return (melhor_opcao[0], True)
     else:
         logger.info("❌ Nenhuma recomendação em Draw No Bet")
         return (None, False)
+
 
 
 def processar_dia_anterior():

@@ -8,6 +8,7 @@ import os
 from datetime import datetime, timedelta
 from sklearn.model_selection import train_test_split
 import logging
+import pickle
 
 
 
@@ -529,7 +530,7 @@ def classify_draw_no_bet(team, home_goals, away_goals):
 
 import numpy as np
 
-def encontrar_melhor_z_binario_positivo(y_true, y_pred_probs, min_percent=0.25):
+def encontrar_melhor_z_binario_positivo(y_true, y_pred_probs, min_percent=0.75):
     thresholds_pos = np.arange(0.5, 1.01, 0.025)
     # Total de previsões positivas (com qualquer confiança)
     total_pred_positivas = np.sum(y_pred_probs >= 0.5)
@@ -557,7 +558,7 @@ def encontrar_melhor_z_binario_positivo(y_true, y_pred_probs, min_percent=0.25):
 
 
 
-def encontrar_melhor_z_binario_negativo(y_true, y_pred_probs, min_percent=0.25):
+def encontrar_melhor_z_binario_negativo(y_true, y_pred_probs, min_percent=0.75):
 
     thresholds_neg = np.arange(0.5, -0.01, -0.025)
     # Total de previsões negativas (com qualquer confiança)
@@ -624,17 +625,21 @@ def prepNNOver_under_X(df=df_temp):
         print(f"❌ Colunas ausentes em 'prepNNOver_under_X': {', '.join(missing_cols)}")
         return None, None
     
+    
     df_temporario = df[required_columns].copy()
     df_temporario.dropna(inplace=True)
     if df_temporario.empty:
         print("❌ DataFrame vazio após dropna em prepNNoverunder*")
         return None, None
     z = df_temporario[['times','odd_goals_over1', 'odd_goals_under1']].copy()
-   
+
     X = df_temporario[['odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean']]
+
     try:
-        X = normalizacao(X)
-        X = pd.DataFrame(X, columns=['odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean']).reset_index(drop=True)
+        with open('scaler_over_under.pkl', 'rb') as f:
+            scaler = pickle.load(f)
+            X_standardized = scaler.transform(X)
+        X = pd.DataFrame(X_standardized, columns=['odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean']).reset_index(drop=True)
     except Exception as e:
         print('Erro over_under')
         return None, None
@@ -661,8 +666,10 @@ def prepNNHandicap_X(df=df_temp):
     df_temporario = pd.get_dummies(df_temporario, columns=['team_ah'], prefix='team_ah')
     X = df_temporario[['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds']]
     try:
-        X = normalizacao(X)
-        X = pd.DataFrame(X, columns=['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds']).reset_index(drop=True)
+        with open('scaler_handicap.pkl', 'rb') as f:
+            scaler = pickle.load(f)
+            X_standardized = scaler.transform(X)
+        X = pd.DataFrame(X_standardized, columns=['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds']).reset_index(drop=True)
         type_df = df_temporario[['team_ah_1','team_ah_2']].reset_index(drop=True)
     except Exception as e:
         print('Erro handicap')
@@ -691,8 +698,10 @@ def prepNNGoal_line_X(df=df_temp):
     df_temporario = pd.get_dummies(df_temporario, columns=['type_gl'], prefix='type_gl')
     X = df_temporario[['h2h_mean', 'media_goals_home', 'media_goals_away','odds_gl', 'goal_line_1', 'goal_line_2']].copy()
     try:
-        X = normalizacao(X)
-        X = pd.DataFrame(X, columns=['h2h_mean', 'media_goals_home', 'media_goals_away','odds_gl', 'goal_line_1', 'goal_line_2']).reset_index(drop=True)
+        with open('scaler_goal_line.pkl', 'rb') as f:
+            scaler = pickle.load(f)
+            X_standardized = scaler.transform(X)
+        X = pd.DataFrame(X_standardized, columns=['h2h_mean', 'media_goals_home', 'media_goals_away','odds_gl', 'goal_line_1', 'goal_line_2']).reset_index(drop=True)
         type_df = df_temporario[['type_gl_1', 'type_gl_2']].reset_index(drop=True)
     except Exception as e:
         print('Erro goal_line')
@@ -722,8 +731,10 @@ def prepNNDouble_chance_X(df=df_temp):
     X = df_temporario[['media_goals_home', 'media_goals_away', 'media_victories_home',
                       'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']].copy()
     try:
-        X = normalizacao(X)
-        X = pd.DataFrame(X, columns=['media_goals_home', 'media_goals_away', 'media_victories_home',
+        with open('scaler_double_chance.pkl', 'rb') as f:
+            scaler = pickle.load(f)
+            X_standardized = scaler.transform(X)
+        X = pd.DataFrame(X_standardized, columns=['media_goals_home', 'media_goals_away', 'media_victories_home',
                                      'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']).reset_index(drop=True)
         type_df = df_temporario[['double_chance_type_1', 'double_chance_type_2','double_chance_type_3']].reset_index(drop=True)
     except Exception as e:
@@ -752,8 +763,10 @@ def prepNNDraw_no_bet_X(df=df_temp):
     X = df_temporario[['media_goals_home', 'media_goals_away', 'media_victories_home','media_victories_away', 
                       'home_h2h_mean', 'away_h2h_mean', 'odds']].copy()
     try:
-        X = normalizacao(X)
-        X = pd.DataFrame(X, columns=['media_goals_home', 'media_goals_away', 'media_victories_home',
+        with open('scaler_draw_no_bet.pkl', 'rb') as f:
+            scaler = pickle.load(f)
+            X_standardized = scaler.transform(X)
+        X = pd.DataFrame(X_standardized, columns=['media_goals_home', 'media_goals_away', 'media_victories_home',
                                      'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']).reset_index(drop=True)
         type_df = df_temporario[['draw_no_bet_type_1', 'draw_no_bet_type_2']].reset_index(drop=True)
     except Exception as e:
@@ -806,7 +819,11 @@ def NN_over_under(df):
     df_temporario.to_csv('df_temporario.csv')
     X = df_temporario[['odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean']]
     y = df_temporario['res_goals_over_under']
-    x_train, x_test, y_train, y_test = normalizacao_and_split(X,y)
+    scaler_over_under = StandardScaler()
+    X_standardized = scaler_over_under.fit_transform(X)
+    with open('scaler_over_under.pkl', 'wb') as f:
+        pickle.dump(scaler_over_under, f)
+    x_train, x_test, y_train, y_test = split(X_standardized,y)
 
     model_over_under = tf.keras.Sequential([
         tf.keras.layers.Dense(128, activation='relu', input_shape=(x_train.shape[1],)),
@@ -815,6 +832,9 @@ def NN_over_under(df):
         tf.keras.layers.Dense(64, activation='relu'),
         tf.keras.layers.BatchNormalization(),
         tf.keras.layers.Dropout(0.3),
+        tf.keras.layers.Dense(32, activation='relu'),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(1, activation='sigmoid')  # Saída binária
     ])
     model_over_under.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001), loss=tf.keras.losses.BinaryCrossentropy(), metrics=['accuracy'])
@@ -948,19 +968,24 @@ def NN_handicap(df=df_temp):
     
     df_temporario.dropna(inplace=True)
     X = df_temporario[['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds']]
-    X = normalizacao(X)
-    X = pd.DataFrame(X, columns=['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds']).reset_index(drop=True)
+    scaler_handicap = StandardScaler()
+    X_standardized = scaler_handicap.fit_transform(X)
+    with open('scaler_handicap.pkl', 'wb') as f:
+        pickle.dump(scaler_handicap, f)
+    
+    X = pd.DataFrame(X_standardized, columns=['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds']).reset_index(drop=True)
     type_df = df_temporario[['team_ah_1.0',	'team_ah_2.0']]
     type_df = type_df.reset_index(drop=True)
     X_final = pd.concat([X, type_df], axis=1)
     y = df_temporario[['negativo', 'positivo', 'reembolso']].copy()
     
 
-    # 1. Criando o y binário: positivo (1) ou não (0)
     y_binario = df_temporario['positivo'].astype(int)
 
     # 2. Reutilizando o X_final já preparado e normalizado
     x_train_bin, x_test_bin, y_train_bin, y_test_bin = split(X_final, y_binario)
+
+
 
         # 3. Criando o modelo binário
     modelo_binario = tf.keras.Sequential([
@@ -970,6 +995,9 @@ def NN_handicap(df=df_temp):
         tf.keras.layers.Dense(64, activation='relu'),
         tf.keras.layers.BatchNormalization(),
         tf.keras.layers.Dropout(0.3),
+        tf.keras.layers.Dense(32, activation='relu'),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(1, activation='sigmoid')  # Saída binária
     ])
 
@@ -1111,8 +1139,11 @@ def NN_goal_line(df=df_temp):
     df_temporario.dropna(inplace=True)
 
     X = df_temporario[['h2h_mean', 'media_goals_home', 'media_goals_away','odds_gl', 'goal_line_1', 'goal_line_2']].copy()
-    X = normalizacao(X)
-    X = pd.DataFrame(X, columns=['h2h_mean', 'media_goals_home', 'media_goals_away','odds_gl', 'goal_line_1', 'goal_line_2']).reset_index(drop=True)
+    scaler_goal_line = StandardScaler()
+    X_standardized = scaler_goal_line.fit_transform(X)
+    with open('scaler_goal_line.pkl', 'wb') as f:
+        pickle.dump(scaler_goal_line, f)
+    X = pd.DataFrame(X_standardized, columns=['h2h_mean', 'media_goals_home', 'media_goals_away','odds_gl', 'goal_line_1', 'goal_line_2']).reset_index(drop=True)
     type_df = df_temporario[['type_gl_1.0', 'type_gl_2.0']]
     type_df = type_df.reset_index(drop=True)
     X_final = pd.concat([X, type_df], axis=1)
@@ -1133,6 +1164,9 @@ def NN_goal_line(df=df_temp):
         tf.keras.layers.Dense(64, activation='relu'),
         tf.keras.layers.BatchNormalization(),
         tf.keras.layers.Dropout(0.3),
+        tf.keras.layers.Dense(32, activation='relu'),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(1, activation='sigmoid')  # Saída binária
     ])
 
@@ -1288,8 +1322,11 @@ def NN_double_chance(df=df_temp):
 
     X = df_temporario[['media_goals_home', 'media_goals_away', 'media_victories_home',
                       'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']].copy()
-    X = normalizacao(X)
-    X = pd.DataFrame(X, columns=['media_goals_home', 'media_goals_away', 'media_victories_home',
+    scaler_double_chance = StandardScaler()
+    X_standardized = scaler_double_chance.fit_transform(X)
+    with open('scaler_double_chance.pkl', 'wb') as f:
+        pickle.dump(scaler_double_chance, f)
+    X = pd.DataFrame(X_standardized, columns=['media_goals_home', 'media_goals_away', 'media_victories_home',
                              'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']).reset_index(drop=True)
     type_df = df_temporario[['double_chance_type_1', 'double_chance_type_2','double_chance_type_3' ]]
     type_df = type_df.reset_index(drop=True)
@@ -1308,6 +1345,9 @@ def NN_double_chance(df=df_temp):
         tf.keras.layers.Dense(64, activation='relu'),
         tf.keras.layers.BatchNormalization(),
         tf.keras.layers.Dropout(0.3),
+        tf.keras.layers.Dense(32, activation='relu'),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
     model_double_chance.compile(optimizer=tf.keras.optimizers.Adam(0.001), loss='binary_crossentropy', metrics=['accuracy'])
@@ -1444,8 +1484,11 @@ def NN_draw_no_bet(df=df_temp):
 
     X = df_temporario[['media_goals_home', 'media_goals_away','media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']].copy()
     
-    X = normalizacao(X)
-    X = pd.DataFrame(X, columns=['media_goals_home', 'media_goals_away',
+    scaler_draw_no_bet = StandardScaler()
+    X_standardized = scaler_draw_no_bet.fit_transform(X)
+    with open('scaler_draw_no_bet.pkl', 'wb') as f:
+        pickle.dump(scaler_draw_no_bet, f)
+    X = pd.DataFrame(X_standardized, columns=['media_goals_home', 'media_goals_away',
                              'media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']).reset_index(drop=True)
 
     type_df = df_temporario[['draw_no_bet_team_1.0', 'draw_no_bet_team_2.0']]
@@ -1466,6 +1509,9 @@ def NN_draw_no_bet(df=df_temp):
         tf.keras.layers.Dense(64, activation='relu'),
         tf.keras.layers.BatchNormalization(),
         tf.keras.layers.Dropout(0.3),
+        tf.keras.layers.Dense(32, activation='relu'),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(1, activation='sigmoid')  # Saída binária
     ])
 
@@ -1474,7 +1520,7 @@ def NN_draw_no_bet(df=df_temp):
     # 4. Treinamento
     hist_bin = modelo_binario_draw_no_bet.fit(x_train_bin, y_train_bin, epochs=30)
     y_pred_probs = modelo_binario_draw_no_bet.predict(x_test_bin)
-    melhor_z_positivo = encontrar_melhor_z_binario_positivo(y_test_bin, y_pred_probs )
+    melhor_z_positivo = encontrar_melhor_z_binario_positivo(y_test_bin, y_pred_probs)
 
     modelo_binario_draw_no_bet.save("model_binario_draw_no_bet.keras")  # Salva em formato nativo do Keras
 
