@@ -37,11 +37,13 @@ chat_id = int(os.getenv("CHAT_ID"))
 
 apiclient = BetsAPIClient(api_key=api)
 
+#talvez adicionar liga como parametro da NN (one hot ou label encoder?), talvez nao normalizar a linha do handicap?, definir um th bem menor que o esperado? melhorar os retornos?
+
 #df = pd.read_csv('src\resultados_novo.csv')
 #CSV_FILE = r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_novo.csv"
 CSV_FILE = r"C:\Users\Leoso\Downloads\projBotAposta\resultados_60_ofc.csv"
 #lista dos thresholds das nns
-lista_th = [0.525,0.3,0.525,0.525,0.575,0.525]
+lista_th = [0.55,0.3,0.5,0.5,0.575,0.5]
 
 
 
@@ -424,6 +426,7 @@ def predicta_double_chance(pred_double_chance_df, dados):
     pred_double_chance_1 = float(preds[0])
     pred_double_chance_2 = float(preds[1])
     pred_double_chance_3 = float(preds[2])
+    
     th_odd = 1.6
 
     logger.info(f"📊 Double Chance - Predições: {preds}, Odds: {dados['odds']}")
