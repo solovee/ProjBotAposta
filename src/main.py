@@ -45,7 +45,7 @@ apiclient = BetsAPIClient(api_key=api)
 #CSV_FILE = r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_novo.csv"
 CSV_FILE = r"C:\Users\Leoso\Downloads\projBotAposta\resultados_60_ofc.csv"
 #lista dos thresholds das nns
-lista_th = [0.55,0.4,0.5,0.5,0.55,0.5]
+lista_th = [0.575,0.4,0.5,0.5,0.575,0.5]
 
 
 
@@ -57,11 +57,13 @@ programado = []
 def checa_virada_do_dia():
     global data_hoje, programado
     while True:
-        if datetime.now().date() != data_hoje:
-            data_hoje = datetime.now().date()
+        novo_dia = datetime.now().date().strftime('%Y%m%d')
+        if novo_dia != data_hoje:
+            data_hoje = novo_dia
             programado = []
             logger.info("🔄 Novo dia detectado, resetando variáveis...")
         time.sleep(60)
+
 
 def agendar_processar_dia_anterior():
     agora = datetime.now()
@@ -131,7 +133,7 @@ def pegaJogosDoDia():
             dia_seg = (datetime.now() + timedelta(days=1)).strftime('%Y%m%d')
             dias_para_buscar.append(dia_seg)
 
-        ids, tempo, nome_time, times_id = [], [], [], []
+        ids, tempo, nome_time, times_id, dias_evento = [], [], [], [], []
 
         for dia in dias_para_buscar:
             r_ids, r_tempo, r_nome_time, r_times_id = apiclient.getUpcoming(leagues=apiclient.leagues_ids, day=dia)
@@ -139,14 +141,25 @@ def pegaJogosDoDia():
             tempo.extend(r_tempo)
             nome_time.extend(r_nome_time)
             times_id.extend(r_times_id)
+            dias_evento.extend([dia] * len(r_ids))  # adiciona o mesmo dia para todos os jogos retornados
 
         if not ids:
             logger.warning("⚠️ Nenhum ID de jogo retornado pela API")
             return pd.DataFrame()
 
-        dados = [{"id_jogo": i, "horario": h, "times": k, "home": z, "away": t} for i, h, k, (z, t) in zip(ids, tempo, nome_time, times_id)]
+        dados = [{
+            "id_jogo": i,
+            "horario": h,
+            "times": k,
+            "home": z,
+            "away": t,
+            "event_day": d  # adicionando event_day
+        } for i, h, k, (z, t), d in zip(ids, tempo, nome_time, times_id, dias_evento)]
+
         dados_dataframe = pd.DataFrame(dados)
         dados_dataframe = dados_dataframe[~dados_dataframe['id_jogo'].isin(programado)]
+        dados_dataframe['event_day'] = pd.to_datetime(dados_dataframe['event_day'], format='%Y%m%d')
+
 
         if dados_dataframe.empty:
             logger.info("ℹ️ Todos os jogos já estão programados")
@@ -168,6 +181,7 @@ def pegaJogosDoDia():
     except Exception as e:
         logger.error(f"❌ Erro ao obter jogos do dia: {str(e)}")
         return pd.DataFrame()
+
 
 
 '''
@@ -233,7 +247,7 @@ def acao_do_jogo(row):
         df_odds['home'] = int(row['home'])
         df_odds['away'] = int(row['away'])
         df_odds['times'] = str(row['times'])
-
+        df_odds['event_day'] = str(row['event_day'])
         
        
         df_odds = NN.preProcessGeneral_x(df_odds)
@@ -316,6 +330,9 @@ def preve(df_linha):
             list_res.append(res_double_chance)
         if res_draw_no_bet:
             list_res.append(res_draw_no_bet)
+        
+        melhor = None
+
         try:
             melhor = max(list_res)
         except:
@@ -323,6 +340,7 @@ def preve(df_linha):
 
         
         list_true = []
+        list_final = []
         if melhor:
             if (tipo_over_under is not None and (res_under_over == melhor)):
                 dados_OU['🔔 Jogo'] = times_para_jogo(str(dados_OU['times']))
@@ -343,16 +361,17 @@ def preve(df_linha):
                     dados_temp = dados_ah.iloc[[1]].copy()
                 dados_temp['🔔 Jogo'] = times_para_jogo(str(dados_temp['times']))
                 if (dados_temp['asian_handicap_1'].astype(str) == dados_temp['asian_handicap_2'].astype(str)):
-                    dados_temp['📊 handicap'] = dados_temp['asian_handicap_1'].astype(str)
+                    dados_temp['⚽ handicap'] = dados_temp['asian_handicap_1'].astype(str)
                 else:
-                    dados_temp['📊 handicap'] = dados_temp['asian_handicap_1'].astype(str) + ' , ' + dados_temp['asian_handicap_2'].astype(str)
-                dados_temp.drop(columns=['asian_handicap_1', 'asian_handicap_2','times'], inplace=True)
+                    dados_temp['⚽ handicap'] = dados_temp['asian_handicap_1'].astype(str) + ' , ' + dados_temp['asian_handicap_2'].astype(str)
                 home, away = home_e_away(str(dados_temp['times']))
+                dados_temp.drop(columns=['asian_handicap_1', 'asian_handicap_2','times'], inplace=True)
                 dados_temp = dados_temp.rename(columns={'team_ah': '🚀 time'})
                 if dados_temp['🚀 time'] == 1:
                     dados_temp['🚀 time'] = home
                 else:
-                    dados_temp['🚀 time'] = home
+                    dados_temp['🚀 time'] = away
+                dados_temp = dados_temp.rename(columns={'odds': '⭐ Odd'})
                 list_true.append(dados_temp)
 
             
@@ -361,37 +380,57 @@ def preve(df_linha):
                     dados_temp = dados_gl.iloc[[0]].copy()  
                 elif (lista_preds_true[4] == 2):
                     dados_temp = dados_gl.iloc[[1]].copy() 
-                #parei aqui
-                dados_temp['linha'] = dados_temp['goal_line_1'].astype(str) + ' , ' + dados_temp['goal_line_2'].astype(str)
-                dados_temp = dados_temp.drop(columns=['goal_line_1', 'goal_line_2'])
-                dados_temp = dados_temp.rename(columns={'type_gl': 'tipo over(1)/under(2)'})  
-                dados_temp = dados_temp.rename(columns={'odds_gl': 'odds'})  
+                dados_temp['🔔 Jogo'] = times_para_jogo(str(dados_temp['times']))
+                if (dados_temp['goal_line_1'].astype(str) == dados_temp['goal_line_2'].astype(str)):
+                    dados_temp['⚽ Linha'] = dados_temp['goal_line_1'].astype(str)
+                else:
+                    dados_temp['⚽ Linha'] = dados_temp['goal_line_1'].astype(str) + ' , ' + dados_temp['goal_line_2'].astype(str)
+                dados_temp = dados_temp.rename(columns={'type_gl': '📊 Tipo'})  
+                dados_temp = dados_temp.rename(columns={'odds_gl': '⭐ Odd'}) 
+                if dados_temp['📊 Tipo'] == 1:
+                    dados_temp['📊 Tipo'] = 'over'
+                else:
+                    dados_temp['📊 Tipo'] = 'under'
+                dados_temp.drop(columns=['goal_line_1', 'goal_line_2', 'times'])
                 list_true.append(dados_temp)
 
-            
             if (type_dc is not None and (res_double_chance == melhor)):
                 if (lista_preds_true[6] == 1):
                     dados_temp = dados_dc.iloc[[0]].copy()
-                    dados_temp = dados_temp.rename(columns={'double_chance': 'double_chance(home=1,away=2,both=3)'})  
-                    list_true.append(dados_temp)
                 elif (lista_preds_true[6] == 2):
                     dados_temp = dados_dc.iloc[[1]].copy()
-                    dados_temp = dados_temp.rename(columns={'double_chance': 'double_chance(home=1,away=2,both=3)'})  
-                    list_true.append(dados_temp)
                 elif (lista_preds_true[6] == 3):
                     dados_temp = dados_dc.iloc[[2]].copy()
-                    dados_temp = dados_temp.rename(columns={'double_chance': 'double_chance(home=1,away=2,both=3)'})  
-                    list_true.append(dados_temp)
-            
+                dados_temp['🔔 Jogo'] = times_para_jogo(str(dados_temp['times']))
+                home, away = home_e_away(str(dados_temp['times']))
+                if dados_temp['double_chance'] == 1:
+                    dados_temp['double_chance'] = home
+                elif dados_temp['double_chance'] == 2:
+                    dados_temp['double_chance'] = away
+                else:
+                    dados_temp['double_chance'] = f'{home} e {away}'
+                dados_temp = dados_temp.rename(columns={'double_chance': '📊 Double Chance'})
+                dados_temp = dados_temp.rename(columns={'odds': '⭐ Odd'})    
+                dados_temp.drop('times')
+                list_true.append(dados_temp)
+            #'times','draw_no_bet_team', 'odds']
             if (time_draw_no_bet is not None and (res_draw_no_bet == melhor)):
                 if (lista_preds_true[8] == 1):
                     dados_temp = dados_dnb.iloc[[0]].copy()
-                    list_true.append(dados_temp)
                 elif (lista_preds_true[8] == 2):
                     dados_temp = dados_dnb.iloc[[1]].copy()
-                    dados_temp = dados_temp.rename(columns={'draw_no_bet_team': 'draw_no_bet_team(home=1,away=2)'})  
-                    list_true.append(dados_temp)
-            list_final = []
+                dados_temp['🔔 Jogo'] = times_para_jogo(str(dados_temp['times']))
+                home, away = home_e_away(str(dados_temp['times']))
+                if dados_temp['draw_no_bet_team'] == 1:
+                    dados_temp['draw_no_bet_team'] = home
+                else:
+                    dados_temp['draw_no_bet_team'] = away
+
+                dados_temp = dados_temp.rename(columns={'draw_no_bet_team': '📊 Draw No Bet'})  
+                dados_temp = dados_temp.rename(columns={'odds': '⭐ Odd'})
+                dados_temp.drop('times')
+                list_true.append(dados_temp)
+                
             for df in list_true:
                 men = df_para_string(df)
                 list_final.append(men)
@@ -447,7 +486,7 @@ def predicta_over_under(prepOverUnder_df, dados):
     pred_over = float(preds[0])
     preds = [pred_over]
 
-    th_ve = 0.9  # Valor Esperado mínimo
+    th_ve = 1.05  # Valor Esperado mínimo
     recomendacoes = []
 
     # Odds de over e under
@@ -485,7 +524,7 @@ def predicta_handicap(prepHandicap_df, dados):
     pred_handicap_2 = float(preds[1])
     preds = [pred_handicap_1, pred_handicap_2]
 
-    th_ve = 0.9  # Valor Esperado mínimo
+    th_ve = 1.05  # Valor Esperado mínimo
     recomendacoes = []
     th_odd = 1.6
     for i in range(2):
@@ -516,7 +555,7 @@ def predicta_goal_line(prepGoal_line_df, dados):
     pred_goal_line_2 = float(preds[1])
     preds = [pred_goal_line_1, pred_goal_line_2]
 
-    th_ve = 0.9  # Valor Esperado mínimo
+    th_ve = 1.05  # Valor Esperado mínimo
     recomendacoes = []
     th_odd = 1.6
     for i in range(2):
@@ -550,7 +589,7 @@ def predicta_double_chance(pred_double_chance_df, dados):
 
     preds = [pred_double_chance_1, pred_double_chance_2, pred_double_chance_3]
 
-    th_ve = 0.9
+    th_ve = 1.05
     th_odd = 1.6
     for i in range(3):
         prob = preds[i]
@@ -577,7 +616,7 @@ def predicta_draw_no_bet(pred_draw_no_bet_df, dados):
 
     preds = [pred_draw_no_bet_1, pred_draw_no_bet_2]
 
-    th_ve = 0.9  # Valor esperado mínimo
+    th_ve = 1.05  # Valor esperado mínimo
     recomendacoes = []
 
     for i in range(2):
@@ -600,7 +639,7 @@ def predicta_draw_no_bet(pred_draw_no_bet_df, dados):
         return (None, None)
 
 
-
+'''
 def processar_dia_anterior():
     dia = dia_anterior()
     print(f"🔄 Processando jogos do dia {dia}")
@@ -678,6 +717,95 @@ def processar_dia_anterior():
 
     except Exception as e:
         print(f"❌ Erro ao processar dia {dia}: {type(e).__name__}: {e}")
+'''
+
+
+def processar_dia_anterior():
+    COLUNAS_PADRAO = [
+        'id', 'event_day', 'home', 'away', 'home_goals', 'away_goals', 'tot_goals',
+        'goals_over_under', 'odd_goals_over1', 'odd_goals_under1',
+        'asian_handicap1', 'team_ah1', 'odds_ah1',
+        'asian_handicap2', 'team_ah2', 'odds_ah2',
+        'goal_line1', 'type_gl1', 'odds_gl1',
+        'goal_line2', 'type_gl2', 'odds_gl2',
+        'double_chance1', 'odds_dc1',
+        'double_chance2', 'odds_dc2',
+        'double_chance3', 'odds_dc3',
+        'draw_no_bet_team1', 'odds_dnb1',
+        'draw_no_bet_team2', 'odds_dnb2',
+    ]
+    dia = dia_anterior()
+    print(f"🔄 Processando jogos do dia {dia}")
+
+    # Carregar dias já processados
+    if os.path.exists(CSV_FILE):
+        df_existente = pd.read_csv(CSV_FILE, dtype={"event_day": str})
+        dias_processados = set(df_existente["event_day"].unique())
+    else:
+        dias_processados = set()
+
+    # Verificar se o dia anterior já foi processado
+    if dia in dias_processados:
+        print(f"✅ O dia {dia} já foi processado.")
+        return
+
+    try:
+        print("🔎 Buscando IDs e dicionário de eventos...")
+        ids, dicio = apiclient.getAllOlds(leagues=apiclient.leagues_ids, day=dia)
+        print(f"✔️ {len(ids)} eventos encontrados.")
+
+        print("📊 Filtrando e transformando odds...")
+        odds_data = apiclient.filtraOddsNovo(ids=ids)
+        df_odds = apiclient.transform_betting_data(odds_data)  # Corrigido para usar a função correta
+
+        novos_dados = []
+        for dados_evento in dicio:
+            event_id = dados_evento.get('id')
+            odds_transformadas = df_odds[df_odds['id'] == event_id].to_dict('records')
+
+            if odds_transformadas:
+                merged = {**dados_evento, **odds_transformadas[0], "event_day": dia}
+            else:
+                merged = {**dados_evento, "event_day": dia}
+
+            novos_dados.append(merged)
+
+        if novos_dados:
+            print(f"🧩 {len(novos_dados)} eventos com odds processados.")
+            df_novo = pd.DataFrame(novos_dados)
+
+            colunas_adicionadas = []
+            for coluna in COLUNAS_PADRAO:
+                if coluna not in df_novo.columns:
+                    df_novo[coluna] = None
+                    colunas_adicionadas.append(coluna)
+
+            if colunas_adicionadas:
+                print(f"➕ Colunas adicionadas automaticamente: {', '.join(colunas_adicionadas)}")
+
+            df_novo = df_novo[COLUNAS_PADRAO]
+
+            if os.path.exists(CSV_FILE):
+                print("📂 CSV existente encontrado, mesclando dados...")
+                df_existente = pd.read_csv(CSV_FILE, dtype={"event_day": str})
+                df_final = pd.concat([df_existente, df_novo], ignore_index=True)
+                df_final = df_final.sort_values(by="event_day", ascending=False).reset_index(drop=True)
+
+                primeiro_dia = df_final["event_day"].min()
+                df_final = df_final[df_final["event_day"] != primeiro_dia]
+            else:
+                print("📄 Nenhum CSV encontrado, criando novo arquivo...")
+                df_final = df_novo
+                primeiro_dia = "N/A"
+
+            df_final.to_csv(CSV_FILE, index=False)
+            print(f"✅ Dados atualizados com sucesso! Dia {primeiro_dia} removido, dia {dia} adicionado.")
+        else:
+            print(f"⚠️ Nenhum dado encontrado para o dia {dia}")
+
+    except Exception as e:
+        print(f"❌ Erro ao processar dia {dia}: {type(e).__name__}: {e}")
+
 
 '''
 #! roda as 00:05

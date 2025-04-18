@@ -69,17 +69,24 @@ def estatisticas_ultimos_10(home_team, away_team):
     return media_gols_home, vitorias_home, media_gols_away, vitorias_away, df_away
 
 def preProcessEstatisticasGerais(df):
-    df[['media_goals_home', 'media_victories_home', 'media_goals_away', 'media_victories_away']] = df.apply(lambda row: estatisticas_ultimos_5(row['home'], row['away']), axis=1)
-    # Aplicar a função ao DataFrame
-    medias = df.apply(
-        lambda row: calcular_medias_h2h(row['home'], row['away'], row.name),
+    # Atualiza a chamada para passar também a data do jogo
+    df[['media_goals_home', 'media_victories_home', 'media_goals_away', 'media_victories_away']] = df.apply(
+        lambda row: estatisticas_ultimos_5(row['home'], row['away'], row['event_day']),
         axis=1
     )
-    # Adicionar as novas colunas
+
+    # Aplica o cálculo de médias H2H (já está certo)
+    medias = df.apply(
+        lambda row: calcular_medias_h2h(row['home'], row['away'], row['event_day']),
+        axis=1
+    )
+
     df['h2h_mean'] = medias.apply(lambda x: x['h2h_mean'])
     df['home_h2h_mean'] = medias.apply(lambda x: x['home_h2h_mean'])
     df['away_h2h_mean'] = medias.apply(lambda x: x['away_h2h_mean'])
+    
     return df
+
 
 
 
@@ -89,14 +96,14 @@ def preProcessEstatisticasGerais_X(df):
         
 
         df[['media_goals_home', 'media_victories_home', 'media_goals_away', 'media_victories_away']] = df.apply(
-            lambda row: estatisticas_ultimos_5(row['home'], row['away']),
+            lambda row: estatisticas_ultimos_5(row['home'], row['away'], row['event_day']),
             axis=1,
             result_type='expand'
         )
         logger.debug("📊 Estatísticas últimas 5 partidas calculadas com sucesso")
 
         medias = df.apply(
-            lambda row: calcular_medias_h2h_X(int(row['home']), int(row['away'])),
+            lambda row: calcular_medias_h2h_X(int(row['home']), int(row['away']), row['event_day']),
             axis=1
         )
         df['h2h_mean'] = medias.apply(lambda x: x['h2h_mean'])
@@ -247,13 +254,17 @@ def split(X_standardized, y):
 
 
 
-def estatisticas_ultimos_5(home_team, away_team):
+def estatisticas_ultimos_5(home_team, away_team, data_jogo):
     try:
-        df_home = df_temp[df_temp['home'] == home_team].tail(5)
+        # Filtra os jogos anteriores à data atual e do time como mandante
+        df_home = df_temp[(df_temp['home'] == home_team) & (df_temp['event_day'] < data_jogo)]
+        df_home = df_home.sort_values(by='event_day', ascending=False).head(5)
         media_gols_home = df_home['home_goals'].mean() if not df_home.empty else np.nan
         vitorias_home = (df_home['home_goals'] > df_home['away_goals']).mean() if not df_home.empty else np.nan
 
-        df_away = df_temp[df_temp['away'] == away_team].tail(5)
+        # Filtra os jogos anteriores à data atual e do time como visitante
+        df_away = df_temp[(df_temp['away'] == away_team) & (df_temp['event_day'] < data_jogo)]
+        df_away = df_away.sort_values(by='event_day', ascending=False).head(5)
         media_gols_away = df_away['away_goals'].mean() if not df_away.empty else np.nan
         vitorias_away = (df_away['away_goals'] > df_away['home_goals']).mean() if not df_away.empty else np.nan
 
@@ -275,24 +286,82 @@ def estatisticas_ultimos_5(home_team, away_team):
 
 
 
-def calcular_medias_h2h(home_id, away_id, index):
+
+def calcular_medias_h2h(home_id, away_id, data_jogo):
     """
-    Calcula três estatísticas de confronto direto:
+    Calcula três estatísticas de confronto direto com base na data do jogo:
+    - h2h_mean: média de gols totais nos confrontos anteriores
+    - home_h2h_mean: média de gols marcados pelo time atual como mandante
+    - away_h2h_mean: média de gols marcados pelo time atual como visitante
+    """
+    df = df_temp.copy()
+
+    # Filtrar confrontos entre os dois times (em qualquer ordem)
+    confrontos = df[((df['home'] == home_id) & (df['away'] == away_id)) |
+                    ((df['home'] == away_id) & (df['away'] == home_id))]
+
+    # Filtrar apenas confrontos ocorridos antes da data do jogo atual
+    confrontos_passados = confrontos[confrontos['event_day'] < data_jogo]
+
+    if confrontos_passados.empty:
+        return {
+            'h2h_mean': None,
+            'home_h2h_mean': None,
+            'away_h2h_mean': None
+        }
+    
+    confrontos_passados = confrontos_passados.sort_values('event_day', ascending=False).head(5)
+
+    # Média de gols totais por confronto
+    h2h_mean = confrontos_passados['tot_goals'].mean()
+
+    # Ajustar médias por lado (quem está sendo analisado como home/away no jogo atual)
+    home_goals = []
+    away_goals = []
+    for _, row in confrontos_passados.iterrows():
+        if row['home'] == home_id:
+            home_goals.append(row['home_goals'])
+            away_goals.append(row['away_goals'])
+        else:
+            home_goals.append(row['away_goals'])
+            away_goals.append(row['home_goals'])
+
+    return {
+        'h2h_mean': h2h_mean,
+        'home_h2h_mean': np.mean(home_goals),
+        'away_h2h_mean': np.mean(away_goals)
+    }
+
+
+def calcular_medias_h2h_X(home_id, away_id, data_jogo):
+    """
+    Calcula três estatísticas de confronto direto, considerando apenas os últimos 5 confrontos
+    anteriores à data do jogo:
     - h2h_mean: média de gols totais (home_goals + away_goals) nos confrontos anteriores
     - home_h2h_mean: média de gols marcados pelo time da casa (home_id) nos confrontos
     - away_h2h_mean: média de gols marcados pelo time visitante (away_id) nos confrontos
     """
     df = df_temp.copy()
+
     # Filtrar todos os confrontos entre os times
-    confrontos = df[((df['home'] == home_id) & (df['away'] == away_id))]
+    confrontos = df[((df['home'] == home_id) & (df['away'] == away_id)) |
+                    ((df['home'] == away_id) & (df['away'] == home_id))]
+
     if confrontos.empty:
-        confrontos = df[(((df['home'] == home_id) & (df['away'] == away_id)) | ((df['home'] == away_id) & (df['away'] == home_id)))]
-    # Considerar apenas confrontos anteriores (linhas abaixo da atual)
-    confrontos_passados = confrontos[confrontos.index < index]
+        return {'h2h_mean': None, 'home_h2h_mean': None, 'away_h2h_mean': None}
+
+    # Filtrar apenas os confrontos anteriores à data do jogo
+    confrontos_passados = confrontos[confrontos['event_day'] < data_jogo]
+
     if confrontos_passados.empty:
         return {'h2h_mean': None, 'home_h2h_mean': None, 'away_h2h_mean': None}
+
+    # Pegar os últimos 5 confrontos mais recentes antes da data do jogo
+    confrontos_passados = confrontos_passados.sort_values('event_day', ascending=False).head(5)
+
     # Calcular média geral de gols totais
     h2h_mean = confrontos_passados['tot_goals'].mean()
+
     # Calcular média de gols específicos por time
     home_goals = []
     away_goals = []
@@ -303,48 +372,16 @@ def calcular_medias_h2h(home_id, away_id, index):
         else:
             home_goals.append(row['away_goals'])
             away_goals.append(row['home_goals'])
+
     home_h2h_mean = np.mean(home_goals) if home_goals else None
     away_h2h_mean = np.mean(away_goals) if away_goals else None
+
     return {
         'h2h_mean': h2h_mean,
         'home_h2h_mean': home_h2h_mean,
         'away_h2h_mean': away_h2h_mean
     }
 
-def calcular_medias_h2h_X(home_id, away_id):
-    """
-    Calcula três estatísticas de confronto direto:
-    - h2h_mean: média de gols totais (home_goals + away_goals) nos confrontos anteriores
-    - home_h2h_mean: média de gols marcados pelo time da casa (home_id) nos confrontos
-    - away_h2h_mean: média de gols marcados pelo time visitante (away_id) nos confrontos
-    """
-    df = df_temp.copy()
-
-    # Filtrar todos os confrontos entre os times
-    confrontos = df[((df['home'] == home_id) & (df['away'] == away_id))]
-    if confrontos.empty:
-        confrontos = df[(((df['home'] == home_id) & (df['away'] == away_id)) | ((df['home'] == away_id) & (df['away'] == home_id)))]
-    if confrontos.empty:
-        return {'h2h_mean': None, 'home_h2h_mean': None, 'away_h2h_mean': None}
-    # Calcular média geral de gols totais
-    h2h_mean = confrontos['tot_goals'].mean()
-    # Calcular média de gols específicos por time
-    home_goals = []
-    away_goals = []
-    for _, row in confrontos.iterrows():
-        if row['home'] == home_id:
-            home_goals.append(row['home_goals'])
-            away_goals.append(row['away_goals'])
-        else:
-            home_goals.append(row['away_goals'])
-            away_goals.append(row['home_goals'])
-    home_h2h_mean = np.mean(home_goals) if home_goals else None
-    away_h2h_mean = np.mean(away_goals) if away_goals else None
-    return {
-        'h2h_mean': h2h_mean,
-        'home_h2h_mean': home_h2h_mean,
-        'away_h2h_mean': away_h2h_mean
-    }
 
 #HANDICAP
 
@@ -530,7 +567,7 @@ def classify_draw_no_bet(team, home_goals, away_goals):
 
 import numpy as np
 
-def encontrar_melhor_z_binario_positivo(y_true, y_pred_probs, min_percent=0.75):
+def encontrar_melhor_z_binario_positivo(y_true, y_pred_probs, min_percent=0.85):
     thresholds_pos = np.arange(0.5, 1.01, 0.025)
     # Total de previsões positivas (com qualquer confiança)
     total_pred_positivas = np.sum(y_pred_probs >= 0.5)
@@ -558,7 +595,7 @@ def encontrar_melhor_z_binario_positivo(y_true, y_pred_probs, min_percent=0.75):
 
 
 
-def encontrar_melhor_z_binario_negativo(y_true, y_pred_probs, min_percent=0.75):
+def encontrar_melhor_z_binario_negativo(y_true, y_pred_probs, min_percent=0.85):
 
     thresholds_neg = np.arange(0.5, -0.01, -0.025)
     # Total de previsões negativas (com qualquer confiança)
@@ -633,7 +670,7 @@ def prepNNOver_under_X(df=df_temp):
         return None, None
     z = df_temporario[['times','odd_goals_over1', 'odd_goals_under1']].copy()
 
-    X = df_temporario[['odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean']]
+    X = df_temporario[['odd_goals_over1', 'odd_goals_under1','media_goals_home','media_goals_away' ,'h2h_mean']]
 
     try:
         with open('scaler_over_under.pkl', 'rb') as f:

@@ -236,6 +236,7 @@ while dias_processados != set(dias_todos):
             print(f"❌ Erro ao processar dia {dia}: {e}")
 
     # Salvar os novos dados
+    df_novo = df_novo.sort_values(by="event_day", ascending=False)
     if novos_dados:
         df_novo = pd.DataFrame(novos_dados)
         
