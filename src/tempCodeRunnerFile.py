@@ -1,1 +1,1 @@
-rimeiro_dia = df_final["event_day"].min()
+th_ve

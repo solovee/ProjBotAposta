@@ -1,5 +1,5 @@
 import requests
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 from math import ceil
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -223,6 +223,11 @@ class BetsAPIClient:
         #print(f"Total de eventos processados: {done}/{len(ids)}")
         return game
     
+    def precisa_pegar_dia_seguinte():
+        agora = datetime.now()
+        return agora.hour >= 21
+
+    
     def getUpcoming(self, sport_id: int = 1, leagues: List[Any] = [], day: str = data_atual()) -> List[Any]:
         results = []
         ts_list = []
@@ -258,7 +263,6 @@ class BetsAPIClient:
         response = requests.get(url, params=params)
         self.chamadas += 1
         resp = response.json()
-
         pager = resp.get('pager', {})
         total_pages = ceil(pager.get('total', 0) / pager.get('per_page', 1))
 
@@ -268,7 +272,7 @@ class BetsAPIClient:
         times_id = []  # Lista de tuplas (home_id, away_id)
 
         for x in resp['results']:
-            if (x.get('ss') is None) or (x.get('time_status') == 0):
+            if (x.get('ss') is None) or (x.get('time_status') == 0) or (int(x.get('time',0)) > time.time()):
                 res.append(x['id'])
                 ts.append(x['time'])
                 times.append((x['home']['name'], x['away']['name']))
@@ -320,6 +324,8 @@ class BetsAPIClient:
         self.chamadas += 1
 
         resp = response.json()
+        with open('a.txt','w') as f:
+            f.write(str(resp))
         
         res = [x['id'] for x in resp['results'] if (x.get('ss') is None) or x.get('time_status') == 0]
         ts = [x['time'] for x in resp['results'] if (x.get('ss') is None) or x.get('time_status') == 0]
@@ -564,24 +570,6 @@ class BetsAPIClient:
         else:
             raise Exception(f"Erro ao obter odds da API: {response.status_code}")
         
-    
-    def getHist(self, event_id: int = 1, qty: int = 20) -> Dict[str, Any]:
-
-        """
-        pega o historico de h2h
-        """
-        url = f'{self.base_url_event}event/history'
-        params = {
-            'token': self.api_key,
-            'event_id': event_id,
-            'qty': qty
-        }
-        response = requests.get(url, params=params)
-        self.chamadas += 1
-        if response.status_code == 200:
-            return response.json()
-        else:
-            raise Exception(f"Erro ao obter odds da API: {response.status_code}")
         
 
 

@@ -50,7 +50,7 @@ lista_th = [0.55,0.4,0.5,0.5,0.55,0.5]
 
 
 #!pega uma vez ao virar o dia e depois de 20 em 20 min pra testar
-data_hoje = datetime.now().date()
+data_hoje = datetime.now().date().strftime('%Y%m%d')
 #!reseta todo dia as 00:00, guarda jogos programados do dia, deve zerar ao mudar o dia
 programado = []
 
@@ -122,8 +122,55 @@ def main():
     threading.Thread(target=loop_pega_jogos, daemon=True).start()
     tb.start_bot()
     logger.info("✅ Todos os serviços foram iniciados")
+    
+def pegaJogosDoDia():
+    try:
+        dias_para_buscar = [str(data_hoje)]
+        if datetime.now().hour >= 20:
+            # Se já for 21h (ou depois), pega também os jogos de amanhã
+            dia_seg = (datetime.now() + timedelta(days=1)).strftime('%Y%m%d')
+            dias_para_buscar.append(dia_seg)
+
+        ids, tempo, nome_time, times_id = [], [], [], []
+
+        for dia in dias_para_buscar:
+            r_ids, r_tempo, r_nome_time, r_times_id = apiclient.getUpcoming(leagues=apiclient.leagues_ids, day=dia)
+            ids.extend(r_ids)
+            tempo.extend(r_tempo)
+            nome_time.extend(r_nome_time)
+            times_id.extend(r_times_id)
+
+        if not ids:
+            logger.warning("⚠️ Nenhum ID de jogo retornado pela API")
+            return pd.DataFrame()
+
+        dados = [{"id_jogo": i, "horario": h, "times": k, "home": z, "away": t} for i, h, k, (z, t) in zip(ids, tempo, nome_time, times_id)]
+        dados_dataframe = pd.DataFrame(dados)
+        dados_dataframe = dados_dataframe[~dados_dataframe['id_jogo'].isin(programado)]
+
+        if dados_dataframe.empty:
+            logger.info("ℹ️ Todos os jogos já estão programados")
+            return dados_dataframe
+
+        agora = int(time.time())
+
+        dados_dataframe['horario'] = dados_dataframe['horario'].astype(int)
+        dados_dataframe['send_time'] = dados_dataframe['horario'] - 320
+        dados_dataframe = dados_dataframe[dados_dataframe['send_time'] > (agora - (7 * 60))]
+        dados_dataframe = dados_dataframe.sort_values(by="horario").reset_index(drop=True)
+
+        programados = dados_dataframe['id_jogo'].tolist()
+        programado.extend(programados)
+        logger.info(f"📌 Adicionados {len(programados)} novos jogos à lista de programados")
+        dados_dataframe.to_csv('oque_sai_do_dadosDataframe.csv')
+        return dados_dataframe
+
+    except Exception as e:
+        logger.error(f"❌ Erro ao obter jogos do dia: {str(e)}")
+        return pd.DataFrame()
 
 
+'''
 def pegaJogosDoDia():
     try:
         ids , tempo, nome_time, times_id = apiclient.getUpcoming(leagues=apiclient.leagues_ids)
@@ -156,7 +203,7 @@ def pegaJogosDoDia():
     except Exception as e:
         logger.error(f"❌ Erro ao obter jogos do dia: {str(e)}")
         return pd.DataFrame()
-
+'''
 
 #!roda apos pegajogosDoDia, mas cada acao do jogo sera executada em seu tempo send_timer
 def pegaOddsEvento(df):
@@ -257,75 +304,97 @@ def preve(df_linha):
         
         logger.info(f"🧠 Predições retornadas: {lista_preds_true}")
 
+        list_res = []
         
-        
-    
+        if res_under_over:
+            list_res.append(res_under_over)
+        if res_handicap:
+            list_res.append(res_handicap)
+        if res_goal_line:
+            list_res.append(res_goal_line)
+        if res_double_chance:
+            list_res.append(res_double_chance)
+        if res_draw_no_bet:
+            list_res.append(res_draw_no_bet)
+        try:
+            melhor = max(list_res)
+        except:
+            logger.info("❌ Nenhuma previsão foi considerada válida.")
+
         
         list_true = []
-        
-        if (lista_preds_true[0] is not None and lista_preds_true[1] is not None):
-            dados_OU = dados_OU.rename(columns={'odd_goals_over1': 'odds_over'})
-            dados_OU = dados_OU.rename(columns={'odd_goals_under1': 'odds_under'})
-            dados_OU['tipo'] = lista_preds_true[0]
-            dados_OU['linha'] = '2.5'
-            list_true.append(dados_OU)
-        
-        if (lista_preds_true[2] is not None and lista_preds_true[3] is not None):
-            if (lista_preds_true[2] == 1):
-                dados_temp = dados_ah.iloc[[0]].copy()     
-                dados_temp['handicap'] = dados_temp['asian_handicap_1'].astype(str) + ' , ' + dados_temp['asian_handicap_2'].astype(str)
-                dados_temp = dados_temp.drop(columns=['asian_handicap_1', 'asian_handicap_2'])
-                dados_temp = dados_temp.rename(columns={'team_ah': 'time'})
+        if melhor:
+            if (tipo_over_under is not None and (res_under_over == melhor)):
+                dados_OU['🔔 Jogo'] = times_para_jogo(str(dados_OU['times']))
+                dados_OU.drop('times', inplace=True)
+                dados_OU['📊 Tipo'] = tipo_over_under
+                if dados_OU['📊 Tipo'] == 'over':
+                    dados_OU['⭐ Odd'] = dados_OU['odd_goals_over1']
+                else:
+                    dados_OU['⭐ Odd'] = dados_OU['odd_goals_under1']
+                dados_OU.drop(columns=['odd_goals_over1','odd_goals_under1'], inplace=True)
+                dados_OU['⚽ Linha'] = '2.5'
+                list_true.append(dados_OU)
+            if (time_handicap is not None and (res_handicap == melhor)):
+
+                if (lista_preds_true[2] == 1):
+                    dados_temp = dados_ah.iloc[[0]].copy() 
+                elif (lista_preds_true[2] == 2):
+                    dados_temp = dados_ah.iloc[[1]].copy()
+                dados_temp['🔔 Jogo'] = times_para_jogo(str(dados_temp['times']))
+                if (dados_temp['asian_handicap_1'].astype(str) == dados_temp['asian_handicap_2'].astype(str)):
+                    dados_temp['📊 handicap'] = dados_temp['asian_handicap_1'].astype(str)
+                else:
+                    dados_temp['📊 handicap'] = dados_temp['asian_handicap_1'].astype(str) + ' , ' + dados_temp['asian_handicap_2'].astype(str)
+                dados_temp.drop(columns=['asian_handicap_1', 'asian_handicap_2','times'], inplace=True)
+                home, away = home_e_away(str(dados_temp['times']))
+                dados_temp = dados_temp.rename(columns={'team_ah': '🚀 time'})
+                if dados_temp['🚀 time'] == 1:
+                    dados_temp['🚀 time'] = home
+                else:
+                    dados_temp['🚀 time'] = home
                 list_true.append(dados_temp)
-            elif (lista_preds_true[2] == 2):
-                dados_temp = dados_ah.iloc[[1]].copy()
-                dados_temp['handicap'] = dados_temp['asian_handicap_1'].astype(str) + ' , ' + dados_temp['asian_handicap_2'].astype(str)
-                dados_temp = dados_temp.drop(columns=['asian_handicap_1', 'asian_handicap_2'])
-                dados_temp = dados_temp.rename(columns={'team_ah': 'time'})
-                list_true.append(dados_temp) 
-        
-        if (lista_preds_true[4] is not None and lista_preds_true[5] is not None):
-            if (lista_preds_true[4] == 1):
-                dados_temp = dados_gl.iloc[[0]].copy()   
+
+            
+            if (linha_gl is not None and (res_goal_line == melhor)):
+                if (lista_preds_true[4] == 1):
+                    dados_temp = dados_gl.iloc[[0]].copy()  
+                elif (lista_preds_true[4] == 2):
+                    dados_temp = dados_gl.iloc[[1]].copy() 
+                #parei aqui
                 dados_temp['linha'] = dados_temp['goal_line_1'].astype(str) + ' , ' + dados_temp['goal_line_2'].astype(str)
                 dados_temp = dados_temp.drop(columns=['goal_line_1', 'goal_line_2'])
                 dados_temp = dados_temp.rename(columns={'type_gl': 'tipo over(1)/under(2)'})  
                 dados_temp = dados_temp.rename(columns={'odds_gl': 'odds'})  
                 list_true.append(dados_temp)
-            elif (lista_preds_true[4] == 2):
-                dados_temp = dados_gl.iloc[[1]].copy()   
-                dados_temp['linha'] = dados_temp['goal_line_1'].astype(str) + ' , ' + dados_temp['goal_line_2'].astype(str)
-                dados_temp = dados_temp.drop(columns=['goal_line_1', 'goal_line_2'])
-                dados_temp = dados_temp.rename(columns={'type_gl': 'tipo over(0)/under(1)'})  
-                dados_temp = dados_temp.rename(columns={'odds_gl': 'odds'})     
-                list_true.append(dados_temp)
-        
-        if (lista_preds_true[6] is not None and lista_preds_true[7] is not None):
-            if (lista_preds_true[6] == 1):
-                dados_temp = dados_dc.iloc[[0]].copy()
-                dados_temp = dados_temp.rename(columns={'double_chance': 'double_chance(home=1,away=2,both=3)'})  
-                list_true.append(dados_temp)
-            elif (lista_preds_true[6] == 2):
-                dados_temp = dados_dc.iloc[[1]].copy()
-                dados_temp = dados_temp.rename(columns={'double_chance': 'double_chance(home=1,away=2,both=3)'})  
-                list_true.append(dados_temp)
-            elif (lista_preds_true[6] == 3):
-                dados_temp = dados_dc.iloc[[2]].copy()
-                dados_temp = dados_temp.rename(columns={'double_chance': 'double_chance(home=1,away=2,both=3)'})  
-                list_true.append(dados_temp)
-        
-        if (lista_preds_true[8] is not None and lista_preds_true[9] is not None):
-            if (lista_preds_true[8] == 1):
-                dados_temp = dados_dnb.iloc[[0]].copy()
-                list_true.append(dados_temp)
-            elif (lista_preds_true[8] == 2):
-                dados_temp = dados_dnb.iloc[[1]].copy()
-                dados_temp = dados_temp.rename(columns={'draw_no_bet_team': 'draw_no_bet_team(home=1,away=2)'})  
-                list_true.append(dados_temp)
-        list_final = []
-        for df in list_true:
-            men = df_para_string(df)
-            list_final.append(men)
+
+            
+            if (type_dc is not None and (res_double_chance == melhor)):
+                if (lista_preds_true[6] == 1):
+                    dados_temp = dados_dc.iloc[[0]].copy()
+                    dados_temp = dados_temp.rename(columns={'double_chance': 'double_chance(home=1,away=2,both=3)'})  
+                    list_true.append(dados_temp)
+                elif (lista_preds_true[6] == 2):
+                    dados_temp = dados_dc.iloc[[1]].copy()
+                    dados_temp = dados_temp.rename(columns={'double_chance': 'double_chance(home=1,away=2,both=3)'})  
+                    list_true.append(dados_temp)
+                elif (lista_preds_true[6] == 3):
+                    dados_temp = dados_dc.iloc[[2]].copy()
+                    dados_temp = dados_temp.rename(columns={'double_chance': 'double_chance(home=1,away=2,both=3)'})  
+                    list_true.append(dados_temp)
+            
+            if (time_draw_no_bet is not None and (res_draw_no_bet == melhor)):
+                if (lista_preds_true[8] == 1):
+                    dados_temp = dados_dnb.iloc[[0]].copy()
+                    list_true.append(dados_temp)
+                elif (lista_preds_true[8] == 2):
+                    dados_temp = dados_dnb.iloc[[1]].copy()
+                    dados_temp = dados_temp.rename(columns={'draw_no_bet_team': 'draw_no_bet_team(home=1,away=2)'})  
+                    list_true.append(dados_temp)
+            list_final = []
+            for df in list_true:
+                men = df_para_string(df)
+                list_final.append(men)
 
         if list_final:
             logger.info("✅ Previsões recomendadas:")
@@ -340,8 +409,21 @@ def preve(df_linha):
         return []
 
 
+def times_para_jogo(times):
+    #('arsenal','mai')
+    c = time.find(',')
+    time_a = times[2:c-1]
+    time_b = time[c+2:-2]
+    final = f'{time_a.upper()} X {time_b.upper()}'
+    return final
 
-
+def home_e_away(times):
+    #('arsenal','mai')
+    c = time.find(',')
+    time_a = times[2:c-1].upper()
+    time_b = time[c+2:-2].upper()
+    
+    return time_a, time_b
 
 def df_para_string(df):
     emojis = ['🔥', '⚽', '📊', '📈', '🔍', '🧠', '🕹️', '✅', '❗', '🧮', '🏆', '💡', '📉', '🔎', '💥', '📝', '🚀']
@@ -365,7 +447,7 @@ def predicta_over_under(prepOverUnder_df, dados):
     pred_over = float(preds[0])
     preds = [pred_over]
 
-    th_ve = 0.95  # Valor Esperado mínimo
+    th_ve = 0.9  # Valor Esperado mínimo
     recomendacoes = []
 
     # Odds de over e under
@@ -388,10 +470,10 @@ def predicta_over_under(prepOverUnder_df, dados):
         # Escolher a melhor opção com maior valor esperado
         melhor_opcao = max(recomendacoes, key=lambda x: x[1])
         logger.info(f"✅ {melhor_opcao[0]} recomendado (VE: {melhor_opcao[1]:.3f}, Prob: {melhor_opcao[2]:.3f}, Odd: {melhor_opcao[3]:.2f})")
-        return (melhor_opcao[0], True)
+        return (melhor_opcao[0], melhor_opcao[2])
     else:
         logger.info("❌ Nenhuma recomendação em Over/Under")
-        return (None, False)
+        return (None, None)
 
 
 
@@ -403,7 +485,7 @@ def predicta_handicap(prepHandicap_df, dados):
     pred_handicap_2 = float(preds[1])
     preds = [pred_handicap_1, pred_handicap_2]
 
-    th_ve = 0.95  # Valor Esperado mínimo
+    th_ve = 0.9  # Valor Esperado mínimo
     recomendacoes = []
     th_odd = 1.6
     for i in range(2):
@@ -418,10 +500,10 @@ def predicta_handicap(prepHandicap_df, dados):
     if recomendacoes:
         melhor_opcao = max(recomendacoes, key=lambda x: x[1])
         logger.info(f"✅ Handicap opção {melhor_opcao[0]} recomendada (VE: {melhor_opcao[1]:.3f}, Prob: {melhor_opcao[2]:.3f}, Odd: {melhor_opcao[3]:.2f})")
-        return (melhor_opcao[0], True)
+        return (melhor_opcao[0], melhor_opcao[2])
     else:
         logger.info("❌ Nenhuma recomendação em Handicap")
-        return (None, False)
+        return (None, None)
 
 
 
@@ -434,7 +516,7 @@ def predicta_goal_line(prepGoal_line_df, dados):
     pred_goal_line_2 = float(preds[1])
     preds = [pred_goal_line_1, pred_goal_line_2]
 
-    th_ve = 0.95  # Valor Esperado mínimo
+    th_ve = 0.9  # Valor Esperado mínimo
     recomendacoes = []
     th_odd = 1.6
     for i in range(2):
@@ -449,10 +531,10 @@ def predicta_goal_line(prepGoal_line_df, dados):
     if recomendacoes:
         melhor_opcao = max(recomendacoes, key=lambda x: x[1])
         logger.info(f"✅ Goal Line opção {melhor_opcao[0]} recomendada (VE: {melhor_opcao[1]:.3f}, Prob: {melhor_opcao[2]:.3f}, Odd: {melhor_opcao[3]:.2f})")
-        return (melhor_opcao[0], True)
+        return (melhor_opcao[0], melhor_opcao[2])
     else:
         logger.info("❌ Nenhuma recomendação em Goal Line")
-        return (None, False)
+        return (None, None)
 
 
 
@@ -468,7 +550,7 @@ def predicta_double_chance(pred_double_chance_df, dados):
 
     preds = [pred_double_chance_1, pred_double_chance_2, pred_double_chance_3]
 
-    th_ve = 0.95
+    th_ve = 0.9
     th_odd = 1.6
     for i in range(3):
         prob = preds[i]
@@ -478,16 +560,13 @@ def predicta_double_chance(pred_double_chance_df, dados):
             recomendacoes.append((i + 1, ve, prob, odd))
     logger.info(f"📊 Double Chance - Predições: {preds}, Odds: {dados['odds']}")
 
-    
-
-
     if recomendacoes:
         melhor_opcao = max(recomendacoes, key=lambda x: x[1])  # maior VE
         logger.info(f"✅ Double Chance opção {melhor_opcao[0]} recomendada | VE={melhor_opcao[1]:.3f} | Prob={melhor_opcao[2]:.2f} | Odd={melhor_opcao[3]}")
-        return (melhor_opcao[0], True)
+        return (melhor_opcao[0], melhor_opcao[2])
     else:
         logger.info("❌ Nenhuma recomendação em Double Chance")
-        return (None, False)
+        return (None, None)
 
 def predicta_draw_no_bet(pred_draw_no_bet_df, dados):
     model_draw_no_bet = tf.keras.models.load_model('model_binario_draw_no_bet.keras')
@@ -498,7 +577,7 @@ def predicta_draw_no_bet(pred_draw_no_bet_df, dados):
 
     preds = [pred_draw_no_bet_1, pred_draw_no_bet_2]
 
-    th_ve = 0.95  # Valor esperado mínimo
+    th_ve = 0.9  # Valor esperado mínimo
     recomendacoes = []
 
     for i in range(2):
@@ -514,11 +593,11 @@ def predicta_draw_no_bet(pred_draw_no_bet_df, dados):
 
     if recomendacoes:
         melhor_opcao = max(recomendacoes, key=lambda x: x[1])
-        logger.info(f"✅ Draw No Bet opção {melhor_opcao[0]} recomendada (maior VE)")
-        return (melhor_opcao[0], True)
+        logger.info(f"✅ Draw No Bet opção {melhor_opcao[0]}| VE={melhor_opcao[1]:.3f} | Prob={melhor_opcao[2]:.2f} | Odd={melhor_opcao[3]}")
+        return (melhor_opcao[0], melhor_opcao[2])
     else:
         logger.info("❌ Nenhuma recomendação em Draw No Bet")
-        return (None, False)
+        return (None, None)
 
 
 
