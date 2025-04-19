@@ -40,10 +40,11 @@ def preProcessGeneral(df=df_temp):
     return df
 
 def preProcessGeneral_x(df):
-    df.to_csv('df_que_chega_pra_preProcessGeneral_X.csv')
+    
     df = preProcessEstatisticasGerais_X(df)
     df = preProcessHandicap_X(df)
     df = preProcessGoalLine_X(df)
+    df.to_csv('df_que_chega_pra_preProcessGeneral_X.csv')
     return df
 
 def criaNNs():
@@ -71,13 +72,13 @@ def estatisticas_ultimos_10(home_team, away_team):
 def preProcessEstatisticasGerais(df):
     # Atualiza a chamada para passar também a data do jogo
     df[['media_goals_home', 'media_victories_home', 'media_goals_away', 'media_victories_away']] = df.apply(
-        lambda row: estatisticas_ultimos_5(row['home'], row['away'], row['event_day']),
+        lambda row: estatisticas_ultimos_5(row['home'], row['away']),
         axis=1
     )
 
     # Aplica o cálculo de médias H2H (já está certo)
     medias = df.apply(
-        lambda row: calcular_medias_h2h(row['home'], row['away'], row['event_day']),
+        lambda row: calcular_medias_h2h(row['home'], row['away'], row.name),
         axis=1
     )
 
@@ -90,20 +91,22 @@ def preProcessEstatisticasGerais(df):
 
 
 
+
 def preProcessEstatisticasGerais_X(df):
     logger.info("🧮 Iniciando preProcessEstatisticasGerais_X")
     try:
-        
 
+        # Calcular as estatísticas das últimas 5 partidas
         df[['media_goals_home', 'media_victories_home', 'media_goals_away', 'media_victories_away']] = df.apply(
-            lambda row: estatisticas_ultimos_5(row['home'], row['away'], row['event_day']),
+            lambda row: estatisticas_ultimos_5(int(row['home']), int(row['away'])),
             axis=1,
             result_type='expand'
         )
         logger.debug("📊 Estatísticas últimas 5 partidas calculadas com sucesso")
 
+        # Calcular as estatísticas H2H
         medias = df.apply(
-            lambda row: calcular_medias_h2h_X(int(row['home']), int(row['away']), row['event_day']),
+            lambda row: calcular_medias_h2h_X(int(row['home']), int(row['away'])),
             axis=1
         )
         df['h2h_mean'] = medias.apply(lambda x: x['h2h_mean'])
@@ -116,6 +119,7 @@ def preProcessEstatisticasGerais_X(df):
     except Exception as e:
         logger.exception("❌ Erro em preProcessEstatisticasGerais_X")
         return df
+
 
 
 def preProcessOverUnder(df=df_temp):
@@ -254,17 +258,19 @@ def split(X_standardized, y):
 
 
 
-def estatisticas_ultimos_5(home_team, away_team, data_jogo):
+from datetime import datetime
+
+def estatisticas_ultimos_5(home_team, away_team):
     try:
+    
+
         # Filtra os jogos anteriores à data atual e do time como mandante
-        df_home = df_temp[(df_temp['home'] == home_team) & (df_temp['event_day'] < data_jogo)]
-        df_home = df_home.sort_values(by='event_day', ascending=False).head(5)
+        df_home = df_temp[(df_temp['home'] == home_team)].head(5)
         media_gols_home = df_home['home_goals'].mean() if not df_home.empty else np.nan
         vitorias_home = (df_home['home_goals'] > df_home['away_goals']).mean() if not df_home.empty else np.nan
 
         # Filtra os jogos anteriores à data atual e do time como visitante
-        df_away = df_temp[(df_temp['away'] == away_team) & (df_temp['event_day'] < data_jogo)]
-        df_away = df_away.sort_values(by='event_day', ascending=False).head(5)
+        df_away = df_temp[(df_temp['away'] == away_team)].head(5)
         media_gols_away = df_away['away_goals'].mean() if not df_away.empty else np.nan
         vitorias_away = (df_away['away_goals'] > df_away['home_goals']).mean() if not df_away.empty else np.nan
 
@@ -286,8 +292,7 @@ def estatisticas_ultimos_5(home_team, away_team, data_jogo):
 
 
 
-
-def calcular_medias_h2h(home_id, away_id, data_jogo):
+def calcular_medias_h2h(home_id, away_id, index):
     """
     Calcula três estatísticas de confronto direto com base na data do jogo:
     - h2h_mean: média de gols totais nos confrontos anteriores
@@ -301,7 +306,7 @@ def calcular_medias_h2h(home_id, away_id, data_jogo):
                     ((df['home'] == away_id) & (df['away'] == home_id))]
 
     # Filtrar apenas confrontos ocorridos antes da data do jogo atual
-    confrontos_passados = confrontos[confrontos['event_day'] < data_jogo]
+    confrontos_passados = confrontos.loc[index + 1:].head(10)
 
     if confrontos_passados.empty:
         return {
@@ -310,7 +315,6 @@ def calcular_medias_h2h(home_id, away_id, data_jogo):
             'away_h2h_mean': None
         }
     
-    confrontos_passados = confrontos_passados.sort_values('event_day', ascending=False).head(5)
 
     # Média de gols totais por confronto
     h2h_mean = confrontos_passados['tot_goals'].mean()
@@ -333,7 +337,7 @@ def calcular_medias_h2h(home_id, away_id, data_jogo):
     }
 
 
-def calcular_medias_h2h_X(home_id, away_id, data_jogo):
+def calcular_medias_h2h_X(home_id, away_id):
     """
     Calcula três estatísticas de confronto direto, considerando apenas os últimos 5 confrontos
     anteriores à data do jogo:
@@ -351,13 +355,12 @@ def calcular_medias_h2h_X(home_id, away_id, data_jogo):
         return {'h2h_mean': None, 'home_h2h_mean': None, 'away_h2h_mean': None}
 
     # Filtrar apenas os confrontos anteriores à data do jogo
-    confrontos_passados = confrontos[confrontos['event_day'] < data_jogo]
+    confrontos_passados = confrontos.head(10)
 
     if confrontos_passados.empty:
         return {'h2h_mean': None, 'home_h2h_mean': None, 'away_h2h_mean': None}
 
     # Pegar os últimos 5 confrontos mais recentes antes da data do jogo
-    confrontos_passados = confrontos_passados.sort_values('event_day', ascending=False).head(5)
 
     # Calcular média geral de gols totais
     h2h_mean = confrontos_passados['tot_goals'].mean()
@@ -656,6 +659,7 @@ def encontrar_melhor_z_softmax_positivo(y_test, y_pred_probs, min_percent=0.05):
     return melhor_z
 
 def prepNNOver_under_X(df=df_temp):
+    df.to_csv('vendo.csv')
     required_columns = ['home','away','times','odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean']
     if not all(col in df.columns for col in required_columns):
         missing_cols = [col for col in required_columns if col not in df.columns]
