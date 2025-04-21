@@ -144,7 +144,7 @@ def checa():
     df_verificacao['resultado'] = df_verificacao['resultado'].astype(float)
 
     # Suponha que cada aposta tenha uma coluna 'odd', ou use um valor fixo como 1.8 se não houver
-    df_verificacao['odd'] = df_verificacao.get('odd', 1.8)
+    df_verificacao['odd'] = df_verificacao.get('odd')
 
     # Cálculo das unidades
     df_verificacao['unidade'] = df_verificacao['resultado'].apply(
@@ -191,10 +191,14 @@ def verificar_aposta(aposta, df_resultados):
 
         if mercado == 'goal_line':
             # Comparar float e tipo (over/under)
-            linha_float = float(linha)
-            if float(row['goal_line1']) == linha_float and row['type_gl1'] == tipo:
+            if tipo == 'over':
+                tipo = 1.0
+            else:
+                tipo = 2.0
+                
+            if row['goal_line1'] == str(linha) and row['type_gl1'] == tipo:
                 return row['gl1_positivo']
-            elif float(row['goal_line2']) == linha_float and row['type_gl2'] == tipo:
+            elif row['goal_line2'] == str(linha) and row['type_gl2'] == tipo:
                 return row['gl2_positivo']
             else:
                 return None
@@ -509,7 +513,7 @@ def preve(df_linha, id):
                     'jogo': dados_temp['🔔 Jogo'].iloc[0]
                 })
 
-                
+
 
             if (linha_gl is not None and (res_goal_line == melhor)):
                 if (lista_preds_true[4] == 1):
