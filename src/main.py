@@ -46,7 +46,13 @@ apiclient = BetsAPIClient(api_key=api)
 CSV_FILE = r"C:\Users\Leoso\Downloads\projBotAposta\resultados_60_ofc.csv"
 #lista dos thresholds das nns
 lista_th = [0.575,0.4,0.5,0.5,0.575,0.5]
-list_checa = []
+list_checa = [{
+                    'id': 173313118,
+                    'mercado': 'draw_no_bet',
+                    'time': 'LYON (JACK)',
+                    'odd': 1.333,
+                    'jogo': 'LYON (JACK) X A.BILBAO (POTTER)'
+                }]
 
 
 
@@ -125,7 +131,8 @@ def jogos_do_dia():
 
 
 def checa():
-    df_odds = jogos_do_dia()
+    df_odds = pd.read_csv(r"C:\Users\Leoso\Downloads\projBotAposta\vendo.csv")
+    #df_odds = jogos_do_dia()
     resultados_verificados = []
 
     for aposta in list_checa:
@@ -137,8 +144,6 @@ def checa():
 
     df_verificacao = pd.DataFrame(resultados_verificados)
 
-    # Exibe o DataFrame filtrado
-    print(df_verificacao[['jogo', 'mercado', 'linha', 'tipo', 'time','odd', 'resultado']])
 
     # Conversão para facilitar o cálculo
     df_verificacao['resultado'] = df_verificacao['resultado'].astype(float)
@@ -178,7 +183,7 @@ def verificar_aposta(aposta, df_resultados):
         time = aposta.get('time')
         mercado = aposta['mercado']
 
-        home_time, away_time = [t.strip() for t in jogo.split(' x ')]
+        home_time, away_time = [t.strip() for t in jogo.split(' X ')]
 
         resultado = df_resultados[
             (df_resultados['id'] == id)
@@ -225,6 +230,22 @@ def verificar_aposta(aposta, df_resultados):
                 return row['dnb1_ganha']
             elif row['draw_no_bet_team2'] == time:
                 return row['dnb2_ganha']
+            else:
+                return None
+        elif mercado == 'double_chance':
+            if time == home_time:
+                time = 1.0
+            elif time == away_time:
+                time = 2.0
+            else:
+                time = 3.0
+            if time == 1.0:
+                return row['res_double_chance1']
+            elif time == 2.0:
+                return row['res_double_chance2']
+            elif time == 3.0:
+                return row['res_double_chance3']
+
             else:
                 return None
 
