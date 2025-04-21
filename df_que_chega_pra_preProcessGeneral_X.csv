@@ -1,2 +1,2 @@
-,id,home,away,times,media_goals_home,media_victories_home,media_goals_away,media_victories_away,h2h_mean,home_h2h_mean,away_h2h_mean
-0,173309704,11259205,11223844,"('PSV (vivienne)', 'A.Madrid (jAke)')",3.0,0.4,2.8,0.6,6.0,2.5,3.5
+,id,goals_over_under,odd_goals_over1,odd_goals_under1,asian_handicap1,team_ah1,odds_ah1,asian_handicap2,team_ah2,odds_ah2,goal_line1,type_gl1,odds_gl1,goal_line2,type_gl2,odds_gl2,home,away,times,media_goals_home,media_victories_home,media_goals_away,media_victories_away,h2h_mean,home_h2h_mean,away_h2h_mean,asian_handicap1_1,asian_handicap1_2,asian_handicap2_1,asian_handicap2_2,goal_line1_1,goal_line1_2,goal_line2_1,goal_line2_2
+0,173370560,2.5,1.030,10.000,"0.0, +0.5",1,1.900,"0.0, -0.5",2,1.800,"6.0, 6.5",1,1.850,"6.0, 6.5",2,1.850,11225931,11223526,"('PSG (Wboy)', 'Marseille (dm1trena)')",2.6,0.2,3.2,0.2,,,,0.0,0.5,0.0,-0.5,6.0,6.5,6.0,6.5
