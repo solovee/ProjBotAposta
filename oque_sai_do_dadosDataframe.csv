@@ -1,4 +1,7 @@
 ,id_jogo,horario,times,home,away,send_time
-0,173309704,1745118720,"('PSV (vivienne)', 'A.Madrid (jAke)')",11259205,11223844,1745118400
-1,173309707,1745119440,"('A.Madrid (jAke)', 'Bayer 04 (why)')",11223844,11261065,1745119120
-2,173309709,1745119440,"('Arsenal (Salfour)', 'Dortmund (panch)')",11227252,11226307,1745119120
+0,173356129,1745193960,"('Fiorentina (GanGsta_Panda)', 'Roma (why)')",11229810,11226658,1745193640
+1,173356124,1745193960,"('Bologna (Salfour)', 'Napoli (panch)')",11226202,11228910,1745193640
+2,173362013,1745194500,"('Tottenham (Klaus)', 'Fenerbahce (Vendetta)')",11245640,11273216,1745194180
+3,173362006,1745194500,"('Lazio (Dempsey)', 'A.Bilbao (Potter)')",11240399,11232015,1745194180
+4,173356134,1745194680,"('Napoli (panch)', 'Fiorentina (GanGsta_Panda)')",11228910,11229810,1745194360
+5,173356146,1745194680,"('Juventus (exhausted)', 'Bologna (Salfour)')",11226309,11226202,1745194360

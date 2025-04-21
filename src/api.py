@@ -247,6 +247,26 @@ class BetsAPIClient:
                 page += 1
 
         return results, ts_list, times, times_id
+    
+    def getUpcoming_check(self, sport_id: int = 1, leagues: List[Any] = [], day: str = data_atual()) -> List[Any]:
+        results = []
+        ts_list = []
+        times = []
+        times_id = []  # Agora será uma lista de tuplas (home_id, away_id)
+        for league in leagues:
+            page = 1
+            while True:
+                res, ts, tm, ti, total_pages = self.get_fifa_matches_with_total_check(league_id=league, page=page, day=day)
+                
+                results.extend(res)
+                ts_list.extend(ts)
+                times.extend(tm)
+                times_id.extend(ti)  # Já são tuplas individuais por jogo
+                if page >= total_pages:
+                    break
+                page += 1
+
+        return results, ts_list, times, times_id
 
 
 # LIVE
@@ -273,6 +293,35 @@ class BetsAPIClient:
 
         for x in resp['results']:
             if (x.get('ss') is None) or (x.get('time_status') == 0) or (int(x.get('time',0)) > time.time()):
+                res.append(x['id'])
+                ts.append(x['time'])
+                times.append((x['home']['name'], x['away']['name']))
+                times_id.append((x['home']['id'], x['away']['id']))  # Coleta diretamente o par de IDs
+
+        return res, ts, times, times_id, total_pages
+    
+    def get_fifa_matches_with_total_check(self, sport_id: int = 1, league_id: int = 10048705, day: str = data_atual(), page: int = 1):
+        url = f'{self.base_url}upcoming'
+        params = {
+            'token': self.api_key,
+            'sport_id': sport_id,
+            'league_id': league_id,
+            'day': day,
+            'page': page
+        }
+        response = requests.get(url, params=params)
+        self.chamadas += 1
+        resp = response.json()
+        pager = resp.get('pager', {})
+        total_pages = ceil(pager.get('total', 0) / pager.get('per_page', 1))
+
+        res = []
+        ts = []
+        times = []
+        times_id = []  # Lista de tuplas (home_id, away_id)
+
+        for x in resp['results']:
+            if (x.get('time_status') == 3):
                 res.append(x['id'])
                 ts.append(x['time'])
                 times.append((x['home']['name'], x['away']['name']))

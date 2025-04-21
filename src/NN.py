@@ -224,6 +224,7 @@ def preProcessDrawNoBet(df=df_temp):
     df['res_draw_no_bet2'] = df.apply(
         lambda row: classify_draw_no_bet(row['draw_no_bet_team2'], row['home_goals'], row['away_goals']), axis=1
     )
+    df.to_csv('dffff.csv')
     df = pd.get_dummies(df, columns=['res_draw_no_bet1'], prefix='dnb1')
     df = pd.get_dummies(df, columns=['res_draw_no_bet2'], prefix='dnb2')
     return df
@@ -541,6 +542,7 @@ def classify_draw_no_bet(team, home_goals, away_goals):
     Returns:
         'ganha', 'perde', 'reembolso' ou 'indefinido'
     """
+    team = float(team)
     if pd.isna(team) or pd.isna(home_goals) or pd.isna(away_goals):
         return 'indefinido'
     

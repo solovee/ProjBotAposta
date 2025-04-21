@@ -33,7 +33,7 @@ load_dotenv()
 api = os.getenv("API_KEY")
 chat_id = int(os.getenv("CHAT_ID"))
 # -1002610837223
-chats = [chat_id, -1002610837223]
+chats = [chat_id]
 
 
 
@@ -46,6 +46,7 @@ apiclient = BetsAPIClient(api_key=api)
 CSV_FILE = r"C:\Users\Leoso\Downloads\projBotAposta\resultados_60_ofc.csv"
 #lista dos thresholds das nns
 lista_th = [0.575,0.4,0.5,0.5,0.575,0.5]
+list_checa = []
 
 
 
@@ -97,6 +98,150 @@ def agendar_criacao_nns():
 
     threading.Timer(delay, tarefa).start()
 
+def jogos_do_dia():
+    ids, dicio = apiclient.getAllOlds(leagues=apiclient.leagues_ids, day=dia_anterior())
+    #pegar dia atual tambem
+    odds = apiclient.filtraOddsNovo(ids)
+    df_odds = apiclient.transform_betting_data(odds)
+ 
+    novos_dados = []  # ✅ declarar a lista aqui
+    
+    # Juntar com dados do evento
+    for dados_evento in dicio:
+        event_id = dados_evento.get('id')
+        odds_transformadas = df_odds[df_odds['id'] == event_id].to_dict('records')
+        
+        if odds_transformadas:
+            merged = {**dados_evento, **odds_transformadas[0], "event_day": data_hoje}
+        else:
+            merged = {**dados_evento, "event_day": data_hoje}
+        
+        novos_dados.append(merged)
+    
+    df = pd.DataFrame(novos_dados)
+    df_odds = NN.preProcessGeneral(df)
+    df_odds.to_csv('vendo.csv')
+    return df_odds
+
+
+def checa():
+    df_odds = jogos_do_dia()
+    resultados_verificados = []
+
+    for aposta in list_checa:
+        resultado = verificar_aposta(aposta, df_odds)
+        resultados_verificados.append({
+            **aposta,
+            'resultado': resultado
+        })
+
+    df_verificacao = pd.DataFrame(resultados_verificados)
+
+    # Exibe o DataFrame filtrado
+    print(df_verificacao[['jogo', 'mercado', 'linha', 'tipo', 'time','odd', 'resultado']])
+
+    # Conversão para facilitar o cálculo
+    df_verificacao['resultado'] = df_verificacao['resultado'].astype(float)
+
+    # Suponha que cada aposta tenha uma coluna 'odd', ou use um valor fixo como 1.8 se não houver
+    df_verificacao['odd'] = df_verificacao.get('odd', 1.8)
+
+    # Cálculo das unidades
+    df_verificacao['unidade'] = df_verificacao['resultado'].apply(
+        lambda x: 1 if x in [1, 1.0, True] else (0 if x in [0, 0.0, False] else None)
+    )
+    df_verificacao['lucro'] = df_verificacao.apply(
+        lambda row: row['odd'] - 1 if row['unidade'] == 1 else (-1 if row['unidade'] == 0 else 0), axis=1
+    )
+
+    # Soma total de unidades
+    total_unidades = df_verificacao['lucro'].sum()
+
+    # ROI: retorno sobre o investimento
+    total_apostas = df_verificacao['unidade'].isin([1, 0]).sum()
+    roi = (total_unidades / total_apostas) * 100 if total_apostas > 0 else 0
+
+    print(f"\n✅ Total de Unidades: {total_unidades:.2f}")
+    print(f"📈 ROI: {roi:.2f}%")
+
+    return df_verificacao, total_unidades, roi
+
+
+
+
+def verificar_aposta(aposta, df_resultados):
+    try:
+        id = aposta['id']
+        jogo = aposta['jogo']
+        linha = aposta.get('linha')
+        tipo = aposta.get('tipo')
+        time = aposta.get('time')
+        mercado = aposta['mercado']
+
+        home_time, away_time = [t.strip() for t in jogo.split(' x ')]
+
+        resultado = df_resultados[
+            (df_resultados['id'] == id)
+        ]
+
+        if resultado.empty:
+            return None
+
+        row = resultado.iloc[0]
+
+        if mercado == 'goal_line':
+            # Comparar float e tipo (over/under)
+            linha_float = float(linha)
+            if float(row['goal_line1']) == linha_float and row['type_gl1'] == tipo:
+                return row['gl1_positivo']
+            elif float(row['goal_line2']) == linha_float and row['type_gl2'] == tipo:
+                return row['gl2_positivo']
+            else:
+                return None
+
+        elif mercado == 'handicap':
+            def format_handicap(valor):
+                partes = str(valor).replace(' ', '').split(',')
+                if len(partes) == 2 and partes[0] == partes[1]:
+                    return partes[0]  # Ex: "0.0, 0.0" → "0.0"
+                return str(valor).strip()
+            if row['team_ah1'] == time and format_handicap(row['asian_handicap1']) == linha:
+                return row['ah1_positivo']
+            elif row['team_ah2'] == time and format_handicap(row['asian_handicap2']) == linha:
+                return row['ah2_positivo']
+            else:
+                return None
+
+        elif mercado == 'draw_no_bet':
+            if time == home_time:
+                time = 1.0
+            else:
+                time = 2.0
+            if row['draw_no_bet_team1'] == time:
+                return row['dnb1_ganha']
+            elif row['draw_no_bet_team2'] == time:
+                return row['dnb2_ganha']
+            else:
+                return None
+
+        return None
+    except Exception as e:
+        print(f"Erro ao verificar aposta: {e}")
+        return None
+'''
+resultados_verificados = []
+
+for aposta in lista_checa:
+    resultado = verificar_aposta(aposta, df_resultados)
+    resultados_verificados.append({
+        **aposta,
+        'resultado': resultado
+    })
+
+df_verificacao = pd.DataFrame(resultados_verificados)
+print(df_verificacao[['jogo', 'mercado', 'linha', 'tipo', 'time', 'resultado']])
+
+'''
 
 def loop_pega_jogos():
     while True:
@@ -182,40 +327,6 @@ def pegaJogosDoDia():
 
 
 
-'''
-def pegaJogosDoDia():
-    try:
-        ids , tempo, nome_time, times_id = apiclient.getUpcoming(leagues=apiclient.leagues_ids)
-        if not ids:
-            logger.warning("⚠️ Nenhum ID de jogo retornado pela API")
-            return pd.DataFrame()
-        # adicionar tratamento pra no caso de vazio
-        dados = [{"id_jogo": i, "horario": h, "times": k, "home": z, "away": t} for i, h, k, (z, t) in zip(ids, tempo, nome_time, times_id)]
-        print(dados)
-        dados_dataframe = pd.DataFrame(dados)
-        dados_dataframe = dados_dataframe[~dados_dataframe['id_jogo'].isin(programado)]
-        
-        if dados_dataframe.empty:
-            logger.info("ℹ️ Todos os jogos já estão programados")
-            return dados_dataframe
-        
-        agora = int(time.time())
-        
-        dados_dataframe['horario'] = dados_dataframe['horario'].astype(int)
-        dados_dataframe['send_time'] = dados_dataframe['horario'] - 320
-        dados_dataframe = dados_dataframe[dados_dataframe['send_time'] > (agora - (7 * 60))]
-        dados_dataframe = dados_dataframe.sort_values(by="horario").reset_index(drop=True)
-        
-        programados = dados_dataframe['id_jogo'].tolist()
-        programado.extend(programados)
-        logger.info(f"📌 Adicionados {len(programados)} novos jogos à lista de programados")
-        dados_dataframe.to_csv('oque_sai_do_dadosDataframe.csv')
-        return dados_dataframe
-    
-    except Exception as e:
-        logger.error(f"❌ Erro ao obter jogos do dia: {str(e)}")
-        return pd.DataFrame()
-'''
 
 #!roda apos pegajogosDoDia, mas cada acao do jogo sera executada em seu tempo send_timer
 def pegaOddsEvento(df):
@@ -235,6 +346,7 @@ def pegaOddsEvento(df):
 # Função que será executada para cada jogo
 def acao_do_jogo(row):
     try:
+        global list_checa
         logger.info(f"⚽ Processando jogo {row['id_jogo']}")
         odds = apiclient.filtraOddsNovo([row['id_jogo']])
         if not odds:
@@ -246,9 +358,13 @@ def acao_do_jogo(row):
         df_odds['away'] = int(row['away'])
         df_odds['times'] = str(row['times'])
         
-       
+        id = row['id_jogo']
         df_odds = NN.preProcessGeneral_x(df_odds)
-        lista_bets_a_enviar = preve(df_odds)
+        lista_bets_a_enviar, listas_para_checar = preve(df_odds, id)
+        df_check = pd.DataFrame(listas_para_checar)
+        df_check.to_csv("checar_bets.csv", index=False)
+        list_checa.append(df_check)
+
         if lista_bets_a_enviar:
             logger.info(f"📩 Enviando {len(lista_bets_a_enviar)} previsões para o Telegram")
             for bet in lista_bets_a_enviar:
@@ -268,7 +384,7 @@ def criaTodasNNs():
     lista_th = NN.criaNNs()
     logger.info(f"📊 Thresholds definidos: {lista_th}")
 
-def preve(df_linha):
+def preve(df_linha, id):
 
     logger.info("🔮 Fazendo previsões para o jogo atual...")
     try:
@@ -335,9 +451,10 @@ def preve(df_linha):
         except:
             logger.info("❌ Nenhuma previsão foi considerada válida.")
 
-        
+        #[(0) - over, (1) - under, (2) - handicap home, (3) - handicap away, (4) - over goal_line, (5) - under goal_line, (6) dc1, dc2, dc3, dnb1, dnb2]
         list_true = []
         list_final = []
+        list_check = []
         if melhor:
             if (tipo_over_under is not None and (res_under_over == melhor)):
                 dados_OU['🔔 Jogo'] = times_para_jogo(str(dados_OU['times'].iloc[0]))
@@ -351,6 +468,15 @@ def preve(df_linha):
                 dados_OU['⚽ Linha'] = '2.5'
                 dados_OU = dados_OU[['🔔 Jogo', '📊 Tipo', '⭐ Odd', '⚽ Linha']]
                 list_true.append(dados_OU)
+                list_check.append({
+                    'id': id,
+                    'mercado': 'over_under',
+                    'tipo': tipo_over_under,
+                    'linha': '2.5',
+                    'odd': dados_OU['⭐ Odd'].iloc[0],
+                    'jogo': dados_OU['🔔 Jogo'].iloc[0]
+                })
+                
 
             if (time_handicap is not None and (res_handicap == melhor)):
                 if (lista_preds_true[2] == 1):
@@ -374,6 +500,16 @@ def preve(df_linha):
                 dados_temp = dados_temp.rename(columns={'odds': '⭐ Odd'})
                 dados_temp = dados_temp[['🔔 Jogo','🚀 time', '⭐ Odd', '⚽ handicap']]
                 list_true.append(dados_temp)
+                list_check.append({
+                    'id': id,
+                    'mercado': 'handicap',
+                    'time': dados_temp['🚀 time'].iloc[0],
+                    'linha': dados_temp['⚽ handicap'].iloc[0],
+                    'odd': dados_temp['⭐ Odd'].iloc[0],
+                    'jogo': dados_temp['🔔 Jogo'].iloc[0]
+                })
+
+                
 
             if (linha_gl is not None and (res_goal_line == melhor)):
                 if (lista_preds_true[4] == 1):
@@ -397,6 +533,14 @@ def preve(df_linha):
                 dados_temp.drop(columns=['goal_line_1', 'goal_line_2', 'times'], inplace=True)
                 dados_temp = dados_temp[['🔔 Jogo','📊 Tipo','⭐ Odd','⚽ Linha']]
                 list_true.append(dados_temp)
+                list_check.append({
+                    'id': id,
+                    'mercado': 'goal_line',
+                    'tipo': dados_temp['📊 Tipo'].iloc[0],
+                    'linha': dados_temp['⚽ Linha'].iloc[0],
+                    'odd': dados_temp['⭐ Odd'].iloc[0],
+                    'jogo': dados_temp['🔔 Jogo'].iloc[0]
+                })
 
             if (type_dc is not None and (res_double_chance == melhor)):
                 if (lista_preds_true[6] == 1):
@@ -421,6 +565,13 @@ def preve(df_linha):
                 dados_temp.drop('times', axis=1, inplace=True)
                 dados_temp = dados_temp[['🔔 Jogo', '📊 Double Chance', '⭐ Odd']]
                 list_true.append(dados_temp)
+                list_check.append({
+                    'id': id,
+                    'mercado': 'double_chance',
+                    'time': dados_temp['📊 Double Chance'].iloc[0],
+                    'odd': dados_temp['⭐ Odd'].iloc[0],
+                    'jogo': dados_temp['🔔 Jogo'].iloc[0]
+                })
 
             if (time_draw_no_bet is not None and (res_draw_no_bet == melhor)):
                 if (lista_preds_true[8] == 1):
@@ -437,8 +588,14 @@ def preve(df_linha):
                 dados_temp.drop('times', axis=1, inplace=True)
                 dados_temp = dados_temp[['🔔 Jogo','📊 Draw No Bet', '⭐ Odd']]
                 list_true.append(dados_temp)
-
-                
+                list_check.append({
+                    'id': id,
+                    'mercado': 'draw_no_bet',
+                    'time': dados_temp['📊 Draw No Bet'].iloc[0],
+                    'odd': dados_temp['⭐ Odd'].iloc[0],
+                    'jogo': dados_temp['🔔 Jogo'].iloc[0]
+                })
+ 
             for df in list_true:
                 men = df_para_string(df)
                 list_final.append(men)
@@ -450,7 +607,7 @@ def preve(df_linha):
         else:
             logger.info("❌ Nenhuma previsão foi considerada válida.")
 
-        return list_final
+        return list_final, list_check
     except Exception as e:
         logger.error(f"❌ Erro durante a previsão: {str(e)}")
         return []
@@ -489,7 +646,6 @@ def df_para_string(df):
         mensagens.append(msg.strip())
 
     return mensagens
-
 
 
 def predicta_over_under(prepOverUnder_df, dados):

@@ -290,5 +290,5 @@ import main
 import NN
 
 
-main.criaTodasNNs()
+main.checa()
 
