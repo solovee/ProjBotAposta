@@ -28,7 +28,7 @@ def dia_anterior():
 
 
 #df_temp = pd.read_csv(r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_novo.csv")
-df_temp = pd.read_csv(r"C:\Users\Leoso\Downloads\projBotAposta\resultados_60_ofc.csv")
+df_temp = pd.read_csv('resultados_60_ofc.csv')
 
 def preProcessGeneral(df=df_temp):
     df = preProcessEstatisticasGerais(df)
@@ -601,7 +601,7 @@ def encontrar_melhor_z_binario_positivo(y_true, y_pred_probs, min_percent=0.9):
 
 
 
-def encontrar_melhor_z_binario_negativo(y_true, y_pred_probs, min_percent=0.1):
+def encontrar_melhor_z_binario_negativo(y_true, y_pred_probs, min_percent=0.9):
 
     thresholds_neg = np.arange(0.5, -0.01, -0.025)
     # Total de previsões negativas (com qualquer confiança)
@@ -705,6 +705,8 @@ def prepNNHandicap_X(df=df_temp):
         print("❌ DataFrame vazio após dropna em prepNNhandicap*")
         return None, None
     z = df_temporario[['times','team_ah','asian_handicap_1', 'asian_handicap_2', 'odds']]
+    z = z.sort_values('team_ah').reset_index(drop=True)
+    df_temporario = df_temporario.sort_values('team_ah').reset_index(drop=True)
     
     df_temporario = pd.get_dummies(df_temporario, columns=['team_ah'], prefix='team_ah')
     X = df_temporario[['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds']]

@@ -66,3 +66,86 @@
 --- NOVO LOTE (2025-04-24T00:30:40.349744) ---
 
 --- NOVO LOTE (2025-04-24T00:30:40.351751) ---
+
+--- NOVO LOTE (2025-04-24T14:25:03.834448) ---
+
+--- NOVO LOTE (2025-04-24T14:25:05.356759) ---
+
+--- NOVO LOTE (2025-04-24T14:26:13.771772) ---
+
+--- NOVO LOTE (2025-04-24T14:26:15.121003) ---
+
+--- NOVO LOTE (2025-04-24T14:32:40.526258) ---
+
+--- NOVO LOTE (2025-04-24T14:32:40.577263) ---
+
+--- NOVO LOTE (2025-04-24T14:39:40.441833) ---
+
+--- NOVO LOTE (2025-04-24T14:39:42.587632) ---
+
+--- NOVO LOTE (2025-04-24T14:56:35.784165) ---
+
+--- NOVO LOTE (2025-04-24T15:12:53.076869) ---
+
+--- NOVO LOTE (2025-04-24T15:12:56.071436) ---
+{"id": "173570950", "mercado": "double_chance", "time": "ARSENAL (ARTHUR)", "odd": "1.800", "jogo": "ARSENAL (ARTHUR) X MAN CITY (PRINCE)"}
+
+--- NOVO LOTE (2025-04-24T15:12:56.129976) ---
+
+--- NOVO LOTE (2025-04-24T15:12:56.130973) ---
+
+--- NOVO LOTE (2025-04-24T15:19:43.085733) ---
+
+--- NOVO LOTE (2025-04-24T15:19:43.086721) ---
+
+--- NOVO LOTE (2025-04-24T15:24:40.546827) ---
+
+--- NOVO LOTE (2025-04-24T15:24:43.487039) ---
+
+--- NOVO LOTE (2025-04-24T15:24:43.489039) ---
+{"id": "173570762", "mercado": "over_under", "tipo": "over", "linha": "2.5", "odd": "1.533", "jogo": "CHELSEA (PROFESSOR) X ARSENAL (ARTHUR)"}
+
+--- NOVO LOTE (2025-04-24T15:24:43.511037) ---
+{"id": "173570357", "mercado": "double_chance", "time": "PSV (SATO)", "odd": "1.909", "jogo": "PSV (SATO) X BENFICA (JESUS)"}
+
+--- NOVO LOTE (2025-04-24T15:29:47.333262) ---
+
+--- NOVO LOTE (2025-04-24T15:29:48.178963) ---
+
+--- NOVO LOTE (2025-04-24T15:39:43.720599) ---
+{"id": "173570752", "mercado": "goal_line", "tipo": "under", "linha": "5.5", "odd": "1.875", "jogo": "CHELSEA (PROFESSOR) X MAN CITY (PRINCE)"}
+
+--- NOVO LOTE (2025-04-24T15:39:43.777111) ---
+{"id": "173570445", "mercado": "draw_no_bet", "time": "NEWCASTLE (SHELBY)", "odd": "1.800", "jogo": "NOTTM FOREST (PERSIE) X NEWCASTLE (SHELBY)"}
+
+--- NOVO LOTE (2025-04-24T15:40:43.187790) ---
+{"id": "173576682", "mercado": "double_chance", "time": "LIVERPOOL (HYPER)", "odd": "1.615", "jogo": "LIVERPOOL (HYPER) X MAN CITY (BOKI)"}
+
+--- NOVO LOTE (2025-04-24T15:40:43.350476) ---
+{"id": "173576685", "mercado": "goal_line", "tipo": "under", "linha": "5.5", "odd": "1.800", "jogo": "ARSENAL (STEKSY) X MAN UTD (PECONI)"}
+
+--- NOVO LOTE (2025-04-24T15:53:23.267994) ---
+
+--- NOVO LOTE (2025-04-24T15:53:25.567877) ---
+
+--- NOVO LOTE (2025-04-24T15:54:42.538229) ---
+
+--- NOVO LOTE (2025-04-24T16:04:42.379647) ---
+{"id": "173576711", "mercado": "double_chance", "time": "ARSENAL (STEKSY)", "odd": "1.800", "jogo": "ARSENAL (STEKSY) X LIVERPOOL (HYPER)"}
+
+--- NOVO LOTE (2025-04-24T16:04:42.391651) ---
+
+--- NOVO LOTE (2025-04-24T16:09:40.492158) ---
+
+--- NOVO LOTE (2025-04-24T16:09:41.168941) ---
+
+--- NOVO LOTE (2025-04-24T16:09:42.364214) ---
+{"id": "173570492", "mercado": "draw_no_bet", "time": "EINTRACHT (ARTHUR)", "odd": "1.727", "jogo": "MAN UTD (PERSIE) X EINTRACHT (ARTHUR)"}
+
+--- NOVO LOTE (2025-04-24T16:09:42.435738) ---
+
+--- NOVO LOTE (2025-04-24T16:16:44.200029) ---
+{"id": "173576717", "mercado": "goal_line", "tipo": "under", "linha": "5.5", "odd": "1.875", "jogo": "CHELSEA (MASLJA) X ARSENAL (STEKSY)"}
+
+--- NOVO LOTE (2025-04-24T16:16:44.256413) ---
+{"id": "173576721", "mercado": "handicap", "time": "MAN UTD (PECONI)", "linha": "1.0", "odd": "1.800", "jogo": "MAN CITY (BOKI) X MAN UTD (PECONI)"}

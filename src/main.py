@@ -33,7 +33,7 @@ load_dotenv()
 api = os.getenv("API_KEY")
 chat_id = int(os.getenv("CHAT_ID"))
 # -1002610837223
-chats = [chat_id]
+chats = [chat_id, -1002610837223]
 
 
 
@@ -43,7 +43,7 @@ apiclient = BetsAPIClient(api_key=api)
 
 #df = pd.read_csv('src\resultados_novo.csv')
 #CSV_FILE = r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_novo.csv"
-CSV_FILE = r"C:\Users\Leoso\Downloads\projBotAposta\resultados_60_ofc.csv"
+CSV_FILE = 'resultados_60_ofc.csv'
 #lista dos thresholds das nns
 lista_th = [0.575,0.4,0.5,0.5,0.575,0.5]
 list_checa = []
@@ -240,7 +240,6 @@ def jogos_do_dia():
     df = NN.preProcessGoalLine(df.copy())
     df = NN.preProcessDoubleChance(df.copy())
     df = NN.preProcessDrawNoBet(df.copy())
-    df.to_csv('vendo.csv')
     return df
 
 
@@ -588,9 +587,9 @@ def preve(df_linha, id):
                 
 
             if (time_handicap is not None and (res_handicap == melhor)):
-                if (lista_preds_true[2] == 1):
+                if (time_handicap== 1):
                     dados_temp = dados_ah.iloc[[0]].copy()
-                elif (lista_preds_true[2] == 2):
+                elif (time_handicap == 2):
                     dados_temp = dados_ah.iloc[[1]].copy()
                 dados_temp['🔔 Jogo'] = times_para_jogo(str(dados_temp['times'].iloc[0]))
 
