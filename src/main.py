@@ -240,7 +240,7 @@ def jogos_do_dia():
     df = NN.preProcessGoalLine(df.copy())
     df = NN.preProcessDoubleChance(df.copy())
     df = NN.preProcessDrawNoBet(df.copy())
-    
+    df.to_csv('vendo.csv')
     return df
 
 
