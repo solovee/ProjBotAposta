@@ -39,12 +39,12 @@ def preProcessGeneral(df=df_temp):
     df = preProcessDrawNoBet(df)
     return df
 
+
 def preProcessGeneral_x(df):
     
     df = preProcessEstatisticasGerais_X(df)
     df = preProcessHandicap_X(df)
     df = preProcessGoalLine_X(df)
-    df.to_csv('df_que_chega_pra_preProcessGeneral_X.csv')
     return df
 
 def criaNNs():
@@ -126,29 +126,32 @@ def preProcessOverUnder(df=df_temp):
     df['res_goals_over_under'] = df['tot_goals'] > df['goals_over_under'].astype(float)
     return df
 
+
+
+
 def preProcessHandicap(df=df_temp):
     # Aplicar a transformação para ambas as colunas
     df[['asian_handicap1_1', 'asian_handicap1_2']] = df['asian_handicap1'].apply(lambda x: pd.Series(split_handicap(x)))
     df[['asian_handicap2_1', 'asian_handicap2_2']] = df['asian_handicap2'].apply(lambda x: pd.Series(split_handicap(x)))
     df['diff_goals'] = df['home_goals'] - df['away_goals']
     # Aplicando a função ao DataFrame
+    
     df['classificacao_ah1'] = df.apply(
         lambda row: classify_asian_handicap(row['team_ah1'], row['asian_handicap1_1'], row['asian_handicap1_2'],row['diff_goals']), axis=1
     )
     df['classificacao_ah2'] = df.apply(
         lambda row: classify_asian_handicap(row['team_ah2'], row['asian_handicap2_1'], row['asian_handicap2_2'], row['diff_goals']), axis=1
     )
-    df = pd.get_dummies(df, columns=['classificacao_ah1'], prefix='ah1')
-    categories = ['indefinido', 'negativo', 'positivo', 'reembolso']
-    for cat in categories:
-        col_name = f'ah1_{cat}'
-        if col_name not in df.columns:
-            df[col_name] = None
-    df = pd.get_dummies(df, columns=['classificacao_ah2'], prefix='ah2')
-    for cat in categories:
-        col_name = f'ah2_{cat}'
-        if col_name not in df.columns:
-            df[col_name] = None
+    
+    df['ah1_positivo'] = df['classificacao_ah1'] == 'positivo'
+    df['ah1_negativo'] = df['classificacao_ah1'] == 'negativo'
+    df['ah1_reembolso'] = df['classificacao_ah1'] == 'reembolso'
+    df['ah1_indefinido'] = df['classificacao_ah1'] == 'indefinido'
+
+    df['ah2_positivo'] = df['classificacao_ah2'] == 'positivo'
+    df['ah2_negativo'] = df['classificacao_ah2'] == 'negativo'
+    df['ah2_reembolso'] = df['classificacao_ah2'] == 'reembolso'
+    df['ah2_indefinido'] = df['classificacao_ah2'] == 'indefinido'
     return df
 
 
@@ -224,7 +227,6 @@ def preProcessDrawNoBet(df=df_temp):
     df['res_draw_no_bet2'] = df.apply(
         lambda row: classify_draw_no_bet(row['draw_no_bet_team2'], row['home_goals'], row['away_goals']), axis=1
     )
-    df.to_csv('dffff.csv')
     df = pd.get_dummies(df, columns=['res_draw_no_bet1'], prefix='dnb1')
     df = pd.get_dummies(df, columns=['res_draw_no_bet2'], prefix='dnb2')
     return df
@@ -418,13 +420,12 @@ def classify_asian_handicap(team, ah1, ah2, diff_goals):
     Returns:
         'positiva', 'negativa', 'reembolso' ou 'indefinido'
     """
+    team, ah1, ah2, diff_goals = float(team), float(ah1), float(ah2), float(diff_goals)
     # Verifica se algum valor é NaN
     if pd.isna(team) or pd.isna(ah1) or pd.isna(ah2) or pd.isna(diff_goals):
         return 'indefinido'
-    
     # Ajusta a diferença de gols conforme o time (inverte para visitante)
     adjusted_diff = diff_goals if team == 1.0 else -diff_goals
-    
     # Verifica se é handicap simples
     if ah1 == ah2:
         resultado = adjusted_diff + ah1
@@ -480,6 +481,7 @@ def classify_goal_line(team_gl, gl1, gl2, tot_goals):
         gl2: segundo valor do handicap (para handicaps compostos)
         tot_goals: total de gols do jogo (home_goals + away_goals)
     """
+    team_gl, gl1, gl2, tot_goals = float(team_gl), float(gl1), float(gl2),float(tot_goals)
     # Verificação de valores nulos
     if pd.isna(team_gl) or pd.isna(gl1) or pd.isna(tot_goals):
         return 'indefinido'
@@ -542,7 +544,7 @@ def classify_draw_no_bet(team, home_goals, away_goals):
     Returns:
         'ganha', 'perde', 'reembolso' ou 'indefinido'
     """
-    team = float(team)
+    team, home_goals, away_goals = float(team), float(home_goals), float(away_goals)
     if pd.isna(team) or pd.isna(home_goals) or pd.isna(away_goals):
         return 'indefinido'
     
@@ -570,9 +572,8 @@ def classify_draw_no_bet(team, home_goals, away_goals):
 #criar nn 1 e 2
 
 
-import numpy as np
 
-def encontrar_melhor_z_binario_positivo(y_true, y_pred_probs, min_percent=0.85):
+def encontrar_melhor_z_binario_positivo(y_true, y_pred_probs, min_percent=0.9):
     thresholds_pos = np.arange(0.5, 1.01, 0.025)
     # Total de previsões positivas (com qualquer confiança)
     total_pred_positivas = np.sum(y_pred_probs >= 0.5)
@@ -600,7 +601,7 @@ def encontrar_melhor_z_binario_positivo(y_true, y_pred_probs, min_percent=0.85):
 
 
 
-def encontrar_melhor_z_binario_negativo(y_true, y_pred_probs, min_percent=0.85):
+def encontrar_melhor_z_binario_negativo(y_true, y_pred_probs, min_percent=0.1):
 
     thresholds_neg = np.arange(0.5, -0.01, -0.025)
     # Total de previsões negativas (com qualquer confiança)
@@ -627,7 +628,7 @@ def encontrar_melhor_z_binario_negativo(y_true, y_pred_probs, min_percent=0.85):
 
     return melhor_z
 
-def encontrar_melhor_z_softmax_positivo(y_test, y_pred_probs, min_percent=0.05):
+def encontrar_melhor_z_softmax_positivo(y_test, y_pred_probs, min_percent=0.1):
 
     thresholds=np.arange(0.40, 1.01, 0.025)
 
@@ -661,7 +662,6 @@ def encontrar_melhor_z_softmax_positivo(y_test, y_pred_probs, min_percent=0.05):
     return melhor_z
 
 def prepNNOver_under_X(df=df_temp):
-    df.to_csv('vendo.csv')
     required_columns = ['home','away','times','odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean']
     if not all(col in df.columns for col in required_columns):
         missing_cols = [col for col in required_columns if col not in df.columns]
@@ -731,7 +731,6 @@ def prepNNGoal_line_X(df=df_temp):
 
     df_temporario = df[required_columns].copy()
     df_temporario = preparar_df_goallines_X(df_temporario)
-    df_temporario.to_csv('prep_goalline.csv')
     df_temporario.dropna(inplace=True)
     if df_temporario.empty:
         print("❌ DataFrame vazio após dropna em prepNNgl*")
@@ -859,7 +858,6 @@ def NN_over_under(df):
 
     df_temporario = df[['odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean','res_goals_over_under']].copy()
     df_temporario.dropna(inplace=True)
-    df_temporario.to_csv('df_temporario.csv')
     X = df_temporario[['odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean']]
     y = df_temporario['res_goals_over_under']
     scaler_over_under = StandardScaler()
@@ -1519,7 +1517,6 @@ def NN_draw_no_bet(df=df_temp):
     df_temporario = preparar_df_draw_no_bet(df_temporario)
 
     df_temporario = pd.get_dummies(df_temporario, columns=['draw_no_bet_team'], prefix='draw_no_bet_team')
-    df_temporario.to_csv('teeste.csv')
     df_temporario = df_temporario[df_temporario['indefinido'] == False]
 
     df_temporario.dropna(inplace=True)

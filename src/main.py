@@ -1,5 +1,6 @@
-import time
-from datetime import datetime, timedelta
+import time as time_module  # para ainda usar time.sleep
+from datetime import datetime, timedelta, time
+
 import tensorflow as tf
 from api import BetsAPIClient, dia_anterior
 import pandas as pd
@@ -9,8 +10,7 @@ import threading
 import NN
 import telegramBot as tb
 import logging
-import random
-import ast
+import json
 
 #tentar arrumar as estatisticas
 #ver os team_ah e type_gl
@@ -46,13 +46,7 @@ apiclient = BetsAPIClient(api_key=api)
 CSV_FILE = r"C:\Users\Leoso\Downloads\projBotAposta\resultados_60_ofc.csv"
 #lista dos thresholds das nns
 lista_th = [0.575,0.4,0.5,0.5,0.575,0.5]
-list_checa = [{
-                    'id': 173313118,
-                    'mercado': 'draw_no_bet',
-                    'time': 'LYON (JACK)',
-                    'odd': 1.333,
-                    'jogo': 'LYON (JACK) X A.BILBAO (POTTER)'
-                }]
+list_checa = []
 
 
 
@@ -69,7 +63,7 @@ def checa_virada_do_dia():
             data_hoje = novo_dia
             programado = []
             logger.info("🔄 Novo dia detectado, resetando variáveis...")
-        time.sleep(60)
+        time_module.sleep(60)
 
 
 def agendar_processar_dia_anterior():
@@ -104,74 +98,36 @@ def agendar_criacao_nns():
 
     threading.Timer(delay, tarefa).start()
 
-def jogos_do_dia():
-    ids, dicio = apiclient.getAllOlds(leagues=apiclient.leagues_ids, day=dia_anterior())
-    #pegar dia atual tambem
-    odds = apiclient.filtraOddsNovo(ids)
-    df_odds = apiclient.transform_betting_data(odds)
- 
-    novos_dados = []  # ✅ declarar a lista aqui
+def agendar_verificacao_diaria():
+    agora = datetime.now()
     
-    # Juntar com dados do evento
-    for dados_evento in dicio:
-        event_id = dados_evento.get('id')
-        odds_transformadas = df_odds[df_odds['id'] == event_id].to_dict('records')
-        
-        if odds_transformadas:
-            merged = {**dados_evento, **odds_transformadas[0], "event_day": data_hoje}
-        else:
-            merged = {**dados_evento, "event_day": data_hoje}
-        
-        novos_dados.append(merged)
+    # Define o horário alvo (00:30)
+    alvo = datetime.combine(agora.date(), time(0, 30))
     
-    df = pd.DataFrame(novos_dados)
-    df_odds = NN.preProcessGeneral(df)
-    df_odds.to_csv('vendo.csv')
-    return df_odds
+    # Se já passou das 00:30 hoje, agenda para amanhã
+    if agora >= alvo:
+        alvo += timedelta(days=1)
+    
+    # Calcula o delay em segundos
+    delay = (alvo - agora).total_seconds()
+    
+    logger.info(f"⏰ Agendando verificação diária para {alvo.strftime('%d/%m/%Y %H:%M')}")
 
+    def tarefa():
+        logger.info("🔍 Iniciando verificação diária de apostas...")
+        try:
+            global list_checa
+            checa()  # Executa a verificação
+            list_checa = []
 
-def checa():
-    df_odds = pd.read_csv(r"C:\Users\Leoso\Downloads\projBotAposta\vendo.csv")
-    #df_odds = jogos_do_dia()
-    resultados_verificados = []
+        except Exception as e:
+            logger.error(f"❌ Erro na verificação diária: {e}")
+        
+        # Reagenda para o próximo dia
+        agendar_verificacao_diaria()
 
-    for aposta in list_checa:
-        resultado = verificar_aposta(aposta, df_odds)
-        resultados_verificados.append({
-            **aposta,
-            'resultado': resultado
-        })
-
-    df_verificacao = pd.DataFrame(resultados_verificados)
-
-
-    # Conversão para facilitar o cálculo
-    df_verificacao['resultado'] = df_verificacao['resultado'].astype(float)
-
-    # Suponha que cada aposta tenha uma coluna 'odd', ou use um valor fixo como 1.8 se não houver
-    df_verificacao['odd'] = df_verificacao.get('odd')
-
-    # Cálculo das unidades
-    df_verificacao['unidade'] = df_verificacao['resultado'].apply(
-        lambda x: 1 if x in [1, 1.0, True] else (0 if x in [0, 0.0, False] else None)
-    )
-    df_verificacao['lucro'] = df_verificacao.apply(
-        lambda row: row['odd'] - 1 if row['unidade'] == 1 else (-1 if row['unidade'] == 0 else 0), axis=1
-    )
-
-    # Soma total de unidades
-    total_unidades = df_verificacao['lucro'].sum()
-
-    # ROI: retorno sobre o investimento
-    total_apostas = df_verificacao['unidade'].isin([1, 0]).sum()
-    roi = (total_unidades / total_apostas) * 100 if total_apostas > 0 else 0
-
-    print(f"\n✅ Total de Unidades: {total_unidades:.2f}")
-    print(f"📈 ROI: {roi:.2f}%")
-
-    return df_verificacao, total_unidades, roi
-
-
+    # Cria o timer
+    threading.Timer(delay, tarefa).start()
 
 
 def verificar_aposta(aposta, df_resultados):
@@ -209,6 +165,10 @@ def verificar_aposta(aposta, df_resultados):
                 return None
 
         elif mercado == 'handicap':
+            if time == home_time:
+                time = 1.0
+            else:
+                time = 2.0
             def format_handicap(valor):
                 partes = str(valor).replace(' ', '').split(',')
                 if len(partes) == 2 and partes[0] == partes[1]:
@@ -253,6 +213,126 @@ def verificar_aposta(aposta, df_resultados):
     except Exception as e:
         print(f"Erro ao verificar aposta: {e}")
         return None
+def jogos_do_dia():
+    ids, dicio = apiclient.getAllOlds(leagues=apiclient.leagues_ids, day=dia_anterior())
+    #pegar dia atual tambem
+    odds = apiclient.filtraOddsNovo(ids)
+    df_odds = apiclient.transform_betting_data(odds)
+    novos_dados = []  # ✅ declarar a lista aqui
+    
+    # Juntar com dados do evento
+    for dados_evento in dicio:
+        event_id = dados_evento.get('id')
+        odds_transformadas = df_odds[df_odds['id'] == event_id].to_dict('records')
+        
+        if odds_transformadas:
+            merged = {**dados_evento, **odds_transformadas[0], "event_day": data_hoje}
+        else:
+            merged = {**dados_evento, "event_day": data_hoje}
+        
+        novos_dados.append(merged)
+    
+    df_dados = pd.DataFrame(novos_dados)
+    df = df_dados.copy()
+    df = NN.preProcessEstatisticasGerais(df.copy())
+    df = NN.preProcessOverUnder(df.copy())
+    df = NN.preProcessHandicap(df.copy())
+    df = NN.preProcessGoalLine(df.copy())
+    df = NN.preProcessDoubleChance(df.copy())
+    df = NN.preProcessDrawNoBet(df.copy())
+    
+    return df
+
+
+def checa():
+    df_odds = jogos_do_dia()
+    resultados_verificados = []
+    contador_none = 0
+    contador_validos = 0
+
+    for aposta in list_checa:
+        resultado = verificar_aposta(aposta, df_odds)
+        
+        # Verifica se o resultado é None/nulo
+        if resultado is None or pd.isna(resultado):
+            contador_none += 1
+        else:
+            contador_validos += 1
+            
+        resultados_verificados.append({
+            **aposta,
+            'resultado': resultado
+        })
+    
+
+    df_verificacao = pd.DataFrame(resultados_verificados)
+
+    # Conversão para facilitar o cálculo (mantém None para resultados inválidos)
+    df_verificacao['resultado'] = pd.to_numeric(df_verificacao['resultado'], errors='coerce')
+
+    # Suponha que cada aposta tenha uma coluna 'odd'
+    df_verificacao['odd'] = df_verificacao.get('odd')
+
+    # Cálculo das unidades (considera explicitamente None)
+    df_verificacao['unidade'] = df_verificacao['resultado'].apply(
+        lambda x: 1 if x in [1, 1.0, True] else (0 if x in [0, 0.0, False] else None)
+    )
+    
+    # Cálculo do lucro (None resulta em 0)
+    df_verificacao['lucro'] = df_verificacao.apply(
+        lambda row: (row['odd'] - 1) if row['unidade'] == 1 
+                   else (-1 if row['unidade'] == 0 
+                   else 0), 
+        axis=1
+    )
+
+    # Estatísticas
+    total_unidades = df_verificacao['lucro'].sum()
+    total_apostas = len(df_verificacao)
+    total_apostas_validas = contador_validos
+    roi = (total_unidades / total_apostas_validas) * 100 if total_apostas_validas > 0 else 0
+    percentual_none = (contador_none / total_apostas) * 100 if total_apostas > 0 else 0
+    # Pega o dia anterior
+    data_anterior = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+    nome_arquivo = f"verificacao_diaria_{data_anterior}.txt"
+
+        # Gera string de resumo para envio ao bot
+    resumo_str = (
+        f"📊 Estatísticas Detalhadas – {data_anterior}\n"
+        f"✅ Total de Apostas: {total_apostas}\n"
+        f"✅ Apostas Válidas: {total_apostas_validas}\n"
+        f"❓ Apostas None/Nulas: {contador_none} ({percentual_none:.1f}%)\n"
+        f"💰 Total de Unidades: {total_unidades:.2f}\n"
+        f"📈 ROI (apenas válidas): {roi:.2f}%\n"
+    )
+    for chat in chats:
+        tb.sendMessages(chat, resumo_str)
+   
+
+    with open(nome_arquivo, "a", encoding="utf-8") as f:
+        f.write(f"\n📅 Verificação referente ao dia {data_anterior}\n")
+        f.write(f"✅ Total de Apostas: {total_apostas}\n")
+        f.write(f"✅ Apostas Válidas: {total_apostas_validas}\n")
+        f.write(f"❓ Apostas None/Nulas: {contador_none} ({percentual_none:.1f}%)\n")
+        f.write(f"💰 Total de Unidades: {total_unidades:.2f}\n")
+        f.write(f"📈 ROI (apenas válidas): {roi:.2f}%\n")
+        f.write("-" * 40 + "\n")
+
+    
+
+    return {
+        'dataframe': df_verificacao,
+        'total_unidades': total_unidades,
+        'roi': roi,
+        'apostas_total': total_apostas,
+        'apostas_validas': total_apostas_validas,
+        'apostas_none': contador_none,
+        'percentual_none': percentual_none
+    }
+
+
+
+
 '''
 resultados_verificados = []
 
@@ -277,12 +357,15 @@ def loop_pega_jogos():
             pegaOddsEvento(df_jogos)
         else:
             logger.info("ℹ️ Nenhum jogo encontrado por agora")
-        time.sleep(10 * 60)  # 20 minutos
+        time_module.sleep(10 * 60)  # 20 minutos
 
 def main():
     logger.info("🚀 Iniciando aplicação de apostas esportivas")
     # Thread para verificar virada do dia e resetar programado
     threading.Thread(target=checa_virada_do_dia, daemon=True).start()
+
+    agendar_verificacao_diaria()
+
 
     # Agendar processamento do dia anterior
     agendar_processar_dia_anterior()
@@ -333,7 +416,7 @@ def pegaJogosDoDia():
             logger.info("ℹ️ Todos os jogos já estão programados")
             return dados_dataframe
 
-        agora = int(time.time())
+        agora = int(time_module.time())
 
         dados_dataframe['horario'] = dados_dataframe['horario'].astype(int)
         dados_dataframe['send_time'] = dados_dataframe['horario'] - 320
@@ -343,7 +426,6 @@ def pegaJogosDoDia():
         programados = dados_dataframe['id_jogo'].tolist()
         programado.extend(programados)
         logger.info(f"📌 Adicionados {len(programados)} novos jogos à lista de programados")
-        dados_dataframe.to_csv('oque_sai_do_dadosDataframe.csv')
         return dados_dataframe
 
     except Exception as e:
@@ -355,7 +437,7 @@ def pegaJogosDoDia():
 
 #!roda apos pegajogosDoDia, mas cada acao do jogo sera executada em seu tempo send_timer
 def pegaOddsEvento(df):
-    agora = time.time()  # timestamp atual em segundos
+    agora = time_module.time()  # timestamp atual em segundos
     logger.info(f"⏳ Agendando {len(df)} eventos...")
 
     for _, row in df.iterrows():
@@ -386,9 +468,11 @@ def acao_do_jogo(row):
         id = row['id_jogo']
         df_odds = NN.preProcessGeneral_x(df_odds)
         lista_bets_a_enviar, listas_para_checar = preve(df_odds, id)
-        df_check = pd.DataFrame(listas_para_checar)
-        df_check.to_csv("checar_bets.csv", index=False)
-        list_checa.append(df_check)
+        with open("checar_bets.txt", "a", encoding="utf-8") as f:
+            f.write(f"\n--- NOVO LOTE ({datetime.now().isoformat()}) ---\n")
+            for aposta in listas_para_checar:
+                f.write(json.dumps(aposta, ensure_ascii=False) + "\n")
+
 
         if lista_bets_a_enviar:
             logger.info(f"📩 Enviando {len(lista_bets_a_enviar)} previsões para o Telegram")
@@ -785,7 +869,7 @@ def predicta_double_chance(pred_double_chance_df, dados):
 
     preds = [pred_double_chance_1, pred_double_chance_2, pred_double_chance_3]
 
-    th_ve = 1.025
+    th_ve = 1.5
     th_odd = 1.6
     for i in range(3):
         prob = preds[i]
@@ -817,7 +901,7 @@ def predicta_draw_no_bet(pred_draw_no_bet_df, dados):
 
     preds = [pred_draw_no_bet_1, pred_draw_no_bet_2]
 
-    th_ve = 1.025 # Valor esperado mínimo
+    th_ve = 1.5 # Valor esperado mínimo
     recomendacoes = []
 
     for i in range(2):
@@ -1008,58 +1092,6 @@ def processar_dia_anterior():
     except Exception as e:
         print(f"❌ Erro ao processar dia {dia}: {type(e).__name__}: {e}")
 
-
-'''
-#! roda as 00:05
-def processar_dia_anterior():
-    dia = dia_anterior()
-    print(f"🔄 Processando jogos do dia {dia}")
-
-    try:
-        ids, dicio = apiclient.getAllOlds(leagues=apiclient.leagues_ids, day=dia)
-        odds_data = apiclient.filtraOddsNovo(ids=ids)
-        df_odds = apiclient.transform_betting_data(odds_data)
-
-        novos_dados = []
-        for dados_evento in dicio:
-            event_id = dados_evento.get('id')
-            odds_transformadas = df_odds[df_odds['id'] == event_id].to_dict('records')
-
-            if odds_transformadas:
-                merged = {**dados_evento, **odds_transformadas[0], "event_day": dia}
-            else:
-                merged = {**dados_evento, "event_day": dia}
-
-            novos_dados.append(merged)
-
-        if novos_dados:
-            df_novo = pd.DataFrame(novos_dados)
-            colunas_ordenadas = ['id', 'event_day'] + [col for col in df_novo.columns if col not in ['id', 'event_day']]
-            df_novo = df_novo[colunas_ordenadas]
-
-            if os.path.exists(CSV_FILE):
-                df_existente = pd.read_csv(CSV_FILE, dtype={"event_day": str})
-
-                # Adiciona os dados novos
-                df_final = pd.concat([df_existente, df_novo], ignore_index=True)
-
-                # Ordena cronologicamente
-                df_final = df_final.sort_values(by="event_day").reset_index(drop=True)
-
-                # Remove o primeiro (mais antigo) dia
-                primeiro_dia = df_final["event_day"].min()
-                df_final = df_final[df_final["event_day"] != primeiro_dia]
-            else:
-                df_final = df_novo
-
-            df_final.to_csv(CSV_FILE, index=False)
-            print(f"✅ Dados atualizados com sucesso! Dia {primeiro_dia} removido, dia {dia} adicionado.")
-        else:
-            print(f"⚠️ Nenhum dado encontrado para o dia {dia}")
-
-    except Exception as e:
-        print(f"❌ Erro ao processar dia {dia}: {e}")
-'''
 if __name__ == "__main__":
     main()
 
