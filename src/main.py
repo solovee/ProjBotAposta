@@ -54,6 +54,7 @@ list_checa = [{"id": "173578950", "mercado": "handicap", "time": "MAN CITY (KODA
 
 
 
+
 #!pega uma vez ao virar o dia e depois de 20 em 20 min pra testar
 data_hoje = datetime.now().date().strftime('%Y%m%d')
 #!reseta todo dia as 00:00, guarda jogos programados do dia, deve zerar ao mudar o dia
@@ -1300,10 +1301,15 @@ def processar_dia_anterior():
     except Exception as e:
         print(f"❌ Erro ao processar dia {dia}: {type(e).__name__}: {e}")
 
-threading.Thread(target=main).start()
+
+
 
 # cria uma API simples só pra Render detectar a porta
 app = FastAPI()
+
+@app.on_event("startup")
+def on_startup():
+    threading.Thread(target=main, daemon=True).start()
 
 @app.get("/")
 def read_root():
