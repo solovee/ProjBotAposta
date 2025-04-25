@@ -50,7 +50,7 @@ apiclient = BetsAPIClient(api_key=api)
 CSV_FILE = 'resultados_60_ofc.csv'
 #lista dos thresholds das nns
 lista_th = [0.575,0.4,0.5,0.5,0.575,0.5]
-list_checa = [{"id": "173576717", "mercado": "goal_line", "tipo": "under", "linha": "5.5", "odd": "1.875", "jogo": "CHELSEA (MASLJA) X ARSENAL (STEKSY)"},{"id": "173576721", "mercado": "handicap", "time": "MAN UTD (PECONI)", "linha": "1.0", "odd": "1.800", "jogo": "MAN CITY (BOKI) X MAN UTD (PECONI)"},{"id": "173570422", "mercado": "goal_line", "tipo": "under", "linha": "5.5 , 6.0", "odd": "1.900", "jogo": "OLYMPIAKOS (SHELBY) X ROMA (PROFESSOR)"},{"id": "173570249", "mercado": "goal_line", "tipo": "over", "linha": "4.5", "odd": "1.850", "jogo": "ROMA (PROFESSOR) X MAN UTD (PERSIE)"},{"id": "173570644", "mercado": "double_chance", "time": "REAL BETIS (ZANGIEF)", "odd": "1.909", "jogo": "FIORENTINA (THOR) X REAL BETIS (ZANGIEF)"},{"id": "173570653", "mercado": "double_chance", "time": "RAPID VIENNA (GOLIATH)", "odd": "1.833", "jogo": "FIORENTINA (THOR) X RAPID VIENNA (GOLIATH)"},{"id": "173570719", "mercado": "handicap", "time": "OLYMPIAKOS (SHELBY)", "linha": "0.0 , -0.5", "odd": "1.950", "jogo": "EINTRACHT (ARTHUR) X OLYMPIAKOS (SHELBY)"},{"id": "173578715", "mercado": "handicap", "time": "BRAGA (LAIKINGDAST)", "linha": "-0.5", "odd": "1.925", "jogo": "RIO AVE (HOTSHOT) X BRAGA (LAIKINGDAST)"},{"id": "173578737", "mercado": "goal_line", "tipo": "over", "linha": "3.5", "odd": "1.850", "jogo": "USA (INQUISITOR) X GHANA (BOULEVARD)"},{"id": "173570543", "mercado": "goal_line", "tipo": "under", "linha": "5.0 , 5.5", "odd": "1.800", "jogo": "LAZIO (ZANGIEF) X AC MILAN (GOLIATH)"},{"id": "173570639", "mercado": "handicap", "time": "AC MILAN (GOLIATH)", "linha": "-0.5", "odd": "1.825", "jogo": "INTER (THOR) X AC MILAN (GOLIATH)"},{"id": "173578790", "mercado": "goal_line", "tipo": "over", "linha": "4.0 , 4.5", "odd": "1.900", "jogo": "DENMARK (LAIKINGDAST) X GHANA (BOULEVARD)"},{"id": "173578800", "mercado": "handicap", "time": "DENMARK (LAIKINGDAST)", "linha": "0.0", "odd": "1.850", "jogo": "USA (INQUISITOR) X DENMARK (LAIKINGDAST)"},{"id": "173578837", "mercado": "handicap", "time": "BARCELONA (HOTSHOT)", "linha": "0.5", "odd": "1.775", "jogo": "LIVERPOOL (LAIKINGDAST) X BARCELONA (HOTSHOT)"}]
+list_checa = [{"id": "173578950", "mercado": "handicap", "time": "MAN CITY (KODAK)", "linha": "0.0", "odd": "1.950", "jogo": "ARSENAL (INQUISITOR) X MAN CITY (KODAK)"},{"id": "173587601", "mercado": "goal_line", "tipo": "over", "linha": "6.0 , 6.5", "odd": "1.850", "jogo": "PSG (MARINER) X BAYERN (RAZVAN)"},{"id": "173578962", "mercado": "goal_line", "tipo": "under", "linha": "4.0 , 4.5", "odd": "1.850", "jogo": "ARSENAL (INQUISITOR) X CHELSEA (LAIKINGDAST)"},{"id": "173587605", "mercado": "handicap", "time": "BAYERN (RAZVAN)", "linha": "0.0", "odd": "1.925", "jogo": "REAL MADRID (JETLI) X BAYERN (RAZVAN)"},{"id": "173588175", "mercado": "handicap", "time": "ITALY (SENIOR)", "linha": "-0.5", "odd": "1.825", "jogo": "ARGENTINA (KRAVATSKHELIA) X ITALY (SENIOR)"},{"id": "173588188", "mercado": "goal_line", "tipo": "under", "linha": "5.0", "odd": "1.800", "jogo": "GERMANY (KOFTOVSKY) X SPAIN (UNCLE)"},{"id": "173588190", "mercado": "handicap", "time": "FRANCE (CL1VLIND)", "linha": "-0.5 , -1.0", "odd": "1.850", "jogo": "ARGENTINA (KRAVATSKHELIA) X FRANCE (CL1VLIND)"},{"id": "173588262", "mercado": "goal_line", "tipo": "under", "linha": "5.0", "odd": "1.900", "jogo": "GERMANY (KOFTOVSKY) X FRANCE (CL1VLIND)"},{"id": "173588275", "mercado": "goal_line", "tipo": "over", "linha": "6.0", "odd": "1.900", "jogo": "BOLOGNA (KRAVATSKHELIA) X NAPOLI (SENIOR)"},{"id": "173588279", "mercado": "goal_line", "tipo": "over", "linha": "6.0", "odd": "1.850", "jogo": "JUVENTUS (UNCLE) X BOLOGNA (KRAVATSKHELIA)"},{"id": "173588284", "mercado": "handicap", "time": "ROMA (KOFTOVSKY)", "linha": "0.0 , -0.5", "odd": "1.950", "jogo": "NAPOLI (SENIOR) X ROMA (KOFTOVSKY)"},{"id": "173588289", "mercado": "handicap", "time": "JUVENTUS (UNCLE)", "linha": "0.0 , -0.5", "odd": "1.850", "jogo": "ROMA (KOFTOVSKY) X JUVENTUS (UNCLE)"},{"id": "173587767", "mercado": "double_chance", "time": "NEWCASTLE (MARINER)", "odd": "2.150", "jogo": "CHELSEA (JETLI) X NEWCASTLE (MARINER)"},{"id": "173588330", "mercado": "handicap", "time": "FIORENTINA (CL1VLIND)", "linha": "0.0 , -0.5", "odd": "1.800", "jogo": "JUVENTUS (UNCLE) X FIORENTINA (CL1VLIND)"},{"id": "173587779", "mercado": "handicap", "time": "CHELSEA (JETLI)", "linha": "-0.5 , -1.0", "odd": "1.900", "jogo": "ARSENAL (GIANT) X CHELSEA (JETLI)"},{"id": "173588341", "mercado": "handicap", "time": "BOLOGNA (KRAVATSKHELIA)", "linha": "-0.5", "odd": "1.800", "jogo": "FIORENTINA (CL1VLIND) X BOLOGNA (KRAVATSKHELIA)"},{"id": "173587794", "mercado": "goal_line", "tipo": "under", "linha": "5.5 , 6.0", "odd": "1.825", "jogo": "NEWCASTLE (MARINER) X ARSENAL (GIANT)"},{"id": "173587812", "mercado": "goal_line", "tipo": "under", "linha": "5.0 , 5.5", "odd": "1.850", "jogo": "NEWCASTLE (MARINER) X CHELSEA (JETLI)"},{"id": "173587826", "mercado": "goal_line", "tipo": "under", "linha": "5.0 , 5.5", "odd": "1.800", "jogo": "CHELSEA (JETLI) X ARSENAL (GIANT)"},{"id": "173587830", "mercado": "handicap", "time": "NEWCASTLE (MARINER)", "linha": "-1.0", "odd": "1.825", "jogo": "NOTTM FOREST (SENSEI) X NEWCASTLE (MARINER)"},{"id": "173630887", "mercado": "goal_line", "tipo": "under", "linha": "4.5 , 5.0", "odd": "1.800", "jogo": "BAYERN (FURIOUS) X INTER (PUNISHER)"},{"id": "173630896", "mercado": "handicap", "time": "PSG (BANEGA)", "linha": "0.0", "odd": "1.875", "jogo": "BAYERN (FURIOUS) X PSG (BANEGA)"},{"id": "173630911", "mercado": "handicap", "time": "INTER (PUNISHER)", "linha": "-0.5", "odd": "1.850", "jogo": "PSG (BANEGA) X INTER (PUNISHER)"},{"id": "173630922", "mercado": "goal_line", "tipo": "under", "linha": "4.5 , 5.0", "odd": "1.850", "jogo": "INTER (PUNISHER) X BAYERN (FURIOUS)"},{"id": "173630929", "mercado": "handicap", "time": "BAYERN (FURIOUS)", "linha": "0.0 , 0.5", "odd": "1.850", "jogo": "PSG (BANEGA) X BAYERN (FURIOUS)"},{"id": "173630965", "mercado": "handicap", "time": "PSG (BANEGA)", "linha": "-0.5", "odd": "1.800", "jogo": "INTER (PUNISHER) X PSG (BANEGA)"},{"id": "173631734", "mercado": "goal_line", "tipo": "under", "linha": "5.5", "odd": "1.900", "jogo": "MAN CITY (GLUMAC) X RIVER PLATE (GIOX)"},{"id": "173631739", "mercado": "goal_line", "tipo": "under", "linha": "5.5", "odd": "1.850", "jogo": "PSG (HYPER) X REAL MADRID (MASLJA)"},{"id": "173630991", "mercado": "goal_line", "tipo": "under", "linha": "5.0", "odd": "1.900", "jogo": "REAL MADRID (BANEGA) X A.MADRID (DAVID)"},{"id": "173631347", "mercado": "handicap", "time": "BARCELONA (VENDETTA)", "linha": "0.0", "odd": "1.925", "jogo": "PSV (DENNIS) X BARCELONA (VENDETTA)"},{"id": "173631760", "mercado": "handicap", "time": "REAL MADRID (MASLJA)", "linha": "-0.5", "odd": "1.900", "jogo": "BOCA JUNIORS (BOLEC) X REAL MADRID (MASLJA)"}]
 
 
 
@@ -234,6 +234,7 @@ def verificar_aposta(aposta, df_resultados):
         ]
 
         if resultado.empty:
+            print(f'nao achou {aposta}')
             return None
 
         row = resultado.iloc[0]
@@ -505,7 +506,7 @@ def checa():
     
     # Cálculo do lucro (None resulta em 0)
     df_verificacao['lucro'] = df_verificacao.apply(
-        lambda row: (row['odd'] - 1) * row['unidade'] if row['unidade'] is not None else 0, 
+        lambda row: (float(row['odd']) - 1) * row['unidade'] if row['unidade'] is not None else 0, 
         axis=1
     )
 
@@ -1298,7 +1299,7 @@ def processar_dia_anterior():
 
     except Exception as e:
         print(f"❌ Erro ao processar dia {dia}: {type(e).__name__}: {e}")
-
+'''
 threading.Thread(target=main).start()
 
 # cria uma API simples só pra Render detectar a porta
@@ -1311,7 +1312,7 @@ def read_root():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     uvicorn.run(app, host="0.0.0.0", port=port)
-
+'''
 if __name__ == "__main__":
     main()
 

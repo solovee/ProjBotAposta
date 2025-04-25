@@ -405,4 +405,74 @@ from api import BetsAPIClient
 from dotenv import load_dotenv
 import main
 
-main.criaTodasNNs()
+import pandas as pd
+import os
+from datetime import datetime
+
+# Definir o nome do arquivo CSV onde os dados serão salvos
+CSV_FILE = 'testees.csv'
+
+def processar_dia_atual():
+    # Definir o formato das colunas padrão
+    COLUNAS_PADRAO = [
+        'id', 'event_day', 'home', 'away', 'home_goals', 'away_goals', 'tot_goals',
+        'goals_over_under', 'odd_goals_over1', 'odd_goals_under1',
+        'asian_handicap1', 'team_ah1', 'odds_ah1',
+        'asian_handicap2', 'team_ah2', 'odds_ah2',
+        'goal_line1', 'type_gl1', 'odds_gl1',
+        'goal_line2', 'type_gl2', 'odds_gl2',
+        'double_chance1', 'odds_dc1',
+        'double_chance2', 'odds_dc2',
+        'double_chance3', 'odds_dc3',
+        'draw_no_bet_team1', 'odds_dnb1',
+        'draw_no_bet_team2', 'odds_dnb2',
+    ]
+    
+    # Pegar o dia de hoje
+    dia = datetime.today().strftime('%Y%m%d')
+    print(f"🔄 Processando jogos do dia {dia}")
+
+    try:
+        print("🔎 Buscando IDs e dicionário de eventos...")
+        # Supondo que apiclient.getAllOlds é uma função que retorna os dados dos jogos
+        ids, dicio = apiclient.getAllOlds(leagues=apiclient.leagues_ids, day=dia)
+        print(f"✔️ {len(ids)} eventos encontrados.")
+
+        print("📊 Filtrando e transformando odds...")
+        odds_data = apiclient.filtraOddsNovo(ids=ids)
+        df_odds = apiclient.transform_betting_data(odds_data)
+
+        novos_dados = []
+        for dados_evento in dicio:
+            event_id = dados_evento.get('id')
+            odds_transformadas = df_odds[df_odds['id'] == event_id].to_dict('records')
+
+            if odds_transformadas:
+                merged = {**dados_evento, **odds_transformadas[0], "event_day": dia}
+            else:
+                merged = {**dados_evento, "event_day": dia}
+
+            novos_dados.append(merged)
+
+        if novos_dados:
+            print(f"🧩 {len(novos_dados)} eventos com odds processados.")
+            df_novo = pd.DataFrame(novos_dados)
+
+            # Garantir que todas as colunas padrão estejam no DataFrame
+            for coluna in COLUNAS_PADRAO:
+                if coluna not in df_novo.columns:
+                    df_novo[coluna] = None
+
+            df_novo = df_novo[COLUNAS_PADRAO]
+
+            # Salvar os dados no CSV
+            df_novo.to_csv(CSV_FILE, index=False)
+            print(f"✅ Dados do dia {dia} salvos com sucesso no arquivo {CSV_FILE}.")
+        else:
+            print(f"⚠️ Nenhum dado encontrado para o dia {dia}")
+
+    except Exception as e:
+        print(f"❌ Erro ao processar o dia {dia}: {type(e).__name__}: {e}")
+
+# Chamar a função
+processar_dia_atual()
