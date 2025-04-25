@@ -46,7 +46,7 @@ apiclient = BetsAPIClient(api_key=api)
 CSV_FILE = 'resultados_60_ofc.csv'
 #lista dos thresholds das nns
 lista_th = [0.575,0.4,0.5,0.5,0.575,0.5]
-list_checa = []
+list_checa = [{"id": "173576717", "mercado": "goal_line", "tipo": "under", "linha": "5.5", "odd": "1.875", "jogo": "CHELSEA (MASLJA) X ARSENAL (STEKSY)"},{"id": "173576721", "mercado": "handicap", "time": "MAN UTD (PECONI)", "linha": "1.0", "odd": "1.800", "jogo": "MAN CITY (BOKI) X MAN UTD (PECONI)"},{"id": "173570422", "mercado": "goal_line", "tipo": "under", "linha": "5.5 , 6.0", "odd": "1.900", "jogo": "OLYMPIAKOS (SHELBY) X ROMA (PROFESSOR)"},{"id": "173570249", "mercado": "goal_line", "tipo": "over", "linha": "4.5", "odd": "1.850", "jogo": "ROMA (PROFESSOR) X MAN UTD (PERSIE)"},{"id": "173570644", "mercado": "double_chance", "time": "REAL BETIS (ZANGIEF)", "odd": "1.909", "jogo": "FIORENTINA (THOR) X REAL BETIS (ZANGIEF)"},{"id": "173570653", "mercado": "double_chance", "time": "RAPID VIENNA (GOLIATH)", "odd": "1.833", "jogo": "FIORENTINA (THOR) X RAPID VIENNA (GOLIATH)"},{"id": "173570719", "mercado": "handicap", "time": "OLYMPIAKOS (SHELBY)", "linha": "0.0 , -0.5", "odd": "1.950", "jogo": "EINTRACHT (ARTHUR) X OLYMPIAKOS (SHELBY)"},{"id": "173578715", "mercado": "handicap", "time": "BRAGA (LAIKINGDAST)", "linha": "-0.5", "odd": "1.925", "jogo": "RIO AVE (HOTSHOT) X BRAGA (LAIKINGDAST)"},{"id": "173578737", "mercado": "goal_line", "tipo": "over", "linha": "3.5", "odd": "1.850", "jogo": "USA (INQUISITOR) X GHANA (BOULEVARD)"},{"id": "173570543", "mercado": "goal_line", "tipo": "under", "linha": "5.0 , 5.5", "odd": "1.800", "jogo": "LAZIO (ZANGIEF) X AC MILAN (GOLIATH)"},{"id": "173570639", "mercado": "handicap", "time": "AC MILAN (GOLIATH)", "linha": "-0.5", "odd": "1.825", "jogo": "INTER (THOR) X AC MILAN (GOLIATH)"},{"id": "173578790", "mercado": "goal_line", "tipo": "over", "linha": "4.0 , 4.5", "odd": "1.900", "jogo": "DENMARK (LAIKINGDAST) X GHANA (BOULEVARD)"},{"id": "173578800", "mercado": "handicap", "time": "DENMARK (LAIKINGDAST)", "linha": "0.0", "odd": "1.850", "jogo": "USA (INQUISITOR) X DENMARK (LAIKINGDAST)"}]
 
 
 
@@ -129,7 +129,7 @@ def agendar_verificacao_diaria():
     # Cria o timer
     threading.Timer(delay, tarefa).start()
 
-
+'''
 def verificar_aposta(aposta, df_resultados):
     try:
         id = aposta['id']
@@ -213,6 +213,140 @@ def verificar_aposta(aposta, df_resultados):
     except Exception as e:
         print(f"Erro ao verificar aposta: {e}")
         return None
+'''
+def verificar_aposta(aposta, df_resultados):
+    try:
+        id = aposta['id']
+        jogo = aposta['jogo']
+        linha = aposta.get('linha')
+        tipo = aposta.get('tipo')
+        time = aposta.get('time')
+        mercado = aposta['mercado']
+
+        home_time, away_time = [t.strip() for t in jogo.split(' X ')]
+
+        resultado = df_resultados[
+            (df_resultados['id'] == id)
+        ]
+
+        if resultado.empty:
+            return None
+
+        row = resultado.iloc[0]
+
+        if mercado == 'goal_line':
+            if tipo == 'over':
+                tipo = 1.0
+            else:
+                tipo = 2.0
+
+            if row['goal_line1'] == str(linha) and row['type_gl1'] == tipo:
+                # Verificar se houve ganho parcial ou meio perda
+                if row['gl1_positivo']:
+                    return 1  # Totalmente positivo
+                elif row['gl1_negativo']:
+                    return 0  # Totalmente negativo
+                elif row['gl1_meio_ganho']:
+                    return 0.5  # Meio ganho
+                elif row['gl1_meia_perda']:
+                    return -0.5  # Meio perda
+                
+            elif row['goal_line2'] == str(linha) and row['type_gl2'] == tipo:
+                # Verificar se houve ganho parcial ou meio perda
+                if row['gl2_positivo']:
+                    return 1  # Totalmente positivo
+                elif row['gl2_negativo']:
+                    return 0  # Totalmente negativo
+                elif row['gl2_meio_ganho']:
+                    return 0.5  # Meio ganho
+                elif row['gl2_meia_perda']:
+                    return -0.5  # Meio perda
+                
+            else:
+                return None
+
+        elif mercado == 'handicap':
+            if time == home_time:
+                time = 1.0
+            else:
+                time = 2.0
+
+            def format_handicap(valor):
+                partes = str(valor).replace(' ', '').split(',')
+                if len(partes) == 2 and partes[0] == partes[1]:
+                    return partes[0]  # Ex: "0.0, 0.0" → "0.0"
+                return str(valor).strip()
+
+            if row['team_ah1'] == time and format_handicap(row['asian_handicap1']) == linha:
+                # Verificar se houve ganho parcial ou meio perda
+                if row['ah1_positivo']:
+                    return 1  # Totalmente positivo
+                elif row['ah1_negativo']:
+                    return 0  # Totalmente negativo
+                elif row['ah1_meio_ganho']:
+                    return 0.5  # Meio ganho
+                elif row['ah1_meia_perda']:
+                    return -0.5  # Meio perda
+                
+            elif row['team_ah2'] == time and format_handicap(row['asian_handicap2']) == linha:
+                # Verificar se houve ganho parcial ou meio perda
+                if row['ah2_positivo']:
+                    return 1  # Totalmente positivo
+                elif row['ah2_negativo']:
+                    return 0  # Totalmente negativo
+                elif row['ah2_meio_ganho']:
+                    return 0.5  # Meio ganho
+                elif row['ah2_meia_perda']:
+                    return -0.5  # Meio perda
+                
+            else:
+                return None
+
+        elif mercado == 'draw_no_bet':
+            if time == home_time:
+                time = 1.0
+            else:
+                time = 2.0
+
+            if row['draw_no_bet_team1'] == time:
+                # Avalia o resultado da aposta para o time1
+                if row['dnb1_ganha']:
+                    return 1  # Ganhou
+                elif row['dnb1_perde']:
+                    return 0  # Perdeu
+                
+            elif row['draw_no_bet_team2'] == time:
+                # Avalia o resultado da aposta para o time2
+                if row['dnb2_ganha']:
+                    return 1  # Ganhou
+                elif row['dnb2_perde']:
+                    return 0  # Perdeu
+            
+            else:
+                return None  # Não encontrou correspondência com o time
+
+
+        elif mercado == 'double_chance':
+            if time == home_time:
+                time = 1.0
+            elif time == away_time:
+                time = 2.0
+            else:
+                time = 3.0
+            if time == 1.0:
+                return row['res_double_chance1']
+            elif time == 2.0:
+                return row['res_double_chance2']
+            elif time == 3.0:
+                return row['res_double_chance3']
+            else:
+                return None
+
+        return None
+    except Exception as e:
+        print(f"Erro ao verificar aposta: {e}")
+        return None
+
 def jogos_do_dia():
     ids, dicio = apiclient.getAllOlds(leagues=apiclient.leagues_ids, day=dia_anterior())
     #pegar dia atual tambem
@@ -236,13 +370,13 @@ def jogos_do_dia():
     df = df_dados.copy()
     df = NN.preProcessEstatisticasGerais(df.copy())
     df = NN.preProcessOverUnder(df.copy())
-    df = NN.preProcessHandicap(df.copy())
-    df = NN.preProcessGoalLine(df.copy())
+    df = NN.preProcessHandicap_i(df.copy())
+    df = NN.preProcessGoalLine_i(df.copy())
     df = NN.preProcessDoubleChance(df.copy())
-    df = NN.preProcessDrawNoBet(df.copy())
+    df = NN.preProcessDrawNoBet_i(df.copy())
     return df
 
-
+'''
 def checa():
     df_odds = jogos_do_dia()
     resultados_verificados = []
@@ -329,23 +463,91 @@ def checa():
         'percentual_none': percentual_none
     }
 
-
-
-
 '''
-resultados_verificados = []
 
-for aposta in lista_checa:
-    resultado = verificar_aposta(aposta, df_resultados)
-    resultados_verificados.append({
-        **aposta,
-        'resultado': resultado
-    })
 
-df_verificacao = pd.DataFrame(resultados_verificados)
-print(df_verificacao[['jogo', 'mercado', 'linha', 'tipo', 'time', 'resultado']])
+def checa():
+    df_odds = jogos_do_dia()
+    resultados_verificados = []
+    contador_none = 0
+    contador_validos = 0
 
-'''
+    for aposta in list_checa:
+        resultado = verificar_aposta(aposta, df_odds)
+        
+        # Verifica se o resultado é None/nulo
+        if resultado is None:
+            contador_none += 1
+        else:
+            contador_validos += 1
+            
+        resultados_verificados.append({
+            **aposta,
+            'resultado': resultado
+        })
+    
+    df_verificacao = pd.DataFrame(resultados_verificados)
+
+    # Conversão para garantir que o 'resultado' seja numérico, com None sendo preservado
+    df_verificacao['resultado'] = pd.to_numeric(df_verificacao['resultado'], errors='coerce')
+
+    # Suponha que cada aposta tenha uma coluna 'odd'
+    df_verificacao['odd'] = df_verificacao.get('odd')
+
+    # Cálculo das unidades
+    df_verificacao['unidade'] = df_verificacao['resultado'].apply(
+        lambda x: 1 if x == 1 else (-1 if x == 0 else (0.5 if x == 0.5 else (-0.5 if x == -0.5 else None)))
+    )
+    
+    # Cálculo do lucro (None resulta em 0)
+    df_verificacao['lucro'] = df_verificacao.apply(
+        lambda row: (row['odd'] - 1) * row['unidade'] if row['unidade'] is not None else 0, 
+        axis=1
+    )
+
+    # Estatísticas
+    total_unidades = df_verificacao['lucro'].sum()
+    total_apostas = len(df_verificacao)
+    total_apostas_validas = contador_validos
+    roi = (total_unidades / total_apostas_validas) * 100 if total_apostas_validas > 0 else 0
+    percentual_none = (contador_none / total_apostas) * 100 if total_apostas > 0 else 0
+    # Pega o dia anterior
+    data_anterior = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+    nome_arquivo = f"verificacao_diaria_{data_anterior}.txt"
+
+    # Gera string de resumo para envio ao bot
+    resumo_str = (
+        f"📊 Estatísticas Detalhadas – {data_anterior}\n"
+        f"✅ Total de Apostas: {total_apostas}\n"
+        f"✅ Apostas Válidas: {total_apostas_validas}\n"
+        f"❓ Apostas None/Nulas: {contador_none} ({percentual_none:.1f}%)\n"
+        f"💰 Total de Unidades: {total_unidades:.2f}\n"
+        f"📈 ROI (apenas válidas): {roi:.2f}%\n"
+    )
+    for chat in chats:
+        tb.sendMessages(chat, resumo_str)
+   
+    with open(nome_arquivo, "a", encoding="utf-8") as f:
+        f.write(f"\n📅 Verificação referente ao dia {data_anterior}\n")
+        f.write(f"✅ Total de Apostas: {total_apostas}\n")
+        f.write(f"✅ Apostas Válidas: {total_apostas_validas}\n")
+        f.write(f"❓ Apostas None/Nulas: {contador_none} ({percentual_none:.1f}%)\n")
+        f.write(f"💰 Total de Unidades: {total_unidades:.2f}\n")
+        f.write(f"📈 ROI (apenas válidas): {roi:.2f}%\n")
+        f.write("-" * 40 + "\n")
+
+    return {
+        'dataframe': df_verificacao,
+        'total_unidades': total_unidades,
+        'roi': roi,
+        'apostas_total': total_apostas,
+        'apostas_validas': total_apostas_validas,
+        'apostas_none': contador_none,
+        'percentual_none': percentual_none
+    }
+
+
+
 
 def loop_pega_jogos():
     while True:
@@ -470,6 +672,8 @@ def acao_do_jogo(row):
         with open("checar_bets.txt", "a", encoding="utf-8") as f:
             f.write(f"\n--- NOVO LOTE ({datetime.now().isoformat()}) ---\n")
             for aposta in listas_para_checar:
+                list_checa.append(aposta)
+                print(list_checa)
                 f.write(json.dumps(aposta, ensure_ascii=False) + "\n")
 
 

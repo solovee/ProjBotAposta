@@ -154,6 +154,36 @@ def preProcessHandicap(df=df_temp):
     df['ah2_indefinido'] = df['classificacao_ah2'] == 'indefinido'
     return df
 
+def preProcessHandicap_i(df=df_temp):
+    # Aplicar a transformação para ambas as colunas
+    df[['asian_handicap1_1', 'asian_handicap1_2']] = df['asian_handicap1'].apply(lambda x: pd.Series(split_handicap(x)))
+    df[['asian_handicap2_1', 'asian_handicap2_2']] = df['asian_handicap2'].apply(lambda x: pd.Series(split_handicap(x)))
+    df['diff_goals'] = df['home_goals'] - df['away_goals']
+    # Aplicando a função ao DataFrame
+    
+    df['classificacao_ah1'] = df.apply(
+        lambda row: classify_asian_handicap_i(row['team_ah1'], row['asian_handicap1_1'], row['asian_handicap1_2'],row['diff_goals']), axis=1
+    )
+    df['classificacao_ah2'] = df.apply(
+        lambda row: classify_asian_handicap_i(row['team_ah2'], row['asian_handicap2_1'], row['asian_handicap2_2'], row['diff_goals']), axis=1
+    )
+    
+    df['ah1_positivo'] = df['classificacao_ah1'] == 'positivo'
+    df['ah1_negativo'] = df['classificacao_ah1'] == 'negativo'
+    df['ah1_reembolso'] = df['classificacao_ah1'] == 'reembolso'
+    df['ah1_indefinido'] = df['classificacao_ah1'] == 'indefinido'
+    df['ah1_meio_ganho'] = df['classificacao_ah1'] == 'meio_ganho'
+    df['ah1_meio_ganho'] = df['classificacao_ah1'] == 'meia_perda'
+
+    df['ah2_positivo'] = df['classificacao_ah2'] == 'positivo'
+    df['ah2_negativo'] = df['classificacao_ah2'] == 'negativo'
+    df['ah2_reembolso'] = df['classificacao_ah2'] == 'reembolso'
+    df['ah2_indefinido'] = df['classificacao_ah2'] == 'indefinido'
+    df['ah2_meio_ganho'] = df['classificacao_ah2'] == 'meio_ganho'
+    df['ah2_meia_perda'] = df['classificacao_ah2'] == 'meia_perda'
+
+    return df
+
 
 def preProcessHandicap_X(df):
     logger.info("🧮 Iniciando preProcessHandicap_X")
@@ -194,6 +224,33 @@ def preProcessGoalLine(df=df_temp):
     df = pd.get_dummies(df, columns=['classificacao_gl2'], prefix='gl2')
     return df
 
+def preProcessGoalLine_i(df=df_temp):
+    # Separando os valores compostos de goal line
+    df[['goal_line1_1', 'goal_line1_2']] = df['goal_line1'].apply(lambda x: pd.Series(split_goal_line(x)))
+    df[['goal_line2_1', 'goal_line2_2']] = df['goal_line2'].apply(lambda x: pd.Series(split_goal_line(x)))
+
+    # Classificando cada linha
+    df['classificacao_gl1'] = df.apply(
+        lambda row: classify_goal_line_i(row['type_gl1'], row['goal_line1_1'], row['goal_line1_2'], row['tot_goals']),
+        axis=1
+    )
+    df['classificacao_gl2'] = df.apply(
+        lambda row: classify_goal_line_i(row['type_gl2'], row['goal_line2_1'], row['goal_line2_2'], row['tot_goals']),
+        axis=1
+    )
+
+    # Criando colunas booleanas
+    for prefix in ['gl1', 'gl2']:
+        df[f'{prefix}_positivo'] = df[f'classificacao_{prefix}'] == 'positivo'
+        df[f'{prefix}_negativo'] = df[f'classificacao_{prefix}'] == 'negativo'
+        df[f'{prefix}_reembolso'] = df[f'classificacao_{prefix}'] == 'reembolso'
+        df[f'{prefix}_indefinido'] = df[f'classificacao_{prefix}'] == 'indefinido'
+        df[f'{prefix}_meio_ganho'] = df[f'classificacao_{prefix}'] == 'meio_ganho'
+        df[f'{prefix}_meia_perda'] = df[f'classificacao_{prefix}'] == 'meia_perda'
+
+    return df
+
+
 
 def preProcessGoalLine_X(df):
     logger.info("🧮 Iniciando preProcessGoalLine_X")
@@ -230,6 +287,25 @@ def preProcessDrawNoBet(df=df_temp):
     df = pd.get_dummies(df, columns=['res_draw_no_bet1'], prefix='dnb1')
     df = pd.get_dummies(df, columns=['res_draw_no_bet2'], prefix='dnb2')
     return df
+
+def preProcessDrawNoBet_i(df=df_temp):
+    # Classificação das apostas DNB
+    df['res_draw_no_bet1'] = df.apply(
+        lambda row: classify_draw_no_bet(row['draw_no_bet_team1'], row['home_goals'], row['away_goals']), axis=1
+    )
+    df['res_draw_no_bet2'] = df.apply(
+        lambda row: classify_draw_no_bet(row['draw_no_bet_team2'], row['home_goals'], row['away_goals']), axis=1
+    )
+
+    # Criando colunas booleanas explícitas para DNB1 e DNB2
+    for prefix in ['dnb1', 'dnb2']:
+        df[f'{prefix}_ganha'] = df[f'res_draw_no_bet{prefix[-1]}'] == 'ganha'
+        df[f'{prefix}_perde'] = df[f'res_draw_no_bet{prefix[-1]}'] == 'perde'
+        df[f'{prefix}_reembolso'] = df[f'res_draw_no_bet{prefix[-1]}'] == 'reembolso'
+        df[f'{prefix}_indefinido'] = df[f'res_draw_no_bet{prefix[-1]}'] == 'indefinido'
+
+    return df
+
 
 
 
@@ -447,8 +523,94 @@ def classify_asian_handicap(team, ah1, ah2, diff_goals):
         else:
             return 'reembolso'
 
+def classify_asian_handicap_i1(team, ah1, ah2, diff_goals):
+    """
+    Classifica uma aposta em handicap asiático para uma equipe, incluindo 'indefinido' para valores NaN.
+    
+    Args:
+        team: 1.0 para time da casa, 2.0 para visitante
+        ah1: primeiro valor do handicap asiático
+        ah2: segundo valor do handicap asiático
+        diff_goals: diferença de gols (home_goals - away_goals)
+        
+    Returns:
+        'positiva', 'negativa', 'reembolso' ou 'indefinido'
+    """
+    team, ah1, ah2, diff_goals = float(team), float(ah1), float(ah2), float(diff_goals)
+    # Verifica se algum valor é NaN
+    if pd.isna(team) or pd.isna(ah1) or pd.isna(ah2) or pd.isna(diff_goals):
+        return 'indefinido'
+    # Ajusta a diferença de gols conforme o time (inverte para visitante)
+    adjusted_diff = diff_goals if team == 1.0 else -diff_goals
+    # Verifica se é handicap simples
+    if ah1 == ah2:
+        resultado = adjusted_diff + ah1
+        if resultado > 0:
+            return 'positivo'
+        elif resultado < 0:
+            return 'negativo'
+        else:
+            return 'reembolso'
+    else:
+        # Handicap composto
+        res1 = adjusted_diff + ah1
+        res2 = adjusted_diff + ah2
+        
+        if res1 > 0 and res2 > 0:
+            return 'positivo'
+        elif res1 < 0 and res2 < 0:
+            return 'negativo'
+        else:
+            return 'meia'
 
-#criar nn 1 e 2
+def classify_asian_handicap_i(team, ah1, ah2, diff_goals):
+    """
+    Classifica uma aposta em handicap asiático para uma equipe, incluindo 'indefinido' para valores NaN.
+
+    Args:
+        team: 1.0 para time da casa, 2.0 para visitante
+        ah1: primeiro valor do handicap asiático
+        ah2: segundo valor do handicap asiático
+        diff_goals: diferença de gols (home_goals - away_goals)
+
+    Returns:
+        'positivo', 'negativo', 'reembolso', 'meio ganho', 'meia perda', 'meia' ou 'indefinido'
+    """
+    import pandas as pd
+
+    team, ah1, ah2, diff_goals = float(team), float(ah1), float(ah2), float(diff_goals)
+
+    if pd.isna(team) or pd.isna(ah1) or pd.isna(ah2) or pd.isna(diff_goals):
+        return 'indefinido'
+
+    adjusted_diff = diff_goals if team == 1.0 else -diff_goals
+
+    if ah1 == ah2:
+        resultado = adjusted_diff + ah1
+        if resultado > 0:
+            return 'positivo'
+        elif resultado < 0:
+            return 'negativo'
+        else:
+            return 'reembolso'
+    else:
+        res1 = adjusted_diff + ah1
+        res2 = adjusted_diff + ah2
+
+        if res1 > 0 and res2 > 0:
+            return 'positivo'
+        elif res1 < 0 and res2 < 0:
+            return 'negativo'
+        elif res1 == 0 and res2 == 0:
+            return 'reembolso'
+        elif (res1 > 0 and res2 == 0) or (res2 > 0 and res1 == 0):
+            return 'meio_ganho'
+        elif (res1 < 0 and res2 == 0) or (res2 < 0 and res1 == 0):
+            return 'meia_perda'
+        elif (res1 > 0 and res2 < 0) or (res2 > 0 and res1 < 0):
+            return 'reembolso'
+        else:
+            return 'indefinido'  # fallback para casos extremos
 
 #GOAL_LINE
 
@@ -513,7 +675,52 @@ def classify_goal_line(team_gl, gl1, gl2, tot_goals):
                 return 'reembolso'  # Meio ganho/meio reembolso
 
 
-#criar nn 1 e 2
+def classify_goal_line_i(team_gl, gl1, gl2, tot_goals):
+    """
+    Classifica uma aposta em Goal Line asiático para Over (1) ou Under (2), com suporte a handicaps compostos.
+
+    Args:
+        team_gl: 1 para Over, 2 para Under
+        gl1: primeira linha do goal line (float)
+        gl2: segunda linha do goal line (float)
+        tot_goals: total de gols no jogo (home_goals + away_goals)
+
+    Returns:
+        'positivo', 'negativo', 'meio ganho', 'meia perda', 'reembolso', ou 'indefinido'
+    """
+    try:
+        team_gl, gl1, gl2, tot_goals = float(team_gl), float(gl1), float(gl2), float(tot_goals)
+    except (TypeError, ValueError):
+        return 'indefinido'
+
+    if pd.isna(team_gl) or pd.isna(gl1) or pd.isna(gl2) or pd.isna(tot_goals):
+        return 'indefinido'
+
+    # Handicap simples
+    if gl1 == gl2:
+        diff = tot_goals - gl1 if team_gl == 1 else gl1 - tot_goals
+        if diff > 0:
+            return 'positivo'
+        elif diff < 0:
+            return 'negativo'
+        else:
+            return 'reembolso'
+
+    # Handicap composto
+    else:
+        res1 = tot_goals - gl1 if team_gl == 1 else gl1 - tot_goals
+        res2 = tot_goals - gl2 if team_gl == 1 else gl2 - tot_goals
+
+        if res1 > 0 and res2 > 0:
+            return 'positivo'
+        elif res1 < 0 and res2 < 0:
+            return 'negativo'
+        elif (res1 == 0 and res2 > 0) or (res2 == 0 and res1 > 0):
+            return 'meio_ganho'
+        elif (res1 == 0 and res2 < 0) or (res2 == 0 and res1 < 0):
+            return 'meia_perda'
+        else:
+            return 'reembolso'
 
 #DOUBLE_CHANCE
 def calcular_resultado_double_chance(df):
