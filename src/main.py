@@ -11,6 +11,11 @@ import NN
 import telegramBot as tb
 import logging
 import json
+import threading
+import time
+import os
+from fastapi import FastAPI
+import uvicorn
 
 #tentar arrumar as estatisticas
 #ver os team_ah e type_gl
@@ -1294,6 +1299,19 @@ def processar_dia_anterior():
 
     except Exception as e:
         print(f"❌ Erro ao processar dia {dia}: {type(e).__name__}: {e}")
+
+threading.Thread(target=main).start()
+
+# cria uma API simples só pra Render detectar a porta
+app = FastAPI()
+
+@app.get("/")
+def read_root():
+    return {"status": "Rodando"}
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
 
 if __name__ == "__main__":
     main()
