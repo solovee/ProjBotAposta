@@ -12,7 +12,6 @@ import telegramBot as tb
 import logging
 import json
 import threading
-import time
 import os
 from fastapi import FastAPI
 import uvicorn
