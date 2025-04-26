@@ -408,7 +408,7 @@ import main
 import pandas as pd
 import os
 from datetime import datetime
-
+'''
 # Definir o nome do arquivo CSV onde os dados serão salvos
 CSV_FILE = 'testees.csv'
 
@@ -476,3 +476,6 @@ def processar_dia_atual():
 
 # Chamar a função
 processar_dia_atual()
+'''
+
+main.checa()

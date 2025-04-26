@@ -934,3 +934,170 @@
 
 --- NOVO LOTE (2025-04-25T11:34:42.344285) ---
 {"id": "173631760", "mercado": "handicap", "time": "REAL MADRID (MASLJA)", "linha": "-0.5", "odd": "1.900", "jogo": "BOCA JUNIORS (BOLEC) X REAL MADRID (MASLJA)"}
+
+--- NOVO LOTE (2025-04-25T21:14:16.085306) ---
+
+--- NOVO LOTE (2025-04-25T21:14:17.197117) ---
+
+--- NOVO LOTE (2025-04-25T21:14:21.719919) ---
+{"id": "173639856", "mercado": "handicap", "time": "UKRAINE (DANGERDIM77)", "linha": "0.0 , -0.5", "odd": "1.925", "jogo": "DENMARK (R0GE) X UKRAINE (DANGERDIM77)"}
+
+--- NOVO LOTE (2025-04-25T21:14:21.734911) ---
+
+--- NOVO LOTE (2025-04-25T21:22:44.163978) ---
+
+--- NOVO LOTE (2025-04-25T21:22:44.235975) ---
+
+--- NOVO LOTE (2025-04-25T21:24:40.366498) ---
+
+--- NOVO LOTE (2025-04-25T21:24:40.384500) ---
+
+--- NOVO LOTE (2025-04-25T21:39:40.364726) ---
+
+--- NOVO LOTE (2025-04-25T21:39:40.365725) ---
+
+--- NOVO LOTE (2025-04-25T21:46:40.264319) ---
+
+--- NOVO LOTE (2025-04-25T21:54:40.372479) ---
+
+--- NOVO LOTE (2025-04-25T21:54:40.374476) ---
+
+--- NOVO LOTE (2025-04-25T21:54:43.870633) ---
+{"id": "173639881", "mercado": "handicap", "time": "BAYERN (GIANNIKID)", "linha": "0.0 , -0.5", "odd": "1.800", "jogo": "BARCELONA (DANGERDIM77) X BAYERN (GIANNIKID)"}
+
+--- NOVO LOTE (2025-04-25T21:54:43.899637) ---
+{"id": "173639885", "mercado": "handicap", "time": "REAL MADRID (JKEY)", "linha": "0.0 , -0.5", "odd": "1.800", "jogo": "LIVERPOOL (R0GE) X REAL MADRID (JKEY)"}
+
+--- NOVO LOTE (2025-04-25T22:06:43.272523) ---
+{"id": "173639890", "mercado": "handicap", "time": "BAYERN (GIANNIKID)", "linha": "0.0 , -0.5", "odd": "1.925", "jogo": "REAL MADRID (JKEY) X BAYERN (GIANNIKID)"}
+
+--- NOVO LOTE (2025-04-25T22:06:43.423592) ---
+{"id": "173639887", "mercado": "handicap", "time": "BARCELONA (DANGERDIM77)", "linha": "0.0 , -0.5", "odd": "1.925", "jogo": "LIVERPOOL (R0GE) X BARCELONA (DANGERDIM77)"}
+
+--- NOVO LOTE (2025-04-25T22:10:40.313738) ---
+
+--- NOVO LOTE (2025-04-25T22:15:51.265909) ---
+
+--- NOVO LOTE (2025-04-25T22:18:40.301145) ---
+
+--- NOVO LOTE (2025-04-25T22:18:42.428274) ---
+
+--- NOVO LOTE (2025-04-25T22:22:40.289923) ---
+
+--- NOVO LOTE (2025-04-25T22:24:40.286206) ---
+
+--- NOVO LOTE (2025-04-25T22:24:43.861228) ---
+
+--- NOVO LOTE (2025-04-25T22:30:51.206870) ---
+{"id": "173639910", "mercado": "handicap", "time": "REAL MADRID (JKEY)", "linha": "0.0 , -0.5", "odd": "1.800", "jogo": "LIVERPOOL (R0GE) X REAL MADRID (JKEY)"}
+
+--- NOVO LOTE (2025-04-25T22:30:52.444058) ---
+
+--- NOVO LOTE (2025-04-25T22:39:40.513779) ---
+
+--- NOVO LOTE (2025-04-25T22:39:40.514777) ---
+
+--- NOVO LOTE (2025-04-25T22:46:40.363739) ---
+
+--- NOVO LOTE (2025-04-25T22:54:40.367520) ---
+
+--- NOVO LOTE (2025-04-25T22:54:40.899296) ---
+
+--- NOVO LOTE (2025-04-25T22:54:56.707200) ---
+{"id": "173639933", "mercado": "handicap", "time": "BARCELONA (DANGERDIM77)", "linha": "0.0 , -0.5", "odd": "1.925", "jogo": "LIVERPOOL (R0GE) X BARCELONA (DANGERDIM77)"}
+
+--- NOVO LOTE (2025-04-25T22:54:57.260149) ---
+{"id": "173639983", "mercado": "handicap", "time": "BAYERN (GIANNIKID)", "linha": "0.0 , -0.5", "odd": "1.925", "jogo": "REAL MADRID (JKEY) X BAYERN (GIANNIKID)"}
+
+--- NOVO LOTE (2025-04-25T23:06:54.168606) ---
+
+--- NOVO LOTE (2025-04-25T23:06:54.564094) ---
+{"id": "173639988", "mercado": "handicap", "time": "LIVERPOOL (R0GE)", "linha": "-0.5 , -1.0", "odd": "1.900", "jogo": "BAYERN (GIANNIKID) X LIVERPOOL (R0GE)"}
+
+--- NOVO LOTE (2025-04-25T23:09:40.589170) ---
+
+--- NOVO LOTE (2025-04-25T23:09:40.598166) ---
+
+--- NOVO LOTE (2025-04-25T23:10:40.330583) ---
+
+--- NOVO LOTE (2025-04-25T23:18:43.115973) ---
+{"id": "173640001", "mercado": "handicap", "time": "REAL MADRID (JKEY)", "linha": "0.0 , -0.5", "odd": "1.800", "jogo": "LIVERPOOL (R0GE) X REAL MADRID (JKEY)"}
+
+--- NOVO LOTE (2025-04-25T23:18:43.166508) ---
+{"id": "173639996", "mercado": "handicap", "time": "BAYERN (GIANNIKID)", "linha": "0.0 , -0.5", "odd": "1.800", "jogo": "BARCELONA (DANGERDIM77) X BAYERN (GIANNIKID)"}
+
+--- NOVO LOTE (2025-04-25T23:22:40.303166) ---
+
+--- NOVO LOTE (2025-04-25T23:24:40.283468) ---
+
+--- NOVO LOTE (2025-04-25T23:24:42.874319) ---
+
+--- NOVO LOTE (2025-04-25T23:30:43.459150) ---
+{"id": "173640007", "mercado": "handicap", "time": "BAYERN (GIANNIKID)", "linha": "0.0 , -0.5", "odd": "1.925", "jogo": "REAL MADRID (JKEY) X BAYERN (GIANNIKID)"}
+
+--- NOVO LOTE (2025-04-25T23:30:43.500149) ---
+{"id": "173640004", "mercado": "handicap", "time": "BARCELONA (DANGERDIM77)", "linha": "0.0", "odd": "1.875", "jogo": "LIVERPOOL (R0GE) X BARCELONA (DANGERDIM77)"}
+
+--- NOVO LOTE (2025-04-25T23:42:43.951978) ---
+
+--- NOVO LOTE (2025-04-25T23:42:44.016993) ---
+{"id": "173640009", "mercado": "handicap", "time": "LIVERPOOL (R0GE)", "linha": "-0.5 , -1.0", "odd": "1.900", "jogo": "BAYERN (GIANNIKID) X LIVERPOOL (R0GE)"}
+
+--- NOVO LOTE (2025-04-25T23:54:40.356704) ---
+
+--- NOVO LOTE (2025-04-25T23:54:41.952134) ---
+{"id": "173642320", "mercado": "goal_line", "tipo": "under", "linha": "5.5 , 6.0", "odd": "1.900", "jogo": "REAL MADRID (JETLI) X PSG (MARINER)"}
+
+--- NOVO LOTE (2025-04-26T00:04:43.926366) ---
+{"id": "173640022", "mercado": "handicap", "time": "ARSENAL (JKEY)", "linha": "0.0 , -0.5", "odd": "1.800", "jogo": "CHELSEA (R0GE) X ARSENAL (JKEY)"}
+
+--- NOVO LOTE (2025-04-26T00:04:43.939350) ---
+{"id": "173640017", "mercado": "goal_line", "tipo": "over", "linha": "5.0 , 5.5", "odd": "1.850", "jogo": "MAN UTD (DANGERDIM77) X MAN CITY (GIANNIKID)"}
+
+--- NOVO LOTE (2025-04-26T00:06:40.279444) ---
+
+--- NOVO LOTE (2025-04-26T00:06:58.105936) ---
+
+--- NOVO LOTE (2025-04-26T00:07:01.671000) ---
+{"id": "173640022", "mercado": "handicap", "time": "ARSENAL (JKEY)", "linha": "0.0 , -0.5", "odd": "1.800", "jogo": "CHELSEA (R0GE) X ARSENAL (JKEY)"}
+
+--- NOVO LOTE (2025-04-26T00:07:01.713999) ---
+{"id": "173640017", "mercado": "goal_line", "tipo": "over", "linha": "5.0 , 5.5", "odd": "1.850", "jogo": "MAN UTD (DANGERDIM77) X MAN CITY (GIANNIKID)"}
+
+--- NOVO LOTE (2025-04-26T00:09:40.355526) ---
+
+--- NOVO LOTE (2025-04-26T00:09:40.427062) ---
+
+--- NOVO LOTE (2025-04-26T00:09:40.428059) ---
+
+--- NOVO LOTE (2025-04-26T00:09:41.712783) ---
+
+--- NOVO LOTE (2025-04-26T00:16:51.446586) ---
+{"id": "173640025", "mercado": "handicap", "time": "MAN UTD (DANGERDIM77)", "linha": "0.0", "odd": "1.825", "jogo": "CHELSEA (R0GE) X MAN UTD (DANGERDIM77)"}
+
+--- NOVO LOTE (2025-04-26T00:16:52.173370) ---
+{"id": "173640032", "mercado": "handicap", "time": "MAN CITY (GIANNIKID)", "linha": "0.0 , -0.5", "odd": "1.925", "jogo": "ARSENAL (JKEY) X MAN CITY (GIANNIKID)"}
+
+--- NOVO LOTE (2025-04-26T00:16:52.707988) ---
+{"id": "173640032", "mercado": "handicap", "time": "MAN CITY (GIANNIKID)", "linha": "0.0 , -0.5", "odd": "1.925", "jogo": "ARSENAL (JKEY) X MAN CITY (GIANNIKID)"}
+
+--- NOVO LOTE (2025-04-26T00:16:52.775492) ---
+{"id": "173640025", "mercado": "handicap", "time": "MAN UTD (DANGERDIM77)", "linha": "0.0", "odd": "1.825", "jogo": "CHELSEA (R0GE) X MAN UTD (DANGERDIM77)"}
+
+--- NOVO LOTE (2025-04-26T00:24:40.304686) ---
+
+--- NOVO LOTE (2025-04-26T00:24:41.916095) ---
+
+--- NOVO LOTE (2025-04-26T00:28:41.820458) ---
+
+--- NOVO LOTE (2025-04-26T00:28:41.863452) ---
+
+--- NOVO LOTE (2025-04-26T00:29:23.959036) ---
+
+--- NOVO LOTE (2025-04-26T00:29:24.002617) ---
+
+--- NOVO LOTE (2025-04-26T00:29:24.090173) ---
+
+--- NOVO LOTE (2025-04-26T00:29:24.112175) ---
+
+--- NOVO LOTE (2025-04-26T00:30:40.275094) ---
