@@ -49,7 +49,7 @@ apiclient = BetsAPIClient(api_key=api)
 #CSV_FILE = r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_novo.csv"
 CSV_FILE = '../resultados_60_ofc.csv'
 #lista dos thresholds das nns
-lista_th = [0.575,0.4,0.55,0.55,0.575,0.525]
+lista_th = [0.575,0.4,0.575,0.575,0.575,0.575]
 list_checa = []
 
 
