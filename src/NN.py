@@ -10,10 +10,15 @@ from sklearn.model_selection import train_test_split
 import logging
 import pickle
 
-
-
-
 logger = logging.getLogger(__name__)
+
+# Configurar caminhos base
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+CSV_FILE = os.path.join(BASE_DIR, 'resultados_60_ofc.csv')
+MODELS_DIR = os.path.join(BASE_DIR, 'models')
+
+# Criar diretório de modelos se não existir
+os.makedirs(MODELS_DIR, exist_ok=True)
 
 #'10048705', 'Esoccer GT Leagues - 12 mins play' ;'10047781', 'Esoccer Battle - 8 mins play'
 #testar pegar evento 171732570 mais tarde   171790606  172006772 9723272 172006783
@@ -26,9 +31,31 @@ def dia_anterior():
         ontem = datetime.now() - timedelta(days=1)
         return ontem.strftime("%Y%m%d")
 
+# Carregar o DataFrame
+df_temp = pd.read_csv(CSV_FILE)
 
-#df_temp = pd.read_csv(r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_novo.csv")
-df_temp = pd.read_csv('../resultados_60_ofc.csv')
+# Funções auxiliares para carregar/salvar modelos e scalers
+def load_model(model_name):
+    model_path = os.path.join(MODELS_DIR, f'{model_name}.keras')
+    if os.path.exists(model_path):
+        return tf.keras.models.load_model(model_path)
+    return None
+
+def load_scaler(scaler_name):
+    scaler_path = os.path.join(MODELS_DIR, f'{scaler_name}.pkl')
+    if os.path.exists(scaler_path):
+        with open(scaler_path, 'rb') as f:
+            return pickle.load(f)
+    return None
+
+def save_model(model, model_name):
+    model_path = os.path.join(MODELS_DIR, f'{model_name}.keras')
+    model.save(model_path)
+
+def save_scaler(scaler, scaler_name):
+    scaler_path = os.path.join(MODELS_DIR, f'{scaler_name}.pkl')
+    with open(scaler_path, 'wb') as f:
+        pickle.dump(scaler, f)
 
 def preProcessGeneral(df=df_temp):
     df = preProcessEstatisticasGerais(df)
@@ -548,17 +575,6 @@ def classify_asian_handicap_i1(team, ah1, ah2, diff_goals):
         if resultado > 0:
             return 'positivo'
         elif resultado < 0:
-            return 'negativo'
-        else:
-            return 'reembolso'
-    else:
-        # Handicap composto
-        res1 = adjusted_diff + ah1
-        res2 = adjusted_diff + ah2
-        
-        if res1 > 0 and res2 > 0:
-            return 'positivo'
-        elif res1 < 0 and res2 < 0:
             return 'negativo'
         else:
             return 'meia'

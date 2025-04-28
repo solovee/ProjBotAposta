@@ -51,7 +51,7 @@ apiclient = BetsAPIClient(api_key=api)
 
 #df = pd.read_csv('src\resultados_novo.csv')
 #CSV_FILE = r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_novo.csv"
-CSV_FILE = '../resultados_60_ofc.csv'
+CSV_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'resultados_60_ofc.csv')
 #lista dos thresholds das nns
 lista_th = [0.575,0.4,0.575,0.575,0.575,0.575]
 list_checa = []

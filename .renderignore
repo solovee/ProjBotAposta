@@ -1,0 +1,24 @@
+# Ignorar arquivos e diretórios
+venv/
+.git/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.env
+*.log
+*.csv
+!resultados_60_ofc.csv
+*.keras
+!model_binario_draw_no_bet.keras
+!model_binario_double_chance.keras
+!model_binario_goal_line.keras
+!model_handicap_binario.keras
+!model_binario_over_under.keras
+*.pkl
+!scaler_draw_no_bet.pkl
+!scaler_double_chance.pkl
+!scaler_goal_line.pkl
+!scaler_handicap.pkl
+!scaler_over_under.pkl 
