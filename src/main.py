@@ -15,6 +15,10 @@ import threading
 import os
 from fastapi import FastAPI
 import uvicorn
+import signal
+import sys
+import asyncio
+from contextlib import asynccontextmanager
 
 #tentar arrumar as estatisticas
 #ver os team_ah e type_gl
@@ -1290,23 +1294,55 @@ def processar_dia_anterior():
 
 
 
-'''
-# cria uma API simples só pra Render detectar a porta
-app = FastAPI()
 
-@app.on_event("startup")
-def on_startup():
+# Variável global para controlar o estado do servidor
+server_running = True
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    global server_running
+    server_running = True
     threading.Thread(target=main, daemon=True).start()
+    yield
+    # Shutdown
+    server_running = False
+
+app = FastAPI(lifespan=lifespan)
 
 @app.get("/")
 def read_root():
     return {"status": "Rodando"}
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
-'''
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}
+
+def signal_handler(signum, frame):
+    global server_running
+    server_running = False
+    sys.exit(0)
 
 if __name__ == "__main__":
-    main()
+    # Registrar handlers de sinal
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
+    
+    # Configurações do uvicorn para produção
+    config = uvicorn.Config(
+        app,
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 10000)),
+        workers=1,
+        timeout_keep_alive=60,
+        log_level="info",
+        access_log=True,
+        proxy_headers=True,
+        forwarded_allow_ips="*"
+    )
+    
+    server = uvicorn.Server(config)
+    server.run()
+
+
 
