@@ -257,3 +257,4 @@ while dias_processados != set(dias_todos):
     print(f"✅ Total de dias processados: {len(dias_processados)}")
     print("⏳ Aguardando 1 hora para a próxima execução...")
     time.sleep(3600)
+    

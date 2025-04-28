@@ -28,7 +28,7 @@ def dia_anterior():
 
 
 #df_temp = pd.read_csv(r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_novo.csv")
-df_temp = pd.read_csv('resultados_60_ofc.csv')
+df_temp = pd.read_csv('../resultados_60_ofc.csv')
 
 def preProcessGeneral(df=df_temp):
     df = preProcessEstatisticasGerais(df)
@@ -173,7 +173,7 @@ def preProcessHandicap_i(df=df_temp):
     df['ah1_reembolso'] = df['classificacao_ah1'] == 'reembolso'
     df['ah1_indefinido'] = df['classificacao_ah1'] == 'indefinido'
     df['ah1_meio_ganho'] = df['classificacao_ah1'] == 'meio_ganho'
-    df['ah1_meio_ganho'] = df['classificacao_ah1'] == 'meia_perda'
+    df['ah1_meia_perda'] = df['classificacao_ah1'] == 'meia_perda'
 
     df['ah2_positivo'] = df['classificacao_ah2'] == 'positivo'
     df['ah2_negativo'] = df['classificacao_ah2'] == 'negativo'

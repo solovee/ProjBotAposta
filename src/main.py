@@ -47,11 +47,10 @@ apiclient = BetsAPIClient(api_key=api)
 
 #df = pd.read_csv('src\resultados_novo.csv')
 #CSV_FILE = r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_novo.csv"
-CSV_FILE = 'resultados_60_ofc.csv'
+CSV_FILE = '../resultados_60_ofc.csv'
 #lista dos thresholds das nns
-lista_th = [0.575,0.4,0.5,0.5,0.575,0.5]
-list_checa = [{"id": "173576717", "mercado": "goal_line", "tipo": "under", "linha": "5.5", "odd": "1.875", "jogo": "CHELSEA (MASLJA) X ARSENAL (STEKSY)"},{"id": "173576721", "mercado": "handicap", "time": "MAN UTD (PECONI)", "linha": "1.0", "odd": "1.800", "jogo": "MAN CITY (BOKI) X MAN UTD (PECONI)"},{"id": "173570422", "mercado": "goal_line", "tipo": "under", "linha": "5.5 , 6.0", "odd": "1.900", "jogo": "OLYMPIAKOS (SHELBY) X ROMA (PROFESSOR)"},{"id": "173570249", "mercado": "goal_line", "tipo": "over", "linha": "4.5", "odd": "1.850", "jogo": "ROMA (PROFESSOR) X MAN UTD (PERSIE)"},{"id": "173570644", "mercado": "double_chance", "time": "REAL BETIS (ZANGIEF)", "odd": "1.909", "jogo": "FIORENTINA (THOR) X REAL BETIS (ZANGIEF)"},{"id": "173570653", "mercado": "double_chance", "time": "RAPID VIENNA (GOLIATH)", "odd": "1.833", "jogo": "FIORENTINA (THOR) X RAPID VIENNA (GOLIATH)"},{"id": "173570719", "mercado": "handicap", "time": "OLYMPIAKOS (SHELBY)", "linha": "0.0 , -0.5", "odd": "1.950", "jogo": "EINTRACHT (ARTHUR) X OLYMPIAKOS (SHELBY)"},{"id": "173578715", "mercado": "handicap", "time": "BRAGA (LAIKINGDAST)", "linha": "-0.5", "odd": "1.925", "jogo": "RIO AVE (HOTSHOT) X BRAGA (LAIKINGDAST)"},{"id": "173578737", "mercado": "goal_line", "tipo": "over", "linha": "3.5", "odd": "1.850", "jogo": "USA (INQUISITOR) X GHANA (BOULEVARD)"},{"id": "173570543", "mercado": "goal_line", "tipo": "under", "linha": "5.0 , 5.5", "odd": "1.800", "jogo": "LAZIO (ZANGIEF) X AC MILAN (GOLIATH)"},{"id": "173570639", "mercado": "handicap", "time": "AC MILAN (GOLIATH)", "linha": "-0.5", "odd": "1.825", "jogo": "INTER (THOR) X AC MILAN (GOLIATH)"},{"id": "173578790", "mercado": "goal_line", "tipo": "over", "linha": "4.0 , 4.5", "odd": "1.900", "jogo": "DENMARK (LAIKINGDAST) X GHANA (BOULEVARD)"},{"id": "173578800", "mercado": "handicap", "time": "DENMARK (LAIKINGDAST)", "linha": "0.0", "odd": "1.850", "jogo": "USA (INQUISITOR) X DENMARK (LAIKINGDAST)"}
-]
+lista_th = [0.575,0.4,0.55,0.55,0.575,0.525]
+list_checa = []
 
 
 
@@ -135,146 +134,98 @@ def agendar_verificacao_diaria():
     # Cria o timer
     threading.Timer(delay, tarefa).start()
 
-'''
 def verificar_aposta(aposta, df_resultados):
     try:
-        id = aposta['id']
-        jogo = aposta['jogo']
-        linha = aposta.get('linha')
-        tipo = aposta.get('tipo')
-        time = aposta.get('time')
-        mercado = aposta['mercado']
-
-        home_time, away_time = [t.strip() for t in jogo.split(' X ')]
-
-        resultado = df_resultados[
-            (df_resultados['id'] == id)
-        ]
-
-        if resultado.empty:
-            return None
-
-        row = resultado.iloc[0]
-
-        if mercado == 'goal_line':
-            # Comparar float e tipo (over/under)
-            if tipo == 'over':
-                tipo = 1.0
-            else:
-                tipo = 2.0
-                
-            if row['goal_line1'] == str(linha) and row['type_gl1'] == tipo:
-                return row['gl1_positivo']
-            elif row['goal_line2'] == str(linha) and row['type_gl2'] == tipo:
-                return row['gl2_positivo']
-            else:
-                return None
-
-        elif mercado == 'handicap':
-            if time == home_time:
-                time = 1.0
-            else:
-                time = 2.0
-            def format_handicap(valor):
-                partes = str(valor).replace(' ', '').split(',')
-                if len(partes) == 2 and partes[0] == partes[1]:
-                    return partes[0]  # Ex: "0.0, 0.0" → "0.0"
-                return str(valor).strip()
-            if row['team_ah1'] == time and format_handicap(row['asian_handicap1']) == linha:
-                return row['ah1_positivo']
-            elif row['team_ah2'] == time and format_handicap(row['asian_handicap2']) == linha:
-                return row['ah2_positivo']
-            else:
-                return None
-
-        elif mercado == 'draw_no_bet':
-            if time == home_time:
-                time = 1.0
-            else:
-                time = 2.0
-            if row['draw_no_bet_team1'] == time:
-                return row['dnb1_ganha']
-            elif row['draw_no_bet_team2'] == time:
-                return row['dnb2_ganha']
-            else:
-                return None
-        elif mercado == 'double_chance':
-            if time == home_time:
-                time = 1.0
-            elif time == away_time:
-                time = 2.0
-            else:
-                time = 3.0
-            if time == 1.0:
-                return row['res_double_chance1']
-            elif time == 2.0:
-                return row['res_double_chance2']
-            elif time == 3.0:
-                return row['res_double_chance3']
-
-            else:
-                return None
-
-        return None
-    except Exception as e:
-        print(f"Erro ao verificar aposta: {e}")
-        return None
-'''
-def verificar_aposta(aposta, df_resultados):
-    try:
-        id = aposta['id']
+        # Extrair dados da aposta
+        id = str(aposta['id'])  # Convert to string to ensure consistent type
         jogo = aposta['jogo']
         linha = aposta.get('linha')
         tipo = aposta.get('tipo')
         time = aposta.get('time')
         mercado = aposta['mercado']
         
-        home_time, away_time = [t.strip() for t in jogo.split(' X ')]
-
-        resultado = df_resultados[
-            (df_resultados['id'] == id)
-        ]
-
+        # Log para debug
+        print(f"Verificando: ID={id}, mercado={mercado}, time={time}, linha={linha}, tipo={tipo}")
+        
+        # Verificar se ID existe no DataFrame
+        df_resultados['id'] = df_resultados['id'].astype(str)  # Ensure ID column is string
+        resultado = df_resultados[df_resultados['id'] == id]
+        
         if resultado.empty:
-            print(f'nao achou {aposta}')
+            print(f"ID não encontrado: {id}")
             return None
+            
+        if mercado == 'goal_line' and not tipo:
+            print(f"Aposta ID={id}: tipo não fornecido para goal_line")
+            return None
+
+        if (mercado == 'handicap' or mercado == 'draw_no_bet') and not time:
+            print(f"Aposta ID={id}: time não fornecido para {mercado}")
+            return None
+        
+        home_time = jogo.split(' X ')[0].strip()
+        away_time = jogo.split(' X ')[1].strip()
 
         row = resultado.iloc[0]
 
-        if mercado == 'goal_line':
+        if mercado == 'over_under':
+            if tipo == 'over':
+                tipo = 1.0
+            else:
+                tipo = 2.0
+                
+            tot_goals = float(row['tot_goals'])
+            if pd.isna(tot_goals):
+                print(f"Total de gols não disponível para ID={id}")
+                return None
+                
+            if (tipo == 1.0) and (tot_goals > 2.5):
+                return 1
+            elif (tipo == 1.0) and (tot_goals < 2.5):
+                return -1
+            elif (tipo == 2.0) and (tot_goals > 2.5):
+                return -1
+            elif (tipo == 2.0) and (tot_goals < 2.5):
+                return 1
+            else:
+                return 0  # Empate exato em 2.5
+
+        elif mercado == 'goal_line':
             if tipo == 'over':
                 tipo = 1.0
             else:
                 tipo = 2.0
 
-            if float(row['type_gl1']) == tipo:
-                # Verificar se houve ganho parcial ou meio perda
+            # Convert to float and handle NaN values
+            type_gl1 = float(row['type_gl1']) if not pd.isna(row['type_gl1']) else None
+            type_gl2 = float(row['type_gl2']) if not pd.isna(row['type_gl2']) else None
+
+            if type_gl1 == tipo:
                 if row['gl1_positivo']:
-                    return 1  # Totalmente positivo
+                    return 1
                 elif row['gl1_negativo']:
-                    return -1  # Totalmente negativo
+                    return -1
                 elif row['gl1_reembolso']:
                     return 0
                 elif row['gl1_meio_ganho']:
-                    return 0.5  # Meio ganho
+                    return 0.5
                 elif row['gl1_meia_perda']:
-                    return -0.5  # Meio perda
+                    return -0.5
                 
-            elif row['type_gl2'] == tipo:
-                # Verificar se houve ganho parcial ou meio perda
+            elif type_gl2 == tipo:
                 if row['gl2_positivo']:
-                    return 1  # Totalmente positivo
+                    return 1
                 elif row['gl2_negativo']:
-                    return -1  # Totalmente negativo
+                    return -1
                 elif row['gl2_reembolso']:
                     return 0
                 elif row['gl2_meio_ganho']:
-                    return 0.5  # Meio ganho
+                    return 0.5
                 elif row['gl2_meia_perda']:
-                    return -0.5  # Meio perda
+                    return -0.5
                 
-            else:
-                return None
+            print(f"Retornando None para ID={id} porque não encontrou goal_line correspondente")
+            return None
 
         elif mercado == 'handicap':
             if time == home_time:
@@ -282,36 +233,36 @@ def verificar_aposta(aposta, df_resultados):
             else:
                 time = 2.0
 
-            
+            # Convert to float and handle NaN values
+            team_ah1 = float(row['team_ah1']) if not pd.isna(row['team_ah1']) else None
+            team_ah2 = float(row['team_ah2']) if not pd.isna(row['team_ah2']) else None
 
-            if row['team_ah1'] == time:
-                # Verificar se houve ganho parcial ou meio perda
+            if team_ah1 == time:
                 if row['ah1_positivo']:
-                    return 1  # Totalmente positivo
+                    return 1
                 elif row['ah1_negativo']:
-                    return -1  # Totalmente negativo
+                    return -1
                 elif row['ah1_reembolso']:
                     return 0
                 elif row['ah1_meio_ganho']:
-                    return 0.5  # Meio ganho
+                    return 0.5
                 elif row['ah1_meia_perda']:
-                    return -0.5  # Meio perda
+                    return -0.5
                 
-            elif row['team_ah2'] == time:
-                # Verificar se houve ganho parcial ou meio perda
+            elif team_ah2 == time:
                 if row['ah2_positivo']:
-                    return 1  # Totalmente positivo
+                    return 1
                 elif row['ah2_negativo']:
-                    return -1  # Totalmente negativo
+                    return -1
                 elif row['ah2_reembolso']:
                     return 0
                 elif row['ah2_meio_ganho']:
-                    return 0.5  # Meio ganho
+                    return 0.5
                 elif row['ah2_meia_perda']:
-                    return -0.5  # Meio perda
+                    return -0.5
                 
-            else:
-                return None
+            print(f"Retornando None para ID={id} porque não encontrou handicap correspondente")
+            return None
 
         elif mercado == 'draw_no_bet':
             if time == home_time:
@@ -319,27 +270,28 @@ def verificar_aposta(aposta, df_resultados):
             else:
                 time = 2.0
 
-            if row['draw_no_bet_team1'] == time:
-                # Avalia o resultado da aposta para o time1
+            # Convert to float and handle NaN values
+            draw_no_bet_team1 = float(row['draw_no_bet_team1']) if not pd.isna(row['draw_no_bet_team1']) else None
+            draw_no_bet_team2 = float(row['draw_no_bet_team2']) if not pd.isna(row['draw_no_bet_team2']) else None
+
+            if draw_no_bet_team1 == time:
                 if row['dnb1_ganha']:
-                    return 1  # Ganhou
+                    return 1
                 elif row['dnb1_perde']:
-                    return -1  # Perdeu
+                    return -1
                 else:
                     return 0
                 
-            elif row['draw_no_bet_team2'] == time:
-                # Avalia o resultado da aposta para o time2
+            elif draw_no_bet_team2 == time:
                 if row['dnb2_ganha']:
-                    return 1  # Ganhou
+                    return 1
                 elif row['dnb2_perde']:
-                    return -1  # Perdeu
+                    return -1
                 else:
                     return 0
             
-            else:
-                return None  # Não encontrou correspondência com o time
-
+            print(f"Retornando None para ID={id} porque não encontrou draw_no_bet correspondente")
+            return None
 
         elif mercado == 'double_chance':
             if time == home_time:
@@ -348,6 +300,7 @@ def verificar_aposta(aposta, df_resultados):
                 time = 2.0
             else:
                 time = 3.0
+
             if time == 1.0:
                 if row['res_double_chance1']:
                     return 1
@@ -364,8 +317,10 @@ def verificar_aposta(aposta, df_resultados):
                 else:
                     return -1
             else:
+                print(f"Retornando None para ID={id} porque não encontrou double_chance correspondente")
                 return None
 
+        print(f"Retornando None para ID={id} porque mercado não reconhecido: {mercado}")
         return None
     except Exception as e:
         print(f"Erro ao verificar aposta: {e}")
@@ -426,7 +381,7 @@ def jogos_do_dia():
 def jogos_do_dia1():
     # Obter os dados para o dia anterior e para o dia atual
     ids_anterior, dicio_anterior = apiclient.getAllOlds(leagues=apiclient.leagues_ids, day="20250424")
-    ids_atual, dicio_atual = apiclient.getAllOlds(leagues=apiclient.leagues_ids, day=dia_anterior())  # Adicionando o dia atual
+    ids_atual, dicio_atual = apiclient.getAllOlds(leagues=apiclient.leagues_ids, day="20250425")  # Adicionando o dia atual
     
     # Filtrar odds para os jogos do dia anterior e do dia atual
     odds_anterior = apiclient.filtraOddsNovo(ids_anterior)
@@ -481,9 +436,9 @@ def jogos_do_dia1():
 
 
 def checa():
-    #df_odds = jogos_do_dia()
-    #df_odds.to_csv('df_odds.csv')
-    df_odds = pd.read_csv('anteontem.csv')
+    df_odds = jogos_do_dia()
+    df_odds.to_csv('df_odds.csv')
+
     resultados_verificados = []
     contador_none = 0
     contador_validos = 0
@@ -627,8 +582,7 @@ def pegaJogosDoDia():
             dia_seg = (datetime.now() + timedelta(days=1)).strftime('%Y%m%d')
             dias_para_buscar.append(dia_seg)
 
-        ids, tempo, nome_time, times_id = [], [], [], [], 
-
+        ids, tempo, nome_time, times_id = [], [], [], []
         for dia in dias_para_buscar:
             r_ids, r_tempo, r_nome_time, r_times_id = apiclient.getUpcoming(leagues=apiclient.leagues_ids, day=dia)
             ids.extend(r_ids)
@@ -645,8 +599,7 @@ def pegaJogosDoDia():
             "horario": h,
             "times": k,
             "home": z,
-            "away": t,
-   
+            "away": t
         } for i, h, k, (z, t) in zip(ids, tempo, nome_time, times_id)]
         print(dados)
         dados_dataframe = pd.DataFrame(dados)
@@ -1045,7 +998,7 @@ def predicta_handicap(prepHandicap_df, dados):
     pred_handicap_2 = float(preds[1])
     preds = [pred_handicap_1, pred_handicap_2]
 
-    th_ve = 1.025 # Valor Esperado mínimo
+    th_ve = 1.1 # Valor Esperado mínimo
     recomendacoes = []
     th_odd = 1.6
     for i in range(2):
@@ -1077,7 +1030,7 @@ def predicta_goal_line(prepGoal_line_df, dados):
     pred_goal_line_2 = float(preds[1])
     preds = [pred_goal_line_1, pred_goal_line_2]
 
-    th_ve = 1.025  # Valor Esperado mínimo
+    th_ve = 1.1  # Valor Esperado mínimo
     recomendacoes = []
     th_odd = 1.6
     for i in range(2):
@@ -1112,7 +1065,7 @@ def predicta_double_chance(pred_double_chance_df, dados):
 
     preds = [pred_double_chance_1, pred_double_chance_2, pred_double_chance_3]
 
-    th_ve = 1.5
+    th_ve = 1.1
     th_odd = 1.6
     for i in range(3):
         prob = preds[i]
@@ -1144,7 +1097,7 @@ def predicta_draw_no_bet(pred_draw_no_bet_df, dados):
 
     preds = [pred_draw_no_bet_1, pred_draw_no_bet_2]
 
-    th_ve = 1.5 # Valor esperado mínimo
+    th_ve = 1.1 # Valor esperado mínimo
     recomendacoes = []
 
     for i in range(2):

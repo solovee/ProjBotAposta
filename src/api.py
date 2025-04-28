@@ -78,6 +78,7 @@ class BetsAPIClient:
 
         for league in leagues:
             pages = self.pagesOld(league_id=league, day=day)
+            
 
             for page in range(1, pages + 1):
                 res = self.get_old_matches(league_id=league, page=page, day=day)
@@ -97,7 +98,8 @@ class BetsAPIClient:
                         'away': registro['away']['id'],
                         'home_goals': home_goals,
                         'away_goals': away_goals,
-                        'tot_goals': (home_goals + away_goals) if home_goals is not None and away_goals is not None else None
+                        'tot_goals': (home_goals + away_goals) if home_goals is not None and away_goals is not None else None,
+                        
                     }
                     di.append(dic)
 
@@ -234,6 +236,7 @@ class BetsAPIClient:
         times = []
         times_id = []  # Agora será uma lista de tuplas (home_id, away_id)
         for league in leagues:
+            
             page = 1
             while True:
                 res, ts, tm, ti, total_pages = self.get_fifa_matches_with_total(league_id=league, page=page, day=day)
@@ -241,7 +244,9 @@ class BetsAPIClient:
                 results.extend(res)
                 ts_list.extend(ts)
                 times.extend(tm)
-                times_id.extend(ti)  # Já são tuplas individuais por jogo
+                times_id.extend(ti) 
+                
+                 # Já são tuplas individuais por jogo
                 if page >= total_pages:
                     break
                 page += 1
