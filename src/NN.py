@@ -28,7 +28,7 @@ def dia_anterior():
 
 
 #df_temp = pd.read_csv(r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_novo.csv")
-df_temp = pd.read_csv('../resultados_60_ofc.csv')
+df_temp = pd.read_csv('resultados_60.csv')
 
 def preProcessGeneral(df=df_temp):
     df = preProcessEstatisticasGerais(df)
@@ -780,7 +780,7 @@ def classify_draw_no_bet(team, home_goals, away_goals):
 
 
 
-def encontrar_melhor_z_binario_positivo(y_true, y_pred_probs, min_percent=0.9):
+def encontrar_melhor_z_binario_positivo(y_true, y_pred_probs, min_percent=0.85):
     thresholds_pos = np.arange(0.5, 1.01, 0.025)
     # Total de previsões positivas (com qualquer confiança)
     total_pred_positivas = np.sum(y_pred_probs >= 0.5)
@@ -869,7 +869,7 @@ def encontrar_melhor_z_softmax_positivo(y_test, y_pred_probs, min_percent=0.1):
     return melhor_z
 
 def prepNNOver_under_X(df=df_temp):
-    required_columns = ['home','away','times','odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean']
+    required_columns = ['home','away','times','odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean','league']
     if not all(col in df.columns for col in required_columns):
         missing_cols = [col for col in required_columns if col not in df.columns]
         print(f"❌ Colunas ausentes em 'prepNNOver_under_X': {', '.join(missing_cols)}")
@@ -881,15 +881,15 @@ def prepNNOver_under_X(df=df_temp):
     if df_temporario.empty:
         print("❌ DataFrame vazio após dropna em prepNNoverunder*")
         return None, None
-    z = df_temporario[['times','odd_goals_over1', 'odd_goals_under1']].copy()
+    z = df_temporario[['times','odd_goals_over1', 'odd_goals_under1','league']].copy()
 
-    X = df_temporario[['odd_goals_over1', 'odd_goals_under1','media_goals_home','media_goals_away' ,'h2h_mean']]
+    X = df_temporario[['odd_goals_over1', 'odd_goals_under1','media_goals_home','media_goals_away' ,'h2h_mean','league']]
 
     try:
         with open('scaler_over_under.pkl', 'rb') as f:
             scaler = pickle.load(f)
             X_standardized = scaler.transform(X)
-        X = pd.DataFrame(X_standardized, columns=['odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean']).reset_index(drop=True)
+        X = pd.DataFrame(X_standardized, columns=['odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean','league']).reset_index(drop=True)
     except Exception as e:
         print('Erro over_under')
         return None, None
@@ -898,7 +898,7 @@ def prepNNOver_under_X(df=df_temp):
 def prepNNHandicap_X(df=df_temp):
     required_columns = ['home','away','times','media_goals_home', 'media_goals_away','home_h2h_mean', 'away_h2h_mean',
                         'asian_handicap1_1', 'asian_handicap1_2','team_ah1','odds_ah1', 
-                        'asian_handicap2_1', 'asian_handicap2_2','team_ah2','odds_ah2']
+                        'asian_handicap2_1', 'asian_handicap2_2','team_ah2','odds_ah2','league']
     if not all(col in df.columns for col in required_columns):
         missing_cols = [col for col in required_columns if col not in df.columns]
         print(f"❌ Colunas ausentes em 'prepNNHandicap_X': {', '.join(missing_cols)}")
@@ -911,17 +911,17 @@ def prepNNHandicap_X(df=df_temp):
     if df_temporario.empty:
         print("❌ DataFrame vazio após dropna em prepNNhandicap*")
         return None, None
-    z = df_temporario[['times','team_ah','asian_handicap_1', 'asian_handicap_2', 'odds']]
+    z = df_temporario[['times','team_ah','asian_handicap_1', 'asian_handicap_2', 'odds','league']]
     z = z.sort_values('team_ah').reset_index(drop=True)
     df_temporario = df_temporario.sort_values('team_ah').reset_index(drop=True)
     
     df_temporario = pd.get_dummies(df_temporario, columns=['team_ah'], prefix='team_ah')
-    X = df_temporario[['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds']]
+    X = df_temporario[['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds','league']]
     try:
         with open('scaler_handicap.pkl', 'rb') as f:
             scaler = pickle.load(f)
             X_standardized = scaler.transform(X)
-        X = pd.DataFrame(X_standardized, columns=['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds']).reset_index(drop=True)
+        X = pd.DataFrame(X_standardized, columns=['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds','league']).reset_index(drop=True)
         type_df = df_temporario[['team_ah_1','team_ah_2']].reset_index(drop=True)
     except Exception as e:
         print('Erro handicap')
@@ -932,7 +932,7 @@ def prepNNHandicap_X(df=df_temp):
 def prepNNGoal_line_X(df=df_temp):
     required_columns = ['home','away','times','h2h_mean' ,'media_goals_home' ,'media_goals_away',
                         'goal_line1_1','goal_line1_2','type_gl1','odds_gl1', 'odds_gl2',
-                        'goal_line2_1','goal_line2_2','type_gl2']
+                        'goal_line2_1','goal_line2_2','type_gl2','league']
     if not all(col in df.columns for col in required_columns):
         missing_cols = [col for col in required_columns if col not in df.columns]
         print(f"❌ Colunas ausentes em 'prepNNGoal_line_X': {', '.join(missing_cols)}")
@@ -944,15 +944,15 @@ def prepNNGoal_line_X(df=df_temp):
     if df_temporario.empty:
         print("❌ DataFrame vazio após dropna em prepNNgl*")
         return None, None
-    z = df_temporario[['times','goal_line_1', 'goal_line_2','type_gl', 'odds_gl']].copy()
+    z = df_temporario[['times','goal_line_1', 'goal_line_2','type_gl', 'odds_gl','league']].copy()
     
     df_temporario = pd.get_dummies(df_temporario, columns=['type_gl'], prefix='type_gl')
-    X = df_temporario[['h2h_mean', 'media_goals_home', 'media_goals_away','odds_gl', 'goal_line_1', 'goal_line_2']].copy()
+    X = df_temporario[['h2h_mean', 'media_goals_home', 'media_goals_away','odds_gl', 'goal_line_1', 'goal_line_2','league']].copy()
     try:
         with open('scaler_goal_line.pkl', 'rb') as f:
             scaler = pickle.load(f)
             X_standardized = scaler.transform(X)
-        X = pd.DataFrame(X_standardized, columns=['h2h_mean', 'media_goals_home', 'media_goals_away','odds_gl', 'goal_line_1', 'goal_line_2']).reset_index(drop=True)
+        X = pd.DataFrame(X_standardized, columns=['h2h_mean', 'media_goals_home', 'media_goals_away','odds_gl', 'goal_line_1', 'goal_line_2','league']).reset_index(drop=True)
         type_df = df_temporario[['type_gl_1', 'type_gl_2']].reset_index(drop=True)
     except Exception as e:
         print('Erro goal_line')
@@ -963,7 +963,7 @@ def prepNNGoal_line_X(df=df_temp):
 def prepNNDouble_chance_X(df=df_temp):
     required_columns = ['home','away','times','media_goals_home','media_goals_away','media_victories_home', 'media_victories_away', 
                         'home_h2h_mean', 'away_h2h_mean', 'double_chance1','odds_dc1', 
-                        'double_chance2', 'odds_dc2', 'double_chance3', 'odds_dc3']
+                        'double_chance2', 'odds_dc2', 'double_chance3', 'odds_dc3','league']
     if not all(col in df.columns for col in required_columns):
         missing_cols = [col for col in required_columns if col not in df.columns]
         print(f"❌ Colunas ausentes em 'prepNNDouble_chance_X': {', '.join(missing_cols)}")
@@ -975,18 +975,18 @@ def prepNNDouble_chance_X(df=df_temp):
     if df_temporario.empty:
         print("❌ DataFrame vazio após dropna em prepNNdc*")
         return None, None
-    z = df_temporario[['times','double_chance', 'odds']].copy()
+    z = df_temporario[['times','double_chance', 'odds','league']].copy()
     
     
     df_temporario = pd.get_dummies(df_temporario, columns=['double_chance'], prefix='double_chance_type')
     X = df_temporario[['media_goals_home', 'media_goals_away', 'media_victories_home',
-                      'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']].copy()
+                      'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds','league']].copy()
     try:
         with open('scaler_double_chance.pkl', 'rb') as f:
             scaler = pickle.load(f)
             X_standardized = scaler.transform(X)
         X = pd.DataFrame(X_standardized, columns=['media_goals_home', 'media_goals_away', 'media_victories_home',
-                                     'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']).reset_index(drop=True)
+                                     'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds','league']).reset_index(drop=True)
         type_df = df_temporario[['double_chance_type_1', 'double_chance_type_2','double_chance_type_3']].reset_index(drop=True)
     except Exception as e:
         print('Erro double_chance')
@@ -996,7 +996,7 @@ def prepNNDouble_chance_X(df=df_temp):
 
 def prepNNDraw_no_bet_X(df=df_temp):
     required_columns = ['home','away','times', 'media_goals_home', 'media_goals_away', 'media_victories_home','media_victories_away',
-                        'home_h2h_mean','away_h2h_mean', 'draw_no_bet_team1', 'odds_dnb1', 'draw_no_bet_team2', 'odds_dnb2']
+                        'home_h2h_mean','away_h2h_mean', 'draw_no_bet_team1', 'odds_dnb1', 'draw_no_bet_team2', 'odds_dnb2','league']
     if not all(col in df.columns for col in required_columns):
         missing_cols = [col for col in required_columns if col not in df.columns]
         print(f"❌ Colunas ausentes em 'prepNNDraw_no_bet_X': {', '.join(missing_cols)}")
@@ -1008,17 +1008,17 @@ def prepNNDraw_no_bet_X(df=df_temp):
     if df_temporario.empty:
         print("❌ DataFrame vazio após dropna em prepNNdnb*")
         return None, None
-    z = df_temporario[['times','draw_no_bet_team', 'odds']].copy()
+    z = df_temporario[['times','draw_no_bet_team', 'odds','league']].copy()
   
     df_temporario = pd.get_dummies(df_temporario, columns=['draw_no_bet_team'], prefix='draw_no_bet_type')
     X = df_temporario[['media_goals_home', 'media_goals_away', 'media_victories_home','media_victories_away', 
-                      'home_h2h_mean', 'away_h2h_mean', 'odds']].copy()
+                      'home_h2h_mean', 'away_h2h_mean', 'odds','league']].copy()
     try:
         with open('scaler_draw_no_bet.pkl', 'rb') as f:
             scaler = pickle.load(f)
             X_standardized = scaler.transform(X)
         X = pd.DataFrame(X_standardized, columns=['media_goals_home', 'media_goals_away', 'media_victories_home',
-                                     'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']).reset_index(drop=True)
+                                     'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds','league']).reset_index(drop=True)
         type_df = df_temporario[['draw_no_bet_type_1', 'draw_no_bet_type_2']].reset_index(drop=True)
     except Exception as e:
         print('Erro draw_no_bet')
@@ -1030,15 +1030,15 @@ def prepNNDraw_no_bet_X(df=df_temp):
 
 #NN over_under
 def prepNNOver_under(df=df_temp):
-    df_temporario = df[['home','away','odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean','res_goals_over_under']].copy()
+    df_temporario = df[['home','away','odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean','res_goals_over_under','league']].copy()
     df_temporario.dropna(inplace=True)
-    z = df_temporario[['home_name','away_name','odd_goals_over1', 'odd_goals_under1']].copy()
+    z = df_temporario[['home_name','away_name','odd_goals_over1', 'odd_goals_under1','league']].copy()
     if len(z) == 1:
         z = z.iloc[[0]].copy()
-    X = df[['odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean']]
+    X = df[['odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean','league']]
     
     X = normalizacao(X)
-    X = pd.DataFrame(X, columns=['odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean'])
+    X = pd.DataFrame(X, columns=['odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean','league'])
     return X, z
 
 #NN over_under
@@ -1065,9 +1065,9 @@ def prepNNOver_under_X(df=df_temp):
 '''
 def NN_over_under(df):
 
-    df_temporario = df[['odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean','res_goals_over_under']].copy()
+    df_temporario = df[['odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean','res_goals_over_under','league']].copy()
     df_temporario.dropna(inplace=True)
-    X = df_temporario[['odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean']]
+    X = df_temporario[['odd_goals_over1', 'odd_goals_under1', 'media_goals_home','media_goals_away' ,'h2h_mean','league']]
     y = df_temporario['res_goals_over_under']
     scaler_over_under = StandardScaler()
     X_standardized = scaler_over_under.fit_transform(X)
@@ -1105,18 +1105,18 @@ def preparar_df_handicaps(df):
     # Seleciona e renomeia o df_temporario1
     df1 = df[['home','away','media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean',
               'asian_handicap1_1', 'asian_handicap1_2','team_ah1', 'odds_ah1',
-              'ah1_indefinido', 'ah1_negativo', 'ah1_positivo', 'ah1_reembolso']].copy()
+              'ah1_indefinido', 'ah1_negativo', 'ah1_positivo', 'ah1_reembolso','league']].copy()
     df1.columns = ['home','away','media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean',
                    'asian_handicap_1', 'asian_handicap_2','team_ah', 'odds',
-                   'indefinido', 'negativo', 'positivo', 'reembolso']
+                   'indefinido', 'negativo', 'positivo', 'reembolso','league']
 
     # Seleciona e renomeia o df_temporario2
     df2 = df[['home','away','media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean',
               'asian_handicap2_1', 'asian_handicap2_2','team_ah2', 'odds_ah2',
-              'ah2_indefinido', 'ah2_negativo', 'ah2_positivo', 'ah2_reembolso']].copy()
+              'ah2_indefinido', 'ah2_negativo', 'ah2_positivo', 'ah2_reembolso','league']].copy()
     df2.columns = ['home','away','media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean',
                    'asian_handicap_1', 'asian_handicap_2','team_ah', 'odds',
-                   'indefinido', 'negativo', 'positivo', 'reembolso']
+                   'indefinido', 'negativo', 'positivo', 'reembolso','league']
 
     # Concatena os dois dataframes
     df_final = pd.concat([df1, df2], ignore_index=True)
@@ -1128,19 +1128,19 @@ def prepNNHandicap(df=df_temp):
                        'asian_handicap1_1', 'asian_handicap1_2','team_ah1','odds_ah1', 
                        'ah1_indefinido','ah1_negativo', 'ah1_positivo','ah1_reembolso', 
                        'asian_handicap2_1', 'asian_handicap2_2','team_ah2','odds_ah2', 
-                       'ah2_indefinido','ah2_negativo', 'ah2_positivo','ah2_reembolso']].copy()
+                       'ah2_indefinido','ah2_negativo', 'ah2_positivo','ah2_reembolso','league']].copy()
     df_temporario = preparar_df_handicaps(df_temporario)
     
     df_temporario = df_temporario[df_temporario['indefinido'] == False]
     df_temporario.dropna(inplace=True)
     
-    z = df_temporario[['home','away','team_ah','asian_handicap_1', 'asian_handicap_2', 'odds']]
+    z = df_temporario[['home','away','team_ah','asian_handicap_1', 'asian_handicap_2', 'odds','league']]
     if len(z) == 1:
         z = z.iloc[[0]].copy()
     df_temporario = pd.get_dummies(df_temporario, columns=['team_ah'], prefix='team_ah')
-    X = df_temporario[['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds']]
+    X = df_temporario[['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds','league']]
     X = normalizacao(X)
-    X = pd.DataFrame(X, columns=['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds']).reset_index(drop=True)
+    X = pd.DataFrame(X, columns=['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds','league']).reset_index(drop=True)
     type_df = df_temporario[['team_ah_1.0',	'team_ah_2.0']]
     type_df = type_df.reset_index(drop=True)
     X_final = pd.concat([X, type_df], axis=1)
@@ -1151,15 +1151,15 @@ def preparar_df_handicaps_X(df):
 
     # Seleciona e renomeia o df_temporario1
     df1 = df[['home','away','times','media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean',
-              'asian_handicap1_1', 'asian_handicap1_2','team_ah1', 'odds_ah1']].copy()
+              'asian_handicap1_1', 'asian_handicap1_2','team_ah1', 'odds_ah1','league']].copy()
     df1.columns = ['home','away','times','media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean',
-                   'asian_handicap_1', 'asian_handicap_2','team_ah', 'odds']
+                   'asian_handicap_1', 'asian_handicap_2','team_ah', 'odds','league']
 
     # Seleciona e renomeia o df_temporario2
     df2 = df[['home','away','times','media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean',
-              'asian_handicap2_1', 'asian_handicap2_2','team_ah2', 'odds_ah2']].copy()
+              'asian_handicap2_1', 'asian_handicap2_2','team_ah2', 'odds_ah2','league']].copy()
     df2.columns = ['home','away','times','media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean',
-                   'asian_handicap_1', 'asian_handicap_2','team_ah', 'odds']
+                   'asian_handicap_1', 'asian_handicap_2','team_ah', 'odds','league']
 
     # Concatena os dois dataframes
     df_final = pd.concat([df1, df2], ignore_index=True)
@@ -1207,7 +1207,7 @@ def NN_handicap(df=df_temp):
                        'asian_handicap1_1', 'asian_handicap1_2','team_ah1','odds_ah1', 
                        'ah1_indefinido','ah1_negativo', 'ah1_positivo','ah1_reembolso', 
                        'asian_handicap2_1', 'asian_handicap2_2','team_ah2','odds_ah2', 
-                       'ah2_indefinido','ah2_negativo', 'ah2_positivo','ah2_reembolso']].copy()
+                       'ah2_indefinido','ah2_negativo', 'ah2_positivo','ah2_reembolso','league']].copy()
     df_temporario = preparar_df_handicaps(df_temporario)
 
     df_temporario = pd.get_dummies(df_temporario, columns=['team_ah'], prefix='team_ah')
@@ -1217,13 +1217,13 @@ def NN_handicap(df=df_temp):
     
     
     df_temporario.dropna(inplace=True)
-    X = df_temporario[['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds']]
+    X = df_temporario[['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds','league']]
     scaler_handicap = StandardScaler()
     X_standardized = scaler_handicap.fit_transform(X)
     with open('scaler_handicap.pkl', 'wb') as f:
         pickle.dump(scaler_handicap, f)
     
-    X = pd.DataFrame(X_standardized, columns=['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds']).reset_index(drop=True)
+    X = pd.DataFrame(X_standardized, columns=['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds','league']).reset_index(drop=True)
     type_df = df_temporario[['team_ah_1.0',	'team_ah_2.0']]
     type_df = type_df.reset_index(drop=True)
     X_final = pd.concat([X, type_df], axis=1)
@@ -1293,18 +1293,18 @@ def preparar_df_goallines(df):
     # Seleciona e renomeia as colunas relacionadas à goal line 1
     df1 = df[['home','away','h2h_mean', 'media_goals_home', 'media_goals_away',
               'goal_line1_1', 'goal_line1_2', 'type_gl1','odds_gl1',
-              'gl1_indefinido', 'gl1_negativo', 'gl1_positivo', 'gl1_reembolso']].copy()
+              'gl1_indefinido', 'gl1_negativo', 'gl1_positivo', 'gl1_reembolso','league']].copy()
     df1.columns = ['home','away','h2h_mean', 'media_goals_home', 'media_goals_away',
                    'goal_line_1', 'goal_line_2', 'type_gl','odds_gl',
-                   'indefinido', 'negativo', 'positivo', 'reembolso']
+                   'indefinido', 'negativo', 'positivo', 'reembolso','league']
 
     # Seleciona e renomeia as colunas relacionadas à goal line 2
     df2 = df[['home','away','h2h_mean', 'media_goals_home', 'media_goals_away',
               'goal_line2_1', 'goal_line2_2', 'type_gl2','odds_gl2',
-              'gl2_indefinido', 'gl2_negativo', 'gl2_positivo', 'gl2_reembolso']].copy()
+              'gl2_indefinido', 'gl2_negativo', 'gl2_positivo', 'gl2_reembolso','league']].copy()
     df2.columns = ['home','away','h2h_mean', 'media_goals_home', 'media_goals_away',
                    'goal_line_1', 'goal_line_2', 'type_gl','odds_gl',
-                   'indefinido', 'negativo', 'positivo', 'reembolso']
+                   'indefinido', 'negativo', 'positivo', 'reembolso','league']
 
     # Concatena os dois dataframes
     df_final = pd.concat([df1, df2], ignore_index=True)
@@ -1312,7 +1312,7 @@ def preparar_df_goallines(df):
     return df_final
 
 def prepNNGoal_line(df=df_temp):
-    df_temporario = df[['home','away','h2h_mean' ,'media_goals_home' ,'media_goals_away','goal_line1_1','goal_line1_2','type_gl1','odds_gl1', 'odds_gl2', 'goal_line2_1','goal_line2_2','type_gl2', 'gl1_indefinido','gl1_negativo', 'gl1_positivo', 'gl1_reembolso', 'gl2_indefinido', 'gl2_negativo', 'gl2_positivo', 'gl2_reembolso']].copy()
+    df_temporario = df[['home','away','h2h_mean' ,'media_goals_home' ,'media_goals_away','goal_line1_1','goal_line1_2','type_gl1','odds_gl1', 'odds_gl2', 'goal_line2_1','goal_line2_2','type_gl2', 'gl1_indefinido','gl1_negativo', 'gl1_positivo', 'gl1_reembolso', 'gl2_indefinido', 'gl2_negativo', 'gl2_positivo', 'gl2_reembolso','league']].copy()
 
     df_temporario = preparar_df_goallines(df_temporario)
     
@@ -1320,13 +1320,13 @@ def prepNNGoal_line(df=df_temp):
     
     df_temporario = df_temporario[df_temporario['indefinido'] == False]
     df_temporario.dropna(inplace=True)
-    z = df_temporario[['home','away','goal_line_1', 'goal_line_2','type_gl', 'odds_gl']].copy()
+    z = df_temporario[['home','away','goal_line_1', 'goal_line_2','type_gl', 'odds_gl','league']].copy()
     if len(z) == 1:
         z = z.iloc[[0]].copy()
     df_temporario = pd.get_dummies(df_temporario, columns=['type_gl'], prefix='type_gl')
-    X = df_temporario[['h2h_mean', 'media_goals_home', 'media_goals_away','odds_gl', 'goal_line_1', 'goal_line_2']].copy()
+    X = df_temporario[['h2h_mean', 'media_goals_home', 'media_goals_away','odds_gl', 'goal_line_1', 'goal_line_2','league']].copy()
     X = normalizacao(X)
-    X = pd.DataFrame(X, columns=['h2h_mean', 'media_goals_home', 'media_goals_away','odds_gl', 'goal_line_1', 'goal_line_2']).reset_index(drop=True)
+    X = pd.DataFrame(X, columns=['h2h_mean', 'media_goals_home', 'media_goals_away','odds_gl', 'goal_line_1', 'goal_line_2','league']).reset_index(drop=True)
     type_df = df_temporario[['type_gl_1.0', 'type_gl_2.0']]
     type_df = type_df.reset_index(drop=True)
     X_final = pd.concat([X, type_df], axis=1)
@@ -1336,15 +1336,15 @@ def prepNNGoal_line(df=df_temp):
 def preparar_df_goallines_X(df):
     # Seleciona e renomeia as colunas relacionadas à goal line 1
     df1 = df[['home','away','times','h2h_mean', 'media_goals_home', 'media_goals_away',
-              'goal_line1_1', 'goal_line1_2', 'type_gl1','odds_gl1']].copy()
+              'goal_line1_1', 'goal_line1_2', 'type_gl1','odds_gl1','league']].copy()
     df1.columns = ['home','away','times','h2h_mean', 'media_goals_home', 'media_goals_away',
-                   'goal_line_1', 'goal_line_2', 'type_gl','odds_gl']
+                   'goal_line_1', 'goal_line_2', 'type_gl','odds_gl','league']
 
     # Seleciona e renomeia as colunas relacionadas à goal line 2
     df2 = df[['home','away','times','h2h_mean', 'media_goals_home', 'media_goals_away',
-              'goal_line2_1', 'goal_line2_2', 'type_gl2','odds_gl2']].copy()
+              'goal_line2_1', 'goal_line2_2', 'type_gl2','odds_gl2','league']].copy()
     df2.columns = ['home','away','times','h2h_mean', 'media_goals_home', 'media_goals_away',
-                   'goal_line_1', 'goal_line_2', 'type_gl','odds_gl']
+                   'goal_line_1', 'goal_line_2', 'type_gl','odds_gl','league']
 
     # Concatena os dois dataframes
     df_final = pd.concat([df1, df2], ignore_index=True)
@@ -1380,7 +1380,7 @@ def prepNNGoal_line_X(df=df_temp):
 #NN goal_line
 def NN_goal_line(df=df_temp):
     
-    df_temporario = df[['home','away','h2h_mean' ,'media_goals_home' ,'media_goals_away','goal_line1_1','goal_line1_2','type_gl1', 'odds_gl1','odds_gl2','goal_line2_1','goal_line2_2','type_gl2', 'gl1_indefinido','gl1_negativo', 'gl1_positivo', 'gl1_reembolso', 'gl2_indefinido', 'gl2_negativo', 'gl2_positivo', 'gl2_reembolso']].copy()
+    df_temporario = df[['home','away','h2h_mean' ,'media_goals_home' ,'media_goals_away','goal_line1_1','goal_line1_2','type_gl1', 'odds_gl1','odds_gl2','goal_line2_1','goal_line2_2','type_gl2', 'gl1_indefinido','gl1_negativo', 'gl1_positivo', 'gl1_reembolso', 'gl2_indefinido', 'gl2_negativo', 'gl2_positivo', 'gl2_reembolso','league']].copy()
     df_temporario = preparar_df_goallines(df_temporario)
     
     df_temporario = pd.get_dummies(df_temporario, columns=['type_gl'], prefix='type_gl')
@@ -1388,12 +1388,12 @@ def NN_goal_line(df=df_temp):
     df_temporario = df_temporario[df_temporario['indefinido'] == False]
     df_temporario.dropna(inplace=True)
 
-    X = df_temporario[['h2h_mean', 'media_goals_home', 'media_goals_away','odds_gl', 'goal_line_1', 'goal_line_2']].copy()
+    X = df_temporario[['h2h_mean', 'media_goals_home', 'media_goals_away','odds_gl', 'goal_line_1', 'goal_line_2','league']].copy()
     scaler_goal_line = StandardScaler()
     X_standardized = scaler_goal_line.fit_transform(X)
     with open('scaler_goal_line.pkl', 'wb') as f:
         pickle.dump(scaler_goal_line, f)
-    X = pd.DataFrame(X_standardized, columns=['h2h_mean', 'media_goals_home', 'media_goals_away','odds_gl', 'goal_line_1', 'goal_line_2']).reset_index(drop=True)
+    X = pd.DataFrame(X_standardized, columns=['h2h_mean', 'media_goals_home', 'media_goals_away','odds_gl', 'goal_line_1', 'goal_line_2','league']).reset_index(drop=True)
     type_df = df_temporario[['type_gl_1.0', 'type_gl_2.0']]
     type_df = type_df.reset_index(drop=True)
     X_final = pd.concat([X, type_df], axis=1)
@@ -1462,7 +1462,7 @@ def NN_goal_line(df=df_temp):
 #juntar double_chances
 def preparar_df_double_chance(df):
     colunas_comuns = ['home','away','media_goals_home', 'media_goals_away', 'media_victories_home',
-                      'media_victories_away', 'home_h2h_mean', 'away_h2h_mean']
+                      'media_victories_away', 'home_h2h_mean', 'away_h2h_mean','league']
     
     # Cria df para cada linha de double chance
     df1 = df[colunas_comuns + ['odds_dc1', 'res_double_chance1']].copy()
@@ -1486,21 +1486,21 @@ def prepNNDouble_chance(df=df_temp):
     df_temporario =df[['home','away','media_goals_home',
         'media_goals_away','media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'double_chance1',
        'odds_dc1', 'double_chance2', 'odds_dc2', 'double_chance3', 'odds_dc3',
-       'res_double_chance1', 'res_double_chance2', 'res_double_chance3']]
+       'res_double_chance1', 'res_double_chance2', 'res_double_chance3','league']]
     df_temporario = preparar_df_double_chance(df_temporario)
     
 
     df_temporario.dropna(inplace=True)
-    z = df_temporario[['home','away','double_chance', 'odds']].copy()
+    z = df_temporario[['home','away','double_chance', 'odds','league']].copy()
     if len(z) == 1:
         z = z.iloc[[0]].copy()
     df_temporario = pd.get_dummies(df_temporario, columns=['double_chance'], prefix='double_chance_type')
 
     X = df_temporario[['media_goals_home', 'media_goals_away', 'media_victories_home',
-                      'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']].copy()
+                      'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds','league']].copy()
     X = normalizacao(X)
     X = pd.DataFrame(X, columns=['media_goals_home', 'media_goals_away', 'media_victories_home',
-                             'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']).reset_index(drop=True)
+                             'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds','league']).reset_index(drop=True)
     type_df = df_temporario[['double_chance_type_1', 'double_chance_type_2','double_chance_type_3' ]]
     type_df = type_df.reset_index(drop=True)
     X_final = pd.concat([X, type_df], axis=1)
@@ -1509,7 +1509,7 @@ def prepNNDouble_chance(df=df_temp):
 
 def preparar_df_double_chance_X(df):
     colunas_comuns = ['home','away','times','media_goals_home', 'media_goals_away', 'media_victories_home',
-                      'media_victories_away', 'home_h2h_mean', 'away_h2h_mean']
+                      'media_victories_away', 'home_h2h_mean', 'away_h2h_mean','league']
     
     # Cria df para cada linha de double chance
     df1 = df[colunas_comuns + ['odds_dc1']].copy()
@@ -1564,20 +1564,20 @@ def NN_double_chance(df=df_temp):
     df_temporario =df[['home','away','media_goals_home',
         'media_goals_away','media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'double_chance1',
        'odds_dc1', 'double_chance2', 'odds_dc2', 'double_chance3', 'odds_dc3',
-       'res_double_chance1', 'res_double_chance2', 'res_double_chance3']]
+       'res_double_chance1', 'res_double_chance2', 'res_double_chance3','league']]
     df_temporario = preparar_df_double_chance(df_temporario)
     df_temporario = pd.get_dummies(df_temporario, columns=['double_chance'], prefix='double_chance_type')
 
     df_temporario.dropna(inplace=True)
 
     X = df_temporario[['media_goals_home', 'media_goals_away', 'media_victories_home',
-                      'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']].copy()
+                      'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds','league']].copy()
     scaler_double_chance = StandardScaler()
     X_standardized = scaler_double_chance.fit_transform(X)
     with open('scaler_double_chance.pkl', 'wb') as f:
         pickle.dump(scaler_double_chance, f)
     X = pd.DataFrame(X_standardized, columns=['media_goals_home', 'media_goals_away', 'media_victories_home',
-                             'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']).reset_index(drop=True)
+                             'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds','league']).reset_index(drop=True)
     type_df = df_temporario[['double_chance_type_1', 'double_chance_type_2','double_chance_type_3' ]]
     type_df = type_df.reset_index(drop=True)
     
@@ -1615,20 +1615,20 @@ def preparar_df_draw_no_bet(df):
     # Seleciona e renomeia o lado 1
     df1 = df[['home','away','home_goals', 'away_goals', 'media_goals_home', 'media_goals_away',
               'media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean',
-              'draw_no_bet_team1', 'odds_dnb1', 'dnb1_indefinido', 'dnb1_perde', 'dnb1_ganha', 'dnb1_reembolso']].copy()
+              'draw_no_bet_team1', 'odds_dnb1', 'dnb1_indefinido', 'dnb1_perde', 'dnb1_ganha', 'dnb1_reembolso','league']].copy()
 
     df1.columns = ['home','away','home_goals', 'away_goals', 'media_goals_home', 'media_goals_away',
                    'media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean',
-                   'draw_no_bet_team', 'odds', 'indefinido', 'perde', 'ganha', 'reembolso']
+                   'draw_no_bet_team', 'odds', 'indefinido', 'perde', 'ganha', 'reembolso','league']
 
     # Seleciona e renomeia o lado 2
     df2 = df[['home','away','home_goals', 'away_goals', 'media_goals_home', 'media_goals_away',
               'media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean',
-              'draw_no_bet_team2', 'odds_dnb2', 'dnb2_indefinido', 'dnb2_perde', 'dnb2_ganha', 'dnb2_reembolso']].copy()
+              'draw_no_bet_team2', 'odds_dnb2', 'dnb2_indefinido', 'dnb2_perde', 'dnb2_ganha', 'dnb2_reembolso','league']].copy()
 
     df2.columns = ['home','away','home_goals', 'away_goals', 'media_goals_home', 'media_goals_away',
                    'media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean',
-                   'draw_no_bet_team', 'odds', 'indefinido', 'perde', 'ganha', 'reembolso']
+                   'draw_no_bet_team', 'odds', 'indefinido', 'perde', 'ganha', 'reembolso','league']
 
     # Concatena os dois lados
     df_final = pd.concat([df1, df2], ignore_index=True)
@@ -1638,24 +1638,24 @@ def preparar_df_draw_no_bet(df):
 def prepNNDraw_no_bet(df=df_temp):
     df_temporario = df[['home','away','home_goals', 'away_goals','media_goals_home', 
        'media_goals_away', 'media_victories_home','media_victories_away', 'home_h2h_mean','away_h2h_mean', 'draw_no_bet_team1', 'odds_dnb1', 'draw_no_bet_team2', 'odds_dnb2', 'dnb1_indefinido' , 'dnb1_perde','dnb1_ganha', 'dnb1_reembolso',
-       'dnb2_indefinido', 'dnb2_perde', 'dnb2_ganha', 'dnb2_reembolso']]
+       'dnb2_indefinido', 'dnb2_perde', 'dnb2_ganha', 'dnb2_reembolso','league']]
     df_temporario = preparar_df_draw_no_bet(df_temporario)
 
 
     df_temporario = df_temporario[df_temporario['indefinido'] == False]
 
     df_temporario.dropna(inplace=True)
-    z = df_temporario[['home','away','draw_no_bet_team','odds']].copy()
+    z = df_temporario[['home','away','draw_no_bet_team','odds','league']].copy()
     if len(z) == 1:
         z = z.iloc[[0]].copy()
     df_temporario = pd.get_dummies(df_temporario, columns=['draw_no_bet_team'], prefix='draw_no_bet_team')
     
 
-    X = df_temporario[['home_goals', 'away_goals', 'media_goals_home', 'media_goals_away','media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']].copy()
+    X = df_temporario[['home_goals', 'away_goals', 'media_goals_home', 'media_goals_away','media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds','league']].copy()
     
     X = normalizacao(X)
     X = pd.DataFrame(X, columns=['home_goals', 'away_goals', 'media_goals_home', 'media_goals_away',
-                             'media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']).reset_index(drop=True)
+                             'media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds','league']).reset_index(drop=True)
 
     type_df = df_temporario[['draw_no_bet_team_1.0', 'draw_no_bet_team_2.0']]
     type_df = type_df.reset_index(drop=True)
@@ -1668,20 +1668,20 @@ def preparar_df_draw_no_bet_X(df):
     # Seleciona e renomeia o lado 1
     df1 = df[['home','away','times', 'media_goals_home', 'media_goals_away',
               'media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean',
-              'draw_no_bet_team1', 'odds_dnb1']].copy()
+              'draw_no_bet_team1', 'odds_dnb1','league']].copy()
 
     df1.columns = ['home','away','times', 'media_goals_home', 'media_goals_away',
                    'media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean',
-                   'draw_no_bet_team', 'odds']
+                   'draw_no_bet_team', 'odds','league']
 
     # Seleciona e renomeia o lado 2
     df2 = df[['home','away', 'times','media_goals_home', 'media_goals_away',
               'media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean',
-              'draw_no_bet_team2', 'odds_dnb2']].copy()
+              'draw_no_bet_team2', 'odds_dnb2','league']].copy()
 
     df2.columns = ['home','away','times', 'media_goals_home', 'media_goals_away',
                    'media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean',
-                   'draw_no_bet_team', 'odds']
+                   'draw_no_bet_team', 'odds','league']
 
     # Concatena os dois lados
     df_final = pd.concat([df1, df2], ignore_index=True)
@@ -1722,7 +1722,7 @@ def NN_draw_no_bet(df=df_temp):
 
     df_temporario = df[['home','away','home_goals', 'away_goals','media_goals_home', 
        'media_goals_away', 'media_victories_home','media_victories_away', 'home_h2h_mean','away_h2h_mean', 'draw_no_bet_team1', 'odds_dnb1', 'draw_no_bet_team2', 'odds_dnb2', 'dnb1_indefinido' , 'dnb1_perde','dnb1_ganha', 'dnb1_reembolso',
-       'dnb2_indefinido', 'dnb2_perde', 'dnb2_ganha', 'dnb2_reembolso']]
+       'dnb2_indefinido', 'dnb2_perde', 'dnb2_ganha', 'dnb2_reembolso','league']]
     df_temporario = preparar_df_draw_no_bet(df_temporario)
 
     df_temporario = pd.get_dummies(df_temporario, columns=['draw_no_bet_team'], prefix='draw_no_bet_team')
@@ -1731,14 +1731,14 @@ def NN_draw_no_bet(df=df_temp):
     df_temporario.dropna(inplace=True)
     
 
-    X = df_temporario[['media_goals_home', 'media_goals_away','media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']].copy()
+    X = df_temporario[['media_goals_home', 'media_goals_away','media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds','league']].copy()
     
     scaler_draw_no_bet = StandardScaler()
     X_standardized = scaler_draw_no_bet.fit_transform(X)
     with open('scaler_draw_no_bet.pkl', 'wb') as f:
         pickle.dump(scaler_draw_no_bet, f)
     X = pd.DataFrame(X_standardized, columns=['media_goals_home', 'media_goals_away',
-                             'media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']).reset_index(drop=True)
+                             'media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds','league']).reset_index(drop=True)
 
     type_df = df_temporario[['draw_no_bet_team_1.0', 'draw_no_bet_team_2.0']]
     type_df = type_df.reset_index(drop=True)

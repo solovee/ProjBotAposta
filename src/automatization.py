@@ -76,6 +76,15 @@ while dias_processados != set(dias_todos):  # Enquanto houver dias para processa
     if novos_dados:
         df_novo = pd.DataFrame(novos_dados)
         
+        # Garantir que todas as colunas existam e estejam na ordem correta
+        for col in COLUNAS_PADRAO:
+            if col not in df_novo.columns:
+                df_novo[col] = None
+        df_novo = df_novo[COLUNAS_PADRAO]
+        
+        # Ordenar por event_day
+        df_novo = df_novo.sort_values(by="event_day", ascending=False)
+
         if not os.path.exists(CSV_FILE):
             df_novo.to_csv(CSV_FILE, index=False)  # Cria um novo arquivo
         else:
@@ -111,11 +120,11 @@ load_dotenv()
 
 api = os.getenv("API_KEY")
 apiclient = BetsAPIClient(api_key=api)
-CSV_FILE = "resultados_60_ofc.csv"
+CSV_FILE = "resultados_60.csv"
 
 # Lista de colunas esperadas no CSV final, mesmo que estejam vazias
 COLUNAS_PADRAO = [
-    'id', 'event_day', 'home', 'away', 'home_goals', 'away_goals', 'tot_goals',
+    'id', 'event_day', 'home', 'away','league', 'home_goals', 'away_goals', 'tot_goals',
     'goals_over_under', 'odd_goals_over1', 'odd_goals_under1',
     'asian_handicap1', 'team_ah1', 'odds_ah1',
     'asian_handicap2', 'team_ah2', 'odds_ah2',
@@ -236,23 +245,22 @@ while dias_processados != set(dias_todos):
             print(f"❌ Erro ao processar dia {dia}: {e}")
 
     # Salvar os novos dados
-    df_novo = df_novo.sort_values(by="event_day", ascending=False)
     if novos_dados:
         df_novo = pd.DataFrame(novos_dados)
         
-        # Reordenar colunas para consistência
-        # Preencher colunas ausentes e garantir a ordem correta
+        # Garantir que todas as colunas existam e estejam na ordem correta
         for col in COLUNAS_PADRAO:
             if col not in df_novo.columns:
                 df_novo[col] = None
-
         df_novo = df_novo[COLUNAS_PADRAO]
-
         
+        # Ordenar por event_day
+        df_novo = df_novo.sort_values(by="event_day", ascending=False)
+
         if not os.path.exists(CSV_FILE):
-            df_novo.to_csv(CSV_FILE, index=False)
+            df_novo.to_csv(CSV_FILE, index=False)  # Cria um novo arquivo
         else:
-            df_novo.to_csv(CSV_FILE, mode='a', header=False, index=False)
+            df_novo.to_csv(CSV_FILE, mode="a", header=False, index=False)  # Adiciona ao existente
 
     print(f"✅ Total de dias processados: {len(dias_processados)}")
     print("⏳ Aguardando 1 hora para a próxima execução...")

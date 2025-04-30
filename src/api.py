@@ -78,7 +78,10 @@ class BetsAPIClient:
 
         for league in leagues:
             pages = self.pagesOld(league_id=league, day=day)
-            
+            if league == 10048705 or league == '10048705':
+                liga = 12
+            else:
+                liga = 8
 
             for page in range(1, pages + 1):
                 res = self.get_old_matches(league_id=league, page=page, day=day)
@@ -99,7 +102,7 @@ class BetsAPIClient:
                         'home_goals': home_goals,
                         'away_goals': away_goals,
                         'tot_goals': (home_goals + away_goals) if home_goals is not None and away_goals is not None else None,
-                        
+                        'league': liga
                     }
                     di.append(dic)
 
@@ -234,9 +237,13 @@ class BetsAPIClient:
         results = []
         ts_list = []
         times = []
-        times_id = []  # Agora será uma lista de tuplas (home_id, away_id)
+        times_id = []
+        leagues_ids = []  # Agora será uma lista de tuplas (home_id, away_id)
         for league in leagues:
-            
+            if league == 10048705 or league == '10048705':
+                liga = 12
+            else:
+                liga = 8
             page = 1
             while True:
                 res, ts, tm, ti, total_pages = self.get_fifa_matches_with_total(league_id=league, page=page, day=day)
@@ -245,13 +252,14 @@ class BetsAPIClient:
                 ts_list.extend(ts)
                 times.extend(tm)
                 times_id.extend(ti) 
+                leagues_ids.extend(liga)
                 
                  # Já são tuplas individuais por jogo
                 if page >= total_pages:
                     break
                 page += 1
 
-        return results, ts_list, times, times_id
+        return results, ts_list, times, times_id, leagues_ids
     
     def getUpcoming_check(self, sport_id: int = 1, leagues: List[Any] = [], day: str = data_atual()) -> List[Any]:
         results = []

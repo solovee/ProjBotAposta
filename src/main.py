@@ -47,7 +47,7 @@ apiclient = BetsAPIClient(api_key=api)
 
 #df = pd.read_csv('src\resultados_novo.csv')
 #CSV_FILE = r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_novo.csv"
-CSV_FILE = '../resultados_60_ofc.csv'
+CSV_FILE = 'resultados_60.csv'
 #lista dos thresholds das nns
 lista_th = [0.575,0.4,0.575,0.575,0.575,0.575]
 list_checa = []
@@ -582,14 +582,14 @@ def pegaJogosDoDia():
             dia_seg = (datetime.now() + timedelta(days=1)).strftime('%Y%m%d')
             dias_para_buscar.append(dia_seg)
 
-        ids, tempo, nome_time, times_id = [], [], [], []
+        ids, tempo, nome_time, times_id, leagues_ids = [], [], [], [], []
         for dia in dias_para_buscar:
-            r_ids, r_tempo, r_nome_time, r_times_id = apiclient.getUpcoming(leagues=apiclient.leagues_ids, day=dia)
+            r_ids, r_tempo, r_nome_time, r_times_id, r_leagues_ids = apiclient.getUpcoming(leagues=apiclient.leagues_ids, day=dia)
             ids.extend(r_ids)
             tempo.extend(r_tempo)
             nome_time.extend(r_nome_time)
             times_id.extend(r_times_id)
-
+            leagues_ids.extend(r_leagues_ids)
         if not ids:
             logger.warning("⚠️ Nenhum ID de jogo retornado pela API")
             return pd.DataFrame()
@@ -600,7 +600,7 @@ def pegaJogosDoDia():
             "times": k,
             "home": z,
             "away": t
-        } for i, h, k, (z, t) in zip(ids, tempo, nome_time, times_id)]
+        } for i, h, k, (z, t),p in zip(ids, tempo, nome_time, times_id,leagues_ids)]
         print(dados)
         dados_dataframe = pd.DataFrame(dados)
         dados_dataframe = dados_dataframe[~dados_dataframe['id_jogo'].isin(programado)]
@@ -658,6 +658,7 @@ def acao_do_jogo(row):
         df_odds['home'] = int(row['home'])
         df_odds['away'] = int(row['away'])
         df_odds['times'] = str(row['times'])
+        df_odds['league'] = int(row['league'])
         
         id = row['id_jogo']
         df_odds = NN.preProcessGeneral_x(df_odds)

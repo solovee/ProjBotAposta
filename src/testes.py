@@ -478,4 +478,4 @@ def processar_dia_atual():
 processar_dia_atual()
 '''
 
-main.checa()
+main.criaTodasNNs()
