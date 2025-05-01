@@ -10,7 +10,6 @@ env/
 venv/
 .venv/
 *.log
-*.csv
-*.txt
 *.keras
-!requirements.txt 
+!requirements.txt
+!resultados_60_ofc.csv 

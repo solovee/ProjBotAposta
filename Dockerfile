@@ -9,14 +9,23 @@ RUN apt-get update && \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy all files first
-COPY . .
+# Copy requirements first
+COPY requirements.txt .
 
 # Install Python packages
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy the rest of the application
+COPY . .
+
 # Set Python path
 ENV PYTHONPATH=/app
+
+# Create necessary directories
+RUN mkdir -p /app/data
+
+# Copy CSV file to the correct location
+RUN cp resultados_60_ofc.csv /app/resultados_60_ofc.csv
 
 # Command to run the application
 CMD ["python", "src/main.py"] 
