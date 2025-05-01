@@ -9,14 +9,11 @@ RUN apt-get update && \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy only requirements first
-COPY requirements.txt ./
+# Copy all files first
+COPY . .
 
 # Install Python packages
 RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy project files
-COPY . .
 
 # Set Python path
 ENV PYTHONPATH=/app
