@@ -25,7 +25,7 @@ ENV PYTHONPATH=/app
 RUN mkdir -p /app/data
 
 # Copy CSV file to the correct location
-RUN cp resultados_60_ofc.csv /app/resultados_60_ofc.csv
+COPY resultados_60_ofc.csv /app/resultados_60_ofc.csv
 
 # Command to run the application
 CMD ["python", "src/main.py"] 
