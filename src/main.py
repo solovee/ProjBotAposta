@@ -13,15 +13,8 @@ import logging
 import json
 import threading
 import os
-from fastapi import FastAPI
-import uvicorn
 import signal
 import sys
-import asyncio
-from contextlib import asynccontextmanager
-
-#tentar arrumar as estatisticas
-#ver os team_ah e type_gl
 
 # Configure logging
 logging.basicConfig(
@@ -35,13 +28,12 @@ logger = logging.getLogger(__name__)
 
 #NORMALIZAR OS DADOS
 
-
 load_dotenv()
 
 api = os.getenv("API_KEY")
 chat_id = int(os.getenv("CHAT_ID"))
 # -1002610837223
-chats = [chat_id]
+chats = [chat_id,-1002610837223]
 
 
 
@@ -441,7 +433,6 @@ def jogos_do_dia1():
 
 def checa():
     df_odds = jogos_do_dia()
-    df_odds.to_csv('df_odds.csv')
 
     resultados_verificados = []
     contador_none = 0
@@ -456,7 +447,6 @@ def checa():
 
     df_filtrado = df_odds[df_odds['id'].isin(ids)]
 
-    df_filtrado.to_csv('df_filtrado.csv')
 
     for aposta in list_checa:
         resultado = verificar_aposta(aposta, df_odds)
@@ -473,7 +463,6 @@ def checa():
         })
     
     df_verificacao = pd.DataFrame(resultados_verificados)
-    df_verificacao.to_csv('verificcao.csv')
 
     # Conversão para garantir que o 'resultado' seja numérico, com None sendo preservado
     df_verificacao['resultado'] = pd.to_numeric(df_verificacao['resultado'], errors='coerce')
@@ -560,24 +549,29 @@ def loop_pega_jogos():
         time_module.sleep(10 * 60)  # 20 minutos
 
 def main():
-    logger.info("🚀 Iniciando aplicação de apostas esportivas")
-    # Thread para verificar virada do dia e resetar programado
-    threading.Thread(target=checa_virada_do_dia, daemon=True).start()
-
-    agendar_verificacao_diaria()
-
-
-    # Agendar processamento do dia anterior
-    agendar_processar_dia_anterior()
-
-    # Agendar criação das NNs
-    agendar_criacao_nns()
-
-    # Iniciar loop que pega os jogos de tempos em tempos
-    threading.Thread(target=loop_pega_jogos, daemon=True).start()
-    tb.start_bot()
-    logger.info("✅ Todos os serviços foram iniciados")
+    # Set up signal handlers
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
     
+    logger.info("Starting background worker...")
+    
+    # Start the day check thread
+    threading.Thread(target=checa_virada_do_dia, daemon=True).start()
+    
+    # Schedule initial tasks
+    agendar_processar_dia_anterior()
+    agendar_criacao_nns()
+    agendar_verificacao_diaria()
+    
+    # Start the main loop
+    while True:
+        try:
+            loop_pega_jogos()
+            time_module.sleep(1200)  # Sleep for 20 minutes
+        except Exception as e:
+            logger.error(f"Error in main loop: {e}")
+            time_module.sleep(60)  # Sleep for 1 minute before retrying
+
 def pegaJogosDoDia():
     try:
         dias_para_buscar = [str(data_hoje)]
@@ -958,7 +952,7 @@ def df_para_string(df):
 
 
 def predicta_over_under(prepOverUnder_df, dados):
-    model_over_under = tf.keras.models.load_model('model_over_under.keras')
+    model_over_under = tf.keras.models.load_model('model_binario_over_under.keras')
     preds = model_over_under.predict(prepOverUnder_df)
 
     pred_over = float(preds[0])
@@ -1298,51 +1292,12 @@ def processar_dia_anterior():
 # Variável global para controlar o estado do servidor
 server_running = True
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Startup
-    global server_running
-    server_running = True
-    threading.Thread(target=main, daemon=True).start()
-    yield
-    # Shutdown
-    server_running = False
-
-app = FastAPI(lifespan=lifespan)
-
-@app.get("/")
-def read_root():
-    return {"status": "Rodando"}
-
-@app.get("/health")
-def health_check():
-    return {"status": "healthy"}
-
 def signal_handler(signum, frame):
-    global server_running
-    server_running = False
+    logger.info("Received shutdown signal. Cleaning up...")
     sys.exit(0)
 
 if __name__ == "__main__":
-    # Registrar handlers de sinal
-    signal.signal(signal.SIGTERM, signal_handler)
-    signal.signal(signal.SIGINT, signal_handler)
-    
-    # Configurações do uvicorn para produção
-    config = uvicorn.Config(
-        app,
-        host="0.0.0.0",
-        port=int(os.environ.get("PORT", 10000)),
-        workers=1,
-        timeout_keep_alive=60,
-        log_level="info",
-        access_log=True,
-        proxy_headers=True,
-        forwarded_allow_ips="*"
-    )
-    
-    server = uvicorn.Server(config)
-    server.run()
+    main()
 
 
 

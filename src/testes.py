@@ -477,5 +477,4 @@ def processar_dia_atual():
 # Chamar a função
 processar_dia_atual()
 '''
-
-main.checa()
+main.criaTodasNNs()
