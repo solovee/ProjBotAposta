@@ -27,5 +27,9 @@ RUN mkdir -p /app/data
 # Copy CSV file to the correct location
 COPY resultados_60_ofc.csv /app/resultados_60_ofc.csv
 
+# Copy all model and scaler files
+COPY src/model_*.keras /app/
+COPY src/scaler_*.pkl /app/
+
 # Command to run the application
 CMD ["python", "src/main.py"] 
