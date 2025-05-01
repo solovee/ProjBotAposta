@@ -33,7 +33,7 @@ load_dotenv()
 api = os.getenv("API_KEY")
 chat_id = int(os.getenv("CHAT_ID"))
 # -1002610837223
-chats = [chat_id,-1002610837223]
+chats = [chat_id]
 
 
 
@@ -83,7 +83,6 @@ def agendar_criacao_nns():
     agora = datetime.now()
     alvo = datetime.combine(agora.date(), datetime.min.time()) + timedelta(hours=0, minutes=15)
 
-    # Se o horário atual já passou de 00:15, agendar para o próximo dia
     if agora >= alvo:
         alvo += timedelta(days=1)
 
@@ -92,24 +91,21 @@ def agendar_criacao_nns():
 
     def tarefa():
         logger.info("🧠 Iniciando criação de modelos de rede neural...")
-        
         criaTodasNNs()
         logger.info("✅ Modelos de rede neural criados com sucesso")
         print(lista_th)
 
     threading.Timer(delay, tarefa).start()
 
+
 def agendar_verificacao_diaria():
     agora = datetime.now()
     
-    # Define o horário alvo (00:30)
     alvo = datetime.combine(agora.date(), time(0, 30))
     
-    # Se já passou das 00:30 hoje, agenda para amanhã
     if agora >= alvo:
         alvo += timedelta(days=1)
     
-    # Calcula o delay em segundos
     delay = (alvo - agora).total_seconds()
     
     logger.info(f"⏰ Agendando verificação diária para {alvo.strftime('%d/%m/%Y %H:%M')}")
@@ -120,14 +116,12 @@ def agendar_verificacao_diaria():
             global list_checa
             checa()  # Executa a verificação
             list_checa = []
-
         except Exception as e:
             logger.error(f"❌ Erro na verificação diária: {e}")
         
         # Reagenda para o próximo dia
         agendar_verificacao_diaria()
 
-    # Cria o timer
     threading.Timer(delay, tarefa).start()
 
 def verificar_aposta(aposta, df_resultados):
@@ -546,7 +540,7 @@ def loop_pega_jogos():
             pegaOddsEvento(df_jogos)
         else:
             logger.info("ℹ️ Nenhum jogo encontrado por agora")
-        time_module.sleep(10 * 60)  # 20 minutos
+        time_module.sleep(10 * 60)  # 10 minutos, ajustado para o intervalo correto
 
 def main():
     # Set up signal handlers
@@ -558,25 +552,22 @@ def main():
     # Start the day check thread
     threading.Thread(target=checa_virada_do_dia, daemon=True).start()
     
-    # Schedule initial tasks
+    # Start the continuous loop for fetching games
+    threading.Thread(target=loop_pega_jogos, daemon=True).start()  # Thread to fetch games continuously
+    
+    # Schedule daily tasks
     agendar_processar_dia_anterior()
     agendar_criacao_nns()
     agendar_verificacao_diaria()
-    
-    # Start the main loop
+
+    # Start the main loop to keep the program alive and running
     while True:
-        try:
-            loop_pega_jogos()
-            time_module.sleep(1200)  # Sleep for 20 minutes
-        except Exception as e:
-            logger.error(f"Error in main loop: {e}")
-            time_module.sleep(60)  # Sleep for 1 minute before retrying
+        time_module.sleep(60)  # Sleep to keep the program running and allow threads to work
 
 def pegaJogosDoDia():
     try:
         dias_para_buscar = [str(data_hoje)]
         if datetime.now().hour >= 20:
-            # Se já for 21h (ou depois), pega também os jogos de amanhã
             dia_seg = (datetime.now() + timedelta(days=1)).strftime('%Y%m%d')
             dias_para_buscar.append(dia_seg)
 
@@ -599,17 +590,15 @@ def pegaJogosDoDia():
             "home": z,
             "away": t
         } for i, h, k, (z, t) in zip(ids, tempo, nome_time, times_id)]
-        print(dados)
+
         dados_dataframe = pd.DataFrame(dados)
         dados_dataframe = dados_dataframe[~dados_dataframe['id_jogo'].isin(programado)]
-
 
         if dados_dataframe.empty:
             logger.info("ℹ️ Todos os jogos já estão programados")
             return dados_dataframe
 
         agora = int(time_module.time())
-
         dados_dataframe['horario'] = dados_dataframe['horario'].astype(int)
         dados_dataframe['send_time'] = dados_dataframe['horario'] - 320
         dados_dataframe = dados_dataframe[dados_dataframe['send_time'] > (agora - (7 * 60))]
