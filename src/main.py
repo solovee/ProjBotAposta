@@ -33,7 +33,7 @@ load_dotenv()
 api = os.getenv("API_KEY")
 chat_id = int(os.getenv("CHAT_ID"))
 # -1002610837223
-chats = [chat_id]
+chats = [chat_id,-1002610837223]
 
 
 
