@@ -234,8 +234,13 @@ class BetsAPIClient:
         results = []
         ts_list = []
         times = []
-        times_id = []  # Agora será uma lista de tuplas (home_id, away_id)
+        times_id = [] 
+        league_durations = [] # Agora será uma lista de tuplas (home_id, away_id)
         for league in leagues:
+            if league == 10048705 or league == '10048705':
+                league_duration = 12
+            elif league == 10047781 or league == '10047781':
+                league_duration = 8
             
             page = 1
             while True:
@@ -245,13 +250,14 @@ class BetsAPIClient:
                 ts_list.extend(ts)
                 times.extend(tm)
                 times_id.extend(ti) 
+                league_durations.append(league_duration)
                 
                  # Já são tuplas individuais por jogo
                 if page >= total_pages:
                     break
                 page += 1
 
-        return results, ts_list, times, times_id
+        return results, ts_list, times, times_id, league_durations
     
     def getUpcoming_check(self, sport_id: int = 1, leagues: List[Any] = [], day: str = data_atual()) -> List[Any]:
         results = []

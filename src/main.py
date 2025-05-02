@@ -33,7 +33,7 @@ load_dotenv()
 api = os.getenv("API_KEY")
 chat_id = int(os.getenv("CHAT_ID"))
 # -1002610837223
-chats = [chat_id,-1002610837223]
+chats = [chat_id]
 
 
 
@@ -43,7 +43,7 @@ apiclient = BetsAPIClient(api_key=api)
 
 #df = pd.read_csv('src\resultados_novo.csv')
 #CSV_FILE = r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_novo.csv"
-CSV_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'resultados_60_ofc.csv')
+CSV_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'resultados_60.csv')
 #lista dos thresholds das nns
 lista_th = [0.575,0.4,0.575,0.575,0.575,0.575]
 list_checa = []
@@ -571,13 +571,14 @@ def pegaJogosDoDia():
             dia_seg = (datetime.now() + timedelta(days=1)).strftime('%Y%m%d')
             dias_para_buscar.append(dia_seg)
 
-        ids, tempo, nome_time, times_id = [], [], [], []
+        ids, tempo, nome_time, times_id, league_durations = [], [], [], [], []
         for dia in dias_para_buscar:
-            r_ids, r_tempo, r_nome_time, r_times_id = apiclient.getUpcoming(leagues=apiclient.leagues_ids, day=dia)
+            r_ids, r_tempo, r_nome_time, r_times_id, r_league_durations = apiclient.getUpcoming(leagues=apiclient.leagues_ids, day=dia)
             ids.extend(r_ids)
             tempo.extend(r_tempo)
             nome_time.extend(r_nome_time)
             times_id.extend(r_times_id)
+            league_durations.extend(r_league_durations)
 
         if not ids:
             logger.warning("⚠️ Nenhum ID de jogo retornado pela API")
@@ -588,8 +589,9 @@ def pegaJogosDoDia():
             "horario": h,
             "times": k,
             "home": z,
-            "away": t
-        } for i, h, k, (z, t) in zip(ids, tempo, nome_time, times_id)]
+            "away": t,
+            "league_duration": d
+        } for i, h, k, (z, t), d in zip(ids, tempo, nome_time, times_id, league_durations)]
 
         dados_dataframe = pd.DataFrame(dados)
         dados_dataframe = dados_dataframe[~dados_dataframe['id_jogo'].isin(programado)]
@@ -645,6 +647,7 @@ def acao_do_jogo(row):
         df_odds['home'] = int(row['home'])
         df_odds['away'] = int(row['away'])
         df_odds['times'] = str(row['times'])
+        df_odds['league'] = int(row['league_duration'])
         
         id = row['id_jogo']
         df_odds = NN.preProcessGeneral_x(df_odds)
@@ -804,9 +807,9 @@ def preve(df_linha, id):
 
 
             if (linha_gl is not None and (res_goal_line == melhor)):
-                if (lista_preds_true[4] == 1):
+                if (linha_gl == 1):
                     dados_temp = dados_gl.iloc[[0]].copy()
-                elif (lista_preds_true[4] == 2):
+                elif (linha_gl == 2):
                     dados_temp = dados_gl.iloc[[1]].copy()
 
                 dados_temp['🔔 Jogo'] = times_para_jogo(str(dados_temp['times'].iloc[0]))
@@ -835,11 +838,11 @@ def preve(df_linha, id):
                 })
 
             if (type_dc is not None and (res_double_chance == melhor)):
-                if (lista_preds_true[6] == 1):
+                if (type_dc == 1):
                     dados_temp = dados_dc.iloc[[0]].copy()
-                elif (lista_preds_true[6] == 2):
+                elif (type_dc == 2):
                     dados_temp = dados_dc.iloc[[1]].copy()
-                elif (lista_preds_true[6] == 3):
+                elif (type_dc == 3):
                     dados_temp = dados_dc.iloc[[2]].copy()
 
                 dados_temp['🔔 Jogo'] = times_para_jogo(str(dados_temp['times'].iloc[0]))
@@ -866,9 +869,9 @@ def preve(df_linha, id):
                 })
 
             if (time_draw_no_bet is not None and (res_draw_no_bet == melhor)):
-                if (lista_preds_true[8] == 1):
+                if (time_draw_no_bet == 1):
                     dados_temp = dados_dnb.iloc[[0]].copy()
-                elif (lista_preds_true[8] == 2):
+                elif (time_draw_no_bet == 2):
                     dados_temp = dados_dnb.iloc[[1]].copy()
 
                 dados_temp['🔔 Jogo'] = times_para_jogo(str(dados_temp['times'].iloc[0]))

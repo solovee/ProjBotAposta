@@ -21,3 +21,17 @@
                    'linha':'-1.0',
                    'odd': 1.444,
                    'jogo': 'ARGENTINA (SALFOUR) X GERMANY (WHY)'}
+
+
+
+
+'odd_goals_over1', 'odd_goals_under1', 'media_goals_home', 'media_goals_away', 'h2h_mean', 'league']
+
+ ['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean', 'asian_handicap_1', 'asian_handicap_2', 'odds', 'league', 'team_ah_1.0', 'team_ah_2.0']
+
+ ['h2h_mean', 'media_goals_home', 'media_goals_away', 'odds_gl', 'goal_line_1', 'goal_line_2', 'league', 'type_gl_1.0', 'type_gl_2.0']
+
+  ['media_goals_home', 'media_goals_away', 'media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds', 'league', 'double_chance_type_1', 'double_chance_type_2', 'double_chance_type_3']
+
+
+  ['media_goals_home', 'media_goals_away', 'media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds', 'league', 'draw_no_bet_team_1.0', 'draw_no_bet_team_2.0'] 
