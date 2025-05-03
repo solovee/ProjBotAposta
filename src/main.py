@@ -553,7 +553,7 @@ def main():
     threading.Thread(target=checa_virada_do_dia, daemon=True).start()
     
     # Start the continuous loop for fetching games
-    threading.Thread(target=loop_pega_jogos, daemon=True).start()  # Thread to fetch games continuously
+    threading.Thread(target=loop_pega_jogos, daemon=True).start() 
     
     # Schedule daily tasks
     agendar_processar_dia_anterior()
@@ -570,10 +570,13 @@ def pegaJogosDoDia():
         if datetime.now().hour >= 20:
             dia_seg = (datetime.now() + timedelta(days=1)).strftime('%Y%m%d')
             dias_para_buscar.append(dia_seg)
+        logger.info(f"📅 Dias para buscar: {dias_para_buscar}")
 
         ids, tempo, nome_time, times_id, league_durations = [], [], [], [], []
         for dia in dias_para_buscar:
+            logger.info(f"🔍 Buscando jogos para o dia {dia}")
             r_ids, r_tempo, r_nome_time, r_times_id, r_league_durations = apiclient.getUpcoming(leagues=apiclient.leagues_ids, day=dia)
+            logger.info(f"📊 Jogos encontrados: {len(r_ids)}")
             ids.extend(r_ids)
             tempo.extend(r_tempo)
             nome_time.extend(r_nome_time)
@@ -594,7 +597,11 @@ def pegaJogosDoDia():
         } for i, h, k, (z, t), d in zip(ids, tempo, nome_time, times_id, league_durations)]
 
         dados_dataframe = pd.DataFrame(dados)
+        logger.info(f"📋 Total de jogos antes da filtragem: {len(dados_dataframe)}")
+        print(dados_dataframe)
+        
         dados_dataframe = dados_dataframe[~dados_dataframe['id_jogo'].isin(programado)]
+        logger.info(f"📋 Jogos após remover programados: {len(dados_dataframe)}")
 
         if dados_dataframe.empty:
             logger.info("ℹ️ Todos os jogos já estão programados")
@@ -603,8 +610,16 @@ def pegaJogosDoDia():
         agora = int(time_module.time())
         dados_dataframe['horario'] = dados_dataframe['horario'].astype(int)
         dados_dataframe['send_time'] = dados_dataframe['horario'] - 320
+        logger.info(f"⏰ Tempo atual: {agora}")
+        print(dados_dataframe)
+        logger.info(f"⏰ Primeiro horário de jogo: {dados_dataframe['horario'].min()}")
+        logger.info(f"⏰ Primeiro send_time: {dados_dataframe['send_time'].min()}")
+        
         dados_dataframe = dados_dataframe[dados_dataframe['send_time'] > (agora - (7 * 60))]
+        logger.info(f"📋 Jogos após filtragem por horário: {len(dados_dataframe)}")
+        
         dados_dataframe = dados_dataframe.sort_values(by="horario").reset_index(drop=True)
+        print(dados_dataframe)
 
         programados = dados_dataframe['id_jogo'].tolist()
         programado.extend(programados)
@@ -648,6 +663,7 @@ def acao_do_jogo(row):
         df_odds['away'] = int(row['away'])
         df_odds['times'] = str(row['times'])
         df_odds['league'] = int(row['league_duration'])
+        df_odds['horario'] = row['horario']  # Add game time to df_odds
         
         id = row['id_jogo']
         df_odds = NN.preProcessGeneral_x(df_odds)
@@ -680,7 +696,6 @@ def criaTodasNNs():
     logger.info(f"📊 Thresholds definidos: {lista_th}")
 
 def preve(df_linha, id):
-
     logger.info("🔮 Fazendo previsões para o jogo atual...")
     try:
         if not lista_th:
@@ -761,7 +776,8 @@ def preve(df_linha, id):
                     dados_OU['⭐ Odd'] = dados_OU['odd_goals_under1']
                 dados_OU.drop(columns=['odd_goals_over1','odd_goals_under1'], inplace=True)
                 dados_OU['⚽ Linha'] = '2.5'
-                dados_OU = dados_OU[['🔔 Jogo', '📊 Tipo', '⭐ Odd', '⚽ Linha']]
+                dados_OU['⏰ Horário'] = datetime.fromtimestamp(df_linha['horario'].iloc[0]).strftime('%H:%M')
+                dados_OU = dados_OU[['🔔 Jogo','⏰ Horário', '📊 Tipo', '⭐ Odd', '⚽ Linha']]
                 list_true.append(dados_OU)
                 list_check.append({
                     'id': id,
@@ -793,7 +809,8 @@ def preve(df_linha, id):
                 team_val = dados_temp['🚀 time'].iloc[0]
                 dados_temp.at[dados_temp.index[0], '🚀 time'] = home if team_val == 1 else away
                 dados_temp = dados_temp.rename(columns={'odds': '⭐ Odd'})
-                dados_temp = dados_temp[['🔔 Jogo','🚀 time', '⭐ Odd', '⚽ handicap']]
+                dados_temp['⏰ Horário'] = datetime.fromtimestamp(df_linha['horario'].iloc[0]).strftime('%H:%M')
+                dados_temp = dados_temp[['🔔 Jogo','⏰ Horário','🚀 time', '⭐ Odd', '⚽ handicap']]
                 list_true.append(dados_temp)
                 list_check.append({
                     'id': id,
@@ -826,7 +843,8 @@ def preve(df_linha, id):
                 tipo_valor = dados_temp['📊 Tipo'].iloc[0]
                 dados_temp.at[dados_temp.index[0], '📊 Tipo'] = 'over' if tipo_valor == 1 else 'under'
                 dados_temp.drop(columns=['goal_line_1', 'goal_line_2', 'times'], inplace=True)
-                dados_temp = dados_temp[['🔔 Jogo','📊 Tipo','⭐ Odd','⚽ Linha']]
+                dados_temp['⏰ Horário'] = datetime.fromtimestamp(df_linha['horario'].iloc[0]).strftime('%H:%M')
+                dados_temp = dados_temp[['🔔 Jogo','⏰ Horário','📊 Tipo','⭐ Odd','⚽ Linha']]
                 list_true.append(dados_temp)
                 list_check.append({
                     'id': id,
@@ -858,7 +876,8 @@ def preve(df_linha, id):
                 dados_temp = dados_temp.rename(columns={'double_chance': '📊 Double Chance'})
                 dados_temp = dados_temp.rename(columns={'odds': '⭐ Odd'})
                 dados_temp.drop('times', axis=1, inplace=True)
-                dados_temp = dados_temp[['🔔 Jogo', '📊 Double Chance', '⭐ Odd']]
+                dados_temp['⏰ Horário'] = datetime.fromtimestamp(df_linha['horario'].iloc[0]).strftime('%H:%M')
+                dados_temp = dados_temp[['🔔 Jogo','⏰ Horário', '📊 Double Chance', '⭐ Odd']]
                 list_true.append(dados_temp)
                 list_check.append({
                     'id': id,
@@ -881,7 +900,8 @@ def preve(df_linha, id):
                 dados_temp = dados_temp.rename(columns={'draw_no_bet_team': '📊 Draw No Bet'})
                 dados_temp = dados_temp.rename(columns={'odds': '⭐ Odd'})
                 dados_temp.drop('times', axis=1, inplace=True)
-                dados_temp = dados_temp[['🔔 Jogo','📊 Draw No Bet', '⭐ Odd']]
+                dados_temp['⏰ Horário'] = datetime.fromtimestamp(df_linha['horario'].iloc[0]).strftime('%H:%M')
+                dados_temp = dados_temp[['🔔 Jogo','⏰ Horário','📊 Draw No Bet', '⭐ Odd']]
                 list_true.append(dados_temp)
                 list_check.append({
                     'id': id,

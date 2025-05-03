@@ -78,6 +78,10 @@ class BetsAPIClient:
 
         for league in leagues:
             pages = self.pagesOld(league_id=league, day=day)
+            if league == 10048705 or league == "10048705":
+                liga = 12
+            elif league == 10047781 or league == "10047781":
+                liga = 8
             
 
             for page in range(1, pages + 1):
@@ -96,6 +100,7 @@ class BetsAPIClient:
                         'id': registro['id'],
                         'home': registro['home']['id'],
                         'away': registro['away']['id'],
+                        'league': liga,
                         'home_goals': home_goals,
                         'away_goals': away_goals,
                         'tot_goals': (home_goals + away_goals) if home_goals is not None and away_goals is not None else None,
@@ -303,7 +308,7 @@ class BetsAPIClient:
         times_id = []  # Lista de tuplas (home_id, away_id)
 
         for x in resp['results']:
-            if (x.get('ss') is None) or (x.get('time_status') == 0) or (int(x.get('time',0)) > time.time()):
+            if (x.get('time_status') == 0) or (int(x.get('time',0)) > time.time()):
                 res.append(x['id'])
                 ts.append(x['time'])
                 times.append((x['home']['name'], x['away']['name']))

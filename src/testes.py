@@ -477,4 +477,18 @@ def processar_dia_atual():
 # Chamar a função
 processar_dia_atual()
 '''
-main.criaTodasNNs()
+
+import pandas as pd
+
+CSV_FILE = "resultados_60.csv"
+
+# Carrega o CSV
+df = pd.read_csv(CSV_FILE, dtype={"event_day": str})
+
+# Ordena do mais recente para o mais antigo
+df_ordenado = df.sort_values(by="event_day", ascending=False)
+
+# Salva no mesmo arquivo
+df_ordenado.to_csv(CSV_FILE, index=False)
+
+print("✅ CSV ordenado do mais recente para o mais antigo.")
