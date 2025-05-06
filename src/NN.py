@@ -7,8 +7,14 @@ from dotenv import load_dotenv
 import os
 from datetime import datetime, timedelta
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
 import logging
 import pickle
+import xgboost as xgb
+import joblib
+from sklearn.linear_model import LogisticRegression
+from autogluon.tabular import TabularPredictor
+import pandas as pd
 #tirar input shape
 
 logger = logging.getLogger(__name__)
@@ -78,6 +84,7 @@ def preProcessGeneral_x(df):
 def criaNNs():
     df = df_temp.copy()
     df = preProcessGeneral(df)
+    df.to_csv('df_temp_preprocessado.csv', index=False)
     z_over_under_positivo, z_over_under_negativo = NN_over_under(df)
     z_handicap = NN_handicap(df)
     z_goal_line = NN_goal_line(df)
@@ -1075,6 +1082,13 @@ def NN_over_under(df):
         pickle.dump(scaler_over_under, f)
     x_train, x_test, y_train, y_test = split(X_standardized,y)
     
+    model_xgb = xgb.XGBClassifier(n_estimators=100, learning_rate=0.1, max_depth=6, use_label_encoder=False, eval_metric='logloss')
+    model_xgb.fit(x_train, y_train)
+    y_pred = model_xgb.predict(x_test)
+    print("Acurácia OU xgb:", accuracy_score(y_test, y_pred))
+    joblib.dump(model_xgb, 'model_xgb_over_under.pkl')
+
+
 
     model_over_under = tf.keras.Sequential([
         tf.keras.layers.Dense(128, activation='relu', input_shape=(x_train.shape[1],)),
@@ -1089,8 +1103,7 @@ def NN_over_under(df):
         tf.keras.layers.Dense(1, activation='sigmoid')  # Saída binária
     ])
     model_over_under.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001), loss=tf.keras.losses.BinaryCrossentropy(), metrics=['accuracy'])
-    hist_bin = model_over_under.fit(x_train, y_train, epochs=30)
-    print(model_over_under.input_shape)
+    hist_bin = model_over_under.fit(x_train, y_train, epochs=30, validation_data=(x_test, y_test))
 
     y_pred_probs = model_over_under.predict(x_test)
     
@@ -1098,8 +1111,51 @@ def NN_over_under(df):
     melhor_z_negativo = encontrar_melhor_z_binario_negativo(y_test, y_pred_probs)
  
     model_over_under.save("model_binario_over_under.keras")  # Salva em formato nativo do Keras
+    y_pred_probs_nn = model_over_under.predict(x_train).flatten()
+    y_pred_probs_xgb = model_xgb.predict(x_train).flatten()
+    X_meta = np.column_stack((y_pred_probs_nn, y_pred_probs_xgb))
+    
+    meta_model = LogisticRegression()  # ou XGBoost para um meta-modelo mais forte
+    meta_model.fit(X_meta, y_train)
+    y_pred_meta = meta_model.predict(X_meta)
+    joblib.dump(meta_model, 'meta_model_over_under.pkl')
+    print("Acurácia OU meta:", accuracy_score(y_train, y_pred_meta))
+
     return melhor_z_positivo, melhor_z_negativo
 
+''''
+def NN_over_under(df):
+    # Seleciona e prepara os dados
+    df_temporario = df[['odd_goals_over1', 'odd_goals_under1', 'media_goals_home',
+                        'media_goals_away', 'h2h_mean', 'res_goals_over_under', 'league']].copy()
+    df_temporario.dropna(inplace=True)
+
+    print("Colunas de X (Over/Under):", df_temporario.drop(columns='res_goals_over_under').columns.tolist())
+
+    # Define a variável alvo
+    label = 'res_goals_over_under'
+
+    # Treinamento com AutoGluon
+    predictor = TabularPredictor(label=label, path='autogluon_over_under_model/', problem_type='binary').fit(
+        train_data=df_temporario,
+        time_limit=600,  # Tempo máximo de treinamento em segundos
+        presets='best_quality'  # Pode trocar por 'medium_quality_faster_train' se quiser mais rápido
+    )
+
+    # Avaliação no próprio conjunto de treino (AutoGluon faz validação interna)
+    performance = predictor.evaluate(df_temporario)
+    print("Acurácia OU AutoGluon:", performance['accuracy'])
+
+    # Probabilidades previstas
+    y_pred_probs = predictor.predict_proba(df_temporario)[1].values  # Probabilidade da classe 1
+
+    # Encontra os melhores thresholds com suas funções já existentes
+    y_true = df_temporario[label].values
+    melhor_z_positivo = encontrar_melhor_z_binario_positivo(y_true, y_pred_probs)
+    melhor_z_negativo = encontrar_melhor_z_binario_negativo(y_true, y_pred_probs)
+
+    return melhor_z_positivo, melhor_z_negativo
+'''
 
 #junta handicaps
 def preparar_df_handicaps(df):
@@ -1108,18 +1164,18 @@ def preparar_df_handicaps(df):
     # Seleciona e renomeia o df_temporario1
     df1 = df[['home','away','media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean',
               'asian_handicap1_1', 'asian_handicap1_2','team_ah1', 'odds_ah1',
-              'ah1_indefinido', 'ah1_negativo', 'ah1_positivo', 'ah1_reembolso', 'league']].copy()
+              'ah1_indefinido', 'ah1_negativo', 'ah1_positivo', 'ah1_reembolso', 'league','favorite_by_odds','odds_ratio']].copy()
     df1.columns = ['home','away','media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean',
                    'asian_handicap_1', 'asian_handicap_2','team_ah', 'odds',
-                   'indefinido', 'negativo', 'positivo', 'reembolso', 'league']
+                   'indefinido', 'negativo', 'positivo', 'reembolso', 'league','favorite_by_odds','odds_ratio']
 
     # Seleciona e renomeia o df_temporario2
     df2 = df[['home','away','media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean',
               'asian_handicap2_1', 'asian_handicap2_2','team_ah2', 'odds_ah2',
-              'ah2_indefinido', 'ah2_negativo', 'ah2_positivo', 'ah2_reembolso', 'league']].copy()
+              'ah2_indefinido', 'ah2_negativo', 'ah2_positivo', 'ah2_reembolso', 'league','favorite_by_odds','odds_ratio']].copy()
     df2.columns = ['home','away','media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean',
                    'asian_handicap_1', 'asian_handicap_2','team_ah', 'odds',
-                   'indefinido', 'negativo', 'positivo', 'reembolso', 'league']
+                   'indefinido', 'negativo', 'positivo', 'reembolso', 'league','favorite_by_odds','odds_ratio']
 
     # Concatena os dois dataframes
     df_final = pd.concat([df1, df2], ignore_index=True)
@@ -1201,39 +1257,51 @@ def prepNNHandicap_X(df=df_temp):
     return X_final, z
 '''
 #NN handicap
+'''
 def NN_handicap(df=df_temp):
+    # Pré-processamento do dataframe
     df_temporario = df[['home','away','media_goals_home', 'media_goals_away','home_h2h_mean', 'away_h2h_mean',
                        'asian_handicap1_1', 'asian_handicap1_2','team_ah1','odds_ah1', 
                        'ah1_indefinido','ah1_negativo', 'ah1_positivo','ah1_reembolso', 
                        'asian_handicap2_1', 'asian_handicap2_2','team_ah2','odds_ah2', 
                        'ah2_indefinido','ah2_negativo', 'ah2_positivo','ah2_reembolso', 'league']].copy()
+    
     df_temporario = preparar_df_handicaps(df_temporario)
     df_temporario = pd.get_dummies(df_temporario, columns=['team_ah'], prefix='team_ah')
     df_temporario = df_temporario[df_temporario['indefinido'] == False]
     df_temporario.dropna(inplace=True)
-    X = df_temporario[['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds', 'league']]
+    
+    # Definição de X e y
+    X = df_temporario[['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean',
+                       'asian_handicap_1', 'asian_handicap_2', 'odds', 'league']]
+    
+    # Normalização
     scaler_handicap = StandardScaler()
     X_standardized = scaler_handicap.fit_transform(X)
+    
     with open('scaler_handicap.pkl', 'wb') as f:
         pickle.dump(scaler_handicap, f)
     
-    X = pd.DataFrame(X_standardized, columns=['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds', 'league']).reset_index(drop=True)
-    type_df = df_temporario[['team_ah_1.0',	'team_ah_2.0']]
-    type_df = type_df.reset_index(drop=True)
-    X_final = pd.concat([X, type_df], axis=1)
-    y = df_temporario[['negativo', 'positivo', 'reembolso']].copy()
+    X = pd.DataFrame(X_standardized, columns=['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean', 
+                                              'asian_handicap1_1', 'asian_handicap1_2', 'odds_ah1', 'league']).reset_index(drop=True)
     
-
+    type_df = df_temporario[['team_ah_1.0', 'team_ah_2.0']].reset_index(drop=True)
+    X_final = pd.concat([X, type_df], axis=1)
+    
     y_binario = df_temporario['positivo'].astype(int)
+    
     print("Colunas de X (handicap):", X_final.columns.tolist())
 
-
-    # 2. Reutilizando o X_final já preparado e normalizado
+    # Divisão de treino e teste
     x_train_bin, x_test_bin, y_train_bin, y_test_bin = split(X_final, y_binario)
-
-
-
-        # 3. Criando o modelo binário
+    
+    # 1. Modelo XGBoost
+    model_xgb = xgb.XGBClassifier(n_estimators=100, learning_rate=0.1, max_depth=6, use_label_encoder=False, eval_metric='logloss')
+    model_xgb.fit(x_train_bin, y_train_bin)
+    y_pred = model_xgb.predict(x_test_bin)
+    print("Acurácia handicap xgb:", accuracy_score(y_test_bin, y_pred))
+    
+    # 2. Modelo Neural Network
     modelo_binario = tf.keras.Sequential([
         tf.keras.layers.Dense(128, activation='relu', input_shape=(x_train_bin.shape[1],)),
         tf.keras.layers.BatchNormalization(),
@@ -1246,62 +1314,168 @@ def NN_handicap(df=df_temp):
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(1, activation='sigmoid')  # Saída binária
     ])
-
+    
     modelo_binario.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001), loss='binary_crossentropy', metrics=['accuracy'])
-
-    # 4. Treinamento
+    
+    # Treinamento da rede neural
     hist_bin = modelo_binario.fit(x_train_bin, y_train_bin, epochs=30)
-    print(modelo_binario.input_shape)
-    y_pred_probs = modelo_binario.predict(x_test_bin)
-    melhor_z_positivo = encontrar_melhor_z_binario_positivo(y_test_bin, y_pred_probs )
-
-    modelo_binario.save("model_handicap_binario.keras")  # Salva em formato nativo do Keras
-
+    
+    # 3. Obtenção das previsões de ambos os modelos
+    y_pred_probs_nn = modelo_binario.predict(x_test_bin).flatten()
+    y_pred_probs_xgb = model_xgb.predict(x_test_bin).flatten()
+    
+    # Empilhamento das previsões
+    X_meta = np.column_stack((y_pred_probs_nn, y_pred_probs_xgb))
+    
+    # 4. Meta-modelo: Logistic Regression
+    meta_model = LogisticRegression()
+    meta_model.fit(X_meta, y_test_bin)
+    
+    # Previsões do meta-modelo
+    y_pred_meta = meta_model.predict(X_meta)
+    
+    # Avaliação do meta-modelo
+    print("Acurácia do meta-modelo:", accuracy_score(y_test_bin, y_pred_meta))
+    
+    # Salvando os modelos
+    modelo_binario.save("model_handicap_binario.keras")  # Rede neural
+    joblib.dump(model_xgb, 'model_xgb_handicap.pkl')  # XGBoost
+    joblib.dump(meta_model, 'meta_model_handicap.pkl')  # Meta-modelo
+    
+    melhor_z_positivo = encontrar_melhor_z_binario_positivo(y_test_bin, y_pred_probs_nn)
+    
     return melhor_z_positivo
+'''
+from autogluon.tabular import TabularPredictor
+import tempfile
+import shutil
+
+def NN_handicap(df=df_temp):
+    # Seleção inicial das colunas
+    df_temporario = df[['home','away','media_goals_home', 'media_goals_away','home_h2h_mean', 'away_h2h_mean',
+                        'asian_handicap1_1', 'asian_handicap1_2','team_ah1','odds_ah1', 
+                        'ah1_indefinido','ah1_negativo', 'ah1_positivo','ah1_reembolso', 
+                        'asian_handicap2_1', 'asian_handicap2_2','team_ah2','odds_ah2', 
+                        'ah2_indefinido','ah2_negativo', 'ah2_positivo','ah2_reembolso', 'league']].copy()
+
+    # Pré-processamento
+    df_temporario['favorite_by_odds'] = df_temporario['odds_ah1'] < df_temporario['odds_ah2']
+    df_temporario['odds_ratio'] = df_temporario['odds_ah1'] / df_temporario['odds_ah2']
+    df_temporario = preparar_df_handicaps(df_temporario)
+    df_temporario = pd.get_dummies(df_temporario, columns=['team_ah'], prefix='team_ah')
+    df_temporario = df_temporario[df_temporario['indefinido'] == False]
+    df_temporario['goals_diff'] = df_temporario['media_goals_home'] - df_temporario['media_goals_away']
+    df_temporario['h2h_diff'] = df_temporario['home_h2h_mean'] - df_temporario['away_h2h_mean']
+    
+
+
+
+
+    # Tratamento de nulos e tipos problemáticos
+    df_temporario['positivo'] = pd.to_numeric(df_temporario['positivo'], errors='coerce')
+    df_temporario.dropna(subset=['positivo'], inplace=True)
+
+    # Feature set e target
+    X = df_temporario[['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean',
+                       'asian_handicap_1', 'asian_handicap_2', 'odds', 'league','goals_diff','h2h_diff','favorite_by_odds','odds_ratio']].copy()
+
+    # Adiciona colunas dummies com segurança
+    for col in ['team_ah_1.0', 'team_ah_2.0']:
+        if col not in df_temporario.columns:
+            df_temporario[col] = 0
+        X[col] = df_temporario[col]
+
+    y = df_temporario['positivo'].astype(int).reset_index(drop=True)
+    X.reset_index(drop=True, inplace=True)
+
+    print("Colunas de X (handicap):", X.columns.tolist())
+
+    if y.nunique() < 2:
+        print("Variável target com menos de 2 classes. Retornando None.")
+        return None
+
+    # Split treino e teste
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    df_ag_train = X_train.copy()
+    df_ag_train['target'] = y_train
+
+    df_ag_test = X_test.copy()
+    df_ag_test['target'] = y_test
+
+    # Diretório temporário para o modelo
+    temp_dir = tempfile.mkdtemp()
+
+    # Treinamento com AutoGluon
+    predictor = TabularPredictor(label='target', path=temp_dir, problem_type='binary').fit(
+        df_ag_train,
+        presets='best_quality',
+        time_limit=1000
+    )
+
+    # Leaderboard e seleção do melhor modelo com try/except
+    leaderboard = predictor.leaderboard(df_ag_train, silent=True)
+    try:
+        best_model_name = predictor.model_best
+        best_model_score = leaderboard.loc[leaderboard['model'] == best_model_name, 'score_val'].values[0]
+    except:
+        best_model_name = leaderboard.loc[leaderboard['score_val'].idxmax(), 'model']
+        best_model_score = leaderboard.loc[leaderboard['score_val'].idxmax(), 'score_val']
+
+    print(f"\nMelhor modelo para Handicap: {best_model_name}")
+    print(f"Acurácia no treino (validação interna): {best_model_score:.4f}")
+    
+
+    # Salvar modelo final
+    predictor_path = "autogluon_handicap_model"
+    shutil.move(temp_dir, predictor_path)
+
+    # Recarrega o modelo salvo
+    predictor = TabularPredictor.load(predictor_path)
+
+    # Predição no conjunto de teste
+    y_pred = predictor.predict(df_ag_test.drop(columns=['target']), model=best_model_name)
+
+    # Avaliação
+    y_true = df_ag_test['target']
+    print("\nMétricas de Avaliação no conjunto de teste (Handicap):")
+    print(f"Acurácia: {accuracy_score(y_true, y_pred):.4f}")
+    print(f"Precisão: {precision_score(y_true, y_pred):.4f}")
+    print(f"Recall: {recall_score(y_true, y_pred):.4f}")
+    print(f"F1-Score: {f1_score(y_true, y_pred):.4f}")
+    print("\nMatriz de Confusão:")
+    print(confusion_matrix(y_true, y_pred))
+    with open('autogluon_handicap_model_leaderboard.txt', 'w') as f:
+        f.write(f"Melhor modelo: {best_model_name}\n")
+        f.write(f"Acurácia: {best_model_score:.4f}\n")
+        f.write("\nMétricas de Avaliação no conjunto de teste (Handicap):")
+        f.write(f"Acurácia: {accuracy_score(y_true, y_pred):.4f}")
+
+    return 0.5
+
+
 
     # 5. Previsões
     
     
-    '''
-    x_train, x_test, y_train, y_test = split(X_final, y)
-    model_handicap = tf.keras.Sequential([
-        tf.keras.layers.Dense(64, activation='relu', input_shape=(x_train.shape[1],)),
-        tf.keras.layers.BatchNormalization(),
-        tf.keras.layers.Dense(64, activation='relu', input_shape=(x_train.shape[1],)),
-        tf.keras.layers.BatchNormalization(),
-        tf.keras.layers.Dropout(0.3),
-        tf.keras.layers.Dense(32, activation='relu'),
-        tf.keras.layers.Dropout(0.3),
-        tf.keras.layers.Dense(3, activation='softmax')
-    ])
-    model_handicap.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001), loss='categorical_crossentropy', metrics=['accuracy'])
-    model_handicap.fit(x_train, y_train, epochs=30)
-    y_pred_probs = model_handicap.predict(x_test)
-    melhor_z_positivo = encontrar_melhor_z_softmax_positivo(y_test, y_pred_probs)
-
-    model_handicap.save("model_handicap.keras")  # Salva em formato nativo do Keras
-
-    return melhor_z_positivo
-    '''
-
 
 #junta goal_lines
 def preparar_df_goallines(df):
     # Seleciona e renomeia as colunas relacionadas à goal line 1
     df1 = df[['home','away','h2h_mean', 'media_goals_home', 'media_goals_away',
               'goal_line1_1', 'goal_line1_2', 'type_gl1','odds_gl1',
-              'gl1_indefinido', 'gl1_negativo', 'gl1_positivo', 'gl1_reembolso', 'league']].copy()
+              'gl1_indefinido', 'gl1_negativo', 'gl1_positivo', 'gl1_reembolso', 'league', 'prob_gl1']].copy()
     df1.columns = ['home','away','h2h_mean', 'media_goals_home', 'media_goals_away',
                    'goal_line_1', 'goal_line_2', 'type_gl','odds_gl',
-                   'indefinido', 'negativo', 'positivo', 'reembolso', 'league']
+                   'indefinido', 'negativo', 'positivo', 'reembolso', 'league', 'prob']
 
     # Seleciona e renomeia as colunas relacionadas à goal line 2
     df2 = df[['home','away','h2h_mean', 'media_goals_home', 'media_goals_away',
               'goal_line2_1', 'goal_line2_2', 'type_gl2','odds_gl2',
-              'gl2_indefinido', 'gl2_negativo', 'gl2_positivo', 'gl2_reembolso', 'league']].copy()
+              'gl2_indefinido', 'gl2_negativo', 'gl2_positivo', 'gl2_reembolso', 'league', 'prob_gl2']].copy()
     df2.columns = ['home','away','h2h_mean', 'media_goals_home', 'media_goals_away',
                    'goal_line_1', 'goal_line_2', 'type_gl','odds_gl',
-                   'indefinido', 'negativo', 'positivo', 'reembolso', 'league']
+                   'indefinido', 'negativo', 'positivo', 'reembolso', 'league', 'prob']
 
     # Concatena os dois dataframes
     df_final = pd.concat([df1, df2], ignore_index=True)
@@ -1375,32 +1549,51 @@ def prepNNGoal_line_X(df=df_temp):
     return X_final, z
 '''
 #NN goal_line
+'''
 def NN_goal_line(df=df_temp):
-    df_temporario = df[['home','away','h2h_mean' ,'media_goals_home' ,'media_goals_away','goal_line1_1','goal_line1_2','type_gl1', 'odds_gl1','odds_gl2','goal_line2_1','goal_line2_2','type_gl2', 'gl1_indefinido','gl1_negativo', 'gl1_positivo', 'gl1_reembolso', 'gl2_indefinido', 'gl2_negativo', 'gl2_positivo', 'gl2_reembolso', 'league']].copy()
+    # Pré-processamento do dataframe
+    df_temporario = df[['home', 'away', 'h2h_mean', 'media_goals_home', 'media_goals_away',
+                        'goal_line1_1', 'goal_line1_2', 'type_gl1', 'odds_gl1', 'odds_gl2',
+                        'goal_line2_1', 'goal_line2_2', 'type_gl2', 'gl1_indefinido', 'gl1_negativo',
+                        'gl1_positivo', 'gl1_reembolso', 'gl2_indefinido', 'gl2_negativo', 'gl2_positivo',
+                        'gl2_reembolso', 'league']].copy()
+    
     df_temporario = preparar_df_goallines(df_temporario)
     df_temporario = pd.get_dummies(df_temporario, columns=['type_gl'], prefix='type_gl')
     df_temporario = df_temporario[df_temporario['indefinido'] == False]
     df_temporario.dropna(inplace=True)
-    X = df_temporario[['h2h_mean', 'media_goals_home', 'media_goals_away','odds_gl', 'goal_line_1', 'goal_line_2', 'league']].copy()
+    
+    # Definição de X e y
+    X = df_temporario[['h2h_mean', 'media_goals_home', 'media_goals_away', 'odds_gl', 'goal_line_1',
+                       'goal_line_2', 'league']].copy()
+    
+    # Normalização
     scaler_goal_line = StandardScaler()
     X_standardized = scaler_goal_line.fit_transform(X)
+    
     with open('scaler_goal_line.pkl', 'wb') as f:
         pickle.dump(scaler_goal_line, f)
-    X = pd.DataFrame(X_standardized, columns=['h2h_mean', 'media_goals_home', 'media_goals_away','odds_gl', 'goal_line_1', 'goal_line_2', 'league']).reset_index(drop=True)
-    type_df = df_temporario[['type_gl_1.0', 'type_gl_2.0']]
-    type_df = type_df.reset_index(drop=True)
+    
+    X = pd.DataFrame(X_standardized, columns=['h2h_mean', 'media_goals_home', 'media_goals_away', 'odds_gl',
+                                              'goal_line_1', 'goal_line_2', 'league']).reset_index(drop=True)
+    
+    type_df = df_temporario[['type_gl_1.0', 'type_gl_2.0']].reset_index(drop=True)
     X_final = pd.concat([X, type_df], axis=1)
+    
+    y_binario = df_temporario['positivo'].astype(int)
     
     print("Colunas de X (goal_line):", X_final.columns.tolist())
     
-    # 1. Criando o y binário: positivo (1) ou não (0)
-    y_binario = df_temporario['positivo'].astype(int)
-
-    # 2. Reutilizando o X_final já preparado e normalizado
+    # Divisão de treino e teste
     x_train_bin, x_test_bin, y_train_bin, y_test_bin = split(X_final, y_binario)
     
-
-        # 3. Criando o modelo binário
+    # 1. Modelo XGBoost
+    model_xgb = xgb.XGBClassifier(n_estimators=100, learning_rate=0.1, max_depth=6, use_label_encoder=False, eval_metric='logloss')
+    model_xgb.fit(x_train_bin, y_train_bin)
+    y_pred = model_xgb.predict(x_test_bin)
+    print("Acurácia goal_line xgb:", accuracy_score(y_test_bin, y_pred))
+    
+    # 2. Modelo Neural Network
     modelo_binario_goal_line = tf.keras.Sequential([
         tf.keras.layers.Dense(128, activation='relu', input_shape=(x_train_bin.shape[1],)),
         tf.keras.layers.BatchNormalization(),
@@ -1413,21 +1606,40 @@ def NN_goal_line(df=df_temp):
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(1, activation='sigmoid')  # Saída binária
     ])
-
+    
     modelo_binario_goal_line.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001), loss='binary_crossentropy', metrics=['accuracy'])
-
-    # 4. Treinamento
+    
+    # Treinamento da rede neural
     hist_bin = modelo_binario_goal_line.fit(x_train_bin, y_train_bin, epochs=30)
-    print(modelo_binario_goal_line.input_shape)
-    y_pred_probs = modelo_binario_goal_line.predict(x_test_bin)
-    melhor_z_positivo = encontrar_melhor_z_binario_positivo(y_test_bin, y_pred_probs )
-
-    modelo_binario_goal_line.save("model_binario_goal_line.keras")  # Salva em formato nativo do Keras
-
+    
+    # 3. Obtenção das previsões de ambos os modelos
+    y_pred_probs_nn = modelo_binario_goal_line.predict(x_test_bin).flatten()
+    y_pred_probs_xgb = model_xgb.predict(x_test_bin).flatten()
+    
+    # Empilhamento das previsões
+    X_meta = np.column_stack((y_pred_probs_nn, y_pred_probs_xgb))
+    
+    # 4. Meta-modelo: Logistic Regression
+    meta_model = LogisticRegression()
+    meta_model.fit(X_meta, y_test_bin)
+    
+    # Previsões do meta-modelo
+    y_pred_meta = meta_model.predict(X_meta)
+    
+    # Avaliação do meta-modelo
+    print("Acurácia do meta-modelo:", accuracy_score(y_test_bin, y_pred_meta))
+    
+    # Salvando os modelos
+    modelo_binario_goal_line.save("model_goal_line_binario.keras")  # Rede neural
+    joblib.dump(model_xgb, 'model_xgb_goal_line.pkl')  # XGBoost
+    joblib.dump(meta_model, 'meta_model_goal_line.pkl')  # Meta-modelo
+    
+    melhor_z_positivo = encontrar_melhor_z_binario_positivo(y_test_bin, y_pred_probs_nn)
+    
     return melhor_z_positivo
 
 
-'''
+
 
     y = df_temporario[['negativo', 'positivo', 'reembolso']].copy()
 
@@ -1454,23 +1666,124 @@ def NN_goal_line(df=df_temp):
     return melhor_z_positivo
 '''
 
+def NN_goal_line(df=df_temp):
+    # Pré-processamento do dataframe
+    df_temporario = df[['home', 'away', 'h2h_mean', 'media_goals_home', 'media_goals_away',
+                        'goal_line1_1', 'goal_line1_2', 'type_gl1', 'odds_gl1', 'odds_gl2',
+                        'goal_line2_1', 'goal_line2_2', 'type_gl2', 'gl1_indefinido', 'gl1_negativo',
+                        'gl1_positivo', 'gl1_reembolso', 'gl2_indefinido', 'gl2_negativo', 'gl2_positivo',
+                        'gl2_reembolso', 'league']].copy()
+    
+    df_temporario['prob_gl1'] = 1 / df_temporario['odds_gl1']
+    df_temporario['prob_gl2'] = 1 / df_temporario['odds_gl2']
+    soma = df_temporario['prob_gl1'] + df_temporario['prob_gl2']
+    df_temporario['prob_gl1'] /= soma
+    df_temporario['prob_gl2'] /= soma
+
+    df_temporario = preparar_df_goallines(df_temporario)
+    df_temporario['split_line'] = (df_temporario['goal_line_1'] != df_temporario['goal_line_2']).astype(int)
+    df_temporario['goals_diff'] = df_temporario['media_goals_home'] - df_temporario['media_goals_away']
+    
+
+
+    df_temporario = pd.get_dummies(df_temporario, columns=['type_gl'], prefix='type_gl')
+    df_temporario = df_temporario[df_temporario['indefinido'] == False]
+    df_temporario['positivo'] = pd.to_numeric(df_temporario['positivo'], errors='coerce')
+    df_temporario.dropna(inplace=True)
+    df_temporario = df_temporario[df_temporario['positivo'].notna()]
+
+    # Definição de X e y
+    X = df_temporario[['h2h_mean', 'media_goals_home', 'media_goals_away', 'odds_gl',
+                       'goal_line_1', 'goal_line_2', 'league','prob','split_line','goals_diff']].copy().reset_index(drop=True)
+
+    type_df = df_temporario[['type_gl_1.0', 'type_gl_2.0']].reset_index(drop=True)
+    X_final = pd.concat([X, type_df], axis=1)
+
+    y = df_temporario['positivo'].astype(int).reset_index(drop=True)
+
+    print("Colunas de X (goal_line):", X_final.columns.tolist())
+
+    if y.nunique() < 2:
+        print("Variável target com menos de 2 classes. Retornando None.")
+        return None
+
+    # Divisão em treino e teste
+    X_train, X_test, y_train, y_test = train_test_split(X_final, y, test_size=0.2, random_state=42)
+
+    df_ag_train = X_train.copy()
+    df_ag_train['target'] = y_train
+
+    df_ag_test = X_test.copy()
+    df_ag_test['target'] = y_test
+
+    # Diretório temporário
+    temp_dir = tempfile.mkdtemp()
+
+    # Treinamento com AutoGluon
+    predictor = TabularPredictor(label='target', path=temp_dir, problem_type='binary').fit(
+        df_ag_train,
+        presets='best_quality',
+        time_limit=1000
+    )
+
+    # Leaderboard e melhor modelo
+    leaderboard = predictor.leaderboard(df_ag_train, silent=True)
+    try:
+        best_model_name = predictor.model_best
+        best_model_score = leaderboard.loc[leaderboard['model'] == best_model_name, 'score_val'].values[0]
+    except:
+        best_model_name = leaderboard.loc[leaderboard['score_val'].idxmax(), 'model']
+        best_model_score = leaderboard.loc[leaderboard['score_val'].idxmax(), 'score_val']
+
+    
+
+    # Salvar modelo final
+    predictor_path = "autogluon_goal_line_model"
+    shutil.move(temp_dir, predictor_path)
+
+    # Recarrega o modelo salvo
+    predictor = TabularPredictor.load(predictor_path)
+
+    # Predição no conjunto de teste
+    y_pred = predictor.predict(df_ag_test.drop(columns=['target']), model=best_model_name)
+
+    # Avaliação das previsões
+    y_true = df_ag_test['target']
+    
+    print(f"Precisão: {precision_score(y_true, y_pred):.4f}")
+    print(f"Recall: {recall_score(y_true, y_pred):.4f}")
+    print(f"F1-Score: {f1_score(y_true, y_pred):.4f}")
+    print("\nMatriz de Confusão:")
+    print(confusion_matrix(y_true, y_pred))
+    print(f"\nMelhor modelo para Goal Line: {best_model_name}")
+    print(f"Acurácia no treino (validação interna): {best_model_score:.4f}")
+    with open('autogluon_goal_line_model_leaderboard.txt', 'w') as f:
+        f.write(f"Melhor modelo: {best_model_name}\n")
+        f.write(f"Acurácia: {best_model_score:.4f}\n")
+        f.write("\nMétricas de Avaliação no conjunto de teste (Goal Line):")
+        f.write(f"Acurácia: {accuracy_score(y_true, y_pred):.4f}")
+
+    return 0.5
+
+
+
 #juntar double_chances
 def preparar_df_double_chance(df):
     colunas_comuns = ['home','away','media_goals_home', 'media_goals_away', 'media_victories_home',
                       'media_victories_away', 'home_h2h_mean', 'away_h2h_mean']
     
     # Cria df para cada linha de double chance
-    df1 = df[colunas_comuns + ['odds_dc1', 'res_double_chance1']].copy()
+    df1 = df[colunas_comuns + ['odds_dc1', 'prob_dc1', 'res_double_chance1']].copy()
     df1['double_chance'] = 1
-    df1.rename(columns={'odds_dc1': 'odds', 'res_double_chance1': 'resultado'}, inplace=True)
+    df1.rename(columns={'odds_dc1': 'odds', 'prob_dc1': 'prob', 'res_double_chance1': 'resultado'}, inplace=True)
 
-    df2 = df[colunas_comuns + ['odds_dc2', 'res_double_chance2']].copy()
+    df2 = df[colunas_comuns + ['odds_dc2', 'prob_dc2', 'res_double_chance2']].copy()
     df2['double_chance'] = 2
-    df2.rename(columns={'odds_dc2': 'odds', 'res_double_chance2': 'resultado'}, inplace=True)
+    df2.rename(columns={'odds_dc2': 'odds', 'prob_dc2': 'prob', 'res_double_chance2': 'resultado'}, inplace=True)
 
-    df3 = df[colunas_comuns + ['odds_dc3', 'res_double_chance3']].copy()
+    df3 = df[colunas_comuns + ['odds_dc3', 'prob_dc3', 'res_double_chance3']].copy()
     df3['double_chance'] = 3
-    df3.rename(columns={'odds_dc3': 'odds', 'res_double_chance3': 'resultado'}, inplace=True)
+    df3.rename(columns={'odds_dc3': 'odds', 'prob_dc3': 'prob', 'res_double_chance3': 'resultado'}, inplace=True)
 
     # Concatena os três em um só
     df_final = pd.concat([df1, df2, df3], ignore_index=True)
@@ -1483,6 +1796,7 @@ def prepNNDouble_chance(df=df_temp):
        'odds_dc1', 'double_chance2', 'odds_dc2', 'double_chance3', 'odds_dc3',
        'res_double_chance1', 'res_double_chance2', 'res_double_chance3']]
     df_temporario = preparar_df_double_chance(df_temporario)
+    
     
 
     df_temporario.dropna(inplace=True)
@@ -1554,39 +1868,53 @@ def prepNNDouble_chance_X(df=df_temp):
 
     return X_final, z
 '''
-#NN double_chance
+
+'''
 def NN_double_chance(df=df_temp):
-    df_temporario =df[['home','away','media_goals_home',
-        'media_goals_away','media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'double_chance1',
-       'odds_dc1', 'double_chance2', 'odds_dc2', 'double_chance3', 'odds_dc3',
-       'res_double_chance1', 'res_double_chance2', 'res_double_chance3']]
+    # Pré-processamento do dataframe
+    df_temporario = df[['home', 'away', 'media_goals_home', 'media_goals_away', 'media_victories_home',
+                        'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'double_chance1',
+                        'odds_dc1', 'double_chance2', 'odds_dc2', 'double_chance3', 'odds_dc3',
+                        'res_double_chance1', 'res_double_chance2', 'res_double_chance3']].copy()
+    
     df_temporario = preparar_df_double_chance(df_temporario)
     df_temporario = pd.get_dummies(df_temporario, columns=['double_chance'], prefix='double_chance_type')
-
     df_temporario.dropna(inplace=True)
 
-    X = df_temporario[['media_goals_home', 'media_goals_away', 'media_victories_home',
-                      'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']].copy()
+    # Definição de X e y
+    X = df_temporario[['media_goals_home', 'media_goals_away', 'media_victories_home', 'media_victories_away',
+                       'home_h2h_mean', 'away_h2h_mean', 'odds']].copy()
+
+    # Normalização
     scaler_double_chance = StandardScaler()
     X_standardized = scaler_double_chance.fit_transform(X)
+    
+    # Salvando o scaler
     with open('scaler_double_chance.pkl', 'wb') as f:
         pickle.dump(scaler_double_chance, f)
+    
     X = pd.DataFrame(X_standardized, columns=['media_goals_home', 'media_goals_away', 'media_victories_home',
-                             'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']).reset_index(drop=True)
-    type_df = df_temporario[['double_chance_type_1', 'double_chance_type_2','double_chance_type_3' ]]
-    type_df = type_df.reset_index(drop=True)
+                                              'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']).reset_index(drop=True)
     
-    
+    type_df = df_temporario[['double_chance_type_1', 'double_chance_type_2', 'double_chance_type_3']].reset_index(drop=True)
     X_final = pd.concat([X, type_df], axis=1)
-   
 
     y = df_temporario['resultado'].copy()
-    print("Colunas de X (doublechance):", X_final.columns.tolist())
+    
+    print("Colunas de X (double chance):", X_final.columns.tolist())
+    
+    # Divisão de treino e teste
     x_train, x_test, y_train, y_test = split(X_final, y)
     
+    # 1. Modelo XGBoost
+    model_xgb = xgb.XGBClassifier(n_estimators=100, learning_rate=0.1, max_depth=6, use_label_encoder=False, eval_metric='logloss')
+    model_xgb.fit(x_train, y_train)
+    y_pred = model_xgb.predict(x_test)
+    print("Acurácia double_chance xgb:", accuracy_score(y_test, y_pred))
     
-    model_double_chance = tf.keras.Sequential([
-        tf.keras.layers.Dense(128, activation='relu'),
+    # 2. Modelo Neural Network
+    model_double_chance_nn = tf.keras.Sequential([
+        tf.keras.layers.Dense(128, activation='relu', input_shape=(x_train.shape[1],)),
         tf.keras.layers.BatchNormalization(),
         tf.keras.layers.Dropout(0.4),
         tf.keras.layers.Dense(64, activation='relu'),
@@ -1595,37 +1923,162 @@ def NN_double_chance(df=df_temp):
         tf.keras.layers.Dense(32, activation='relu'),
         tf.keras.layers.BatchNormalization(),
         tf.keras.layers.Dropout(0.2),
-        tf.keras.layers.Dense(1, activation='sigmoid')
+        tf.keras.layers.Dense(1, activation='sigmoid')  # Saída binária
     ])
-    model_double_chance.compile(optimizer=tf.keras.optimizers.Adam(0.001), loss='binary_crossentropy', metrics=['accuracy'])
-    hist_bin = model_double_chance.fit(x_train, y_train, epochs=30)
-    print(model_double_chance.input_shape)
-    y_pred_probs = model_double_chance.predict(x_test)
-    melhor_z_positivo = encontrar_melhor_z_binario_positivo(y_test, y_pred_probs)
-
-    model_double_chance.save("model_binario_double_chance.keras")  # Salva em formato nativo do Keras
-
+    
+    model_double_chance_nn.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001), loss='binary_crossentropy', metrics=['accuracy'])
+    
+    # Treinamento da rede neural
+    hist_bin = model_double_chance_nn.fit(x_train, y_train, epochs=30)
+    
+    # 3. Obtenção das previsões de ambos os modelos
+    y_pred_probs_nn = model_double_chance_nn.predict(x_test).flatten()
+    y_pred_probs_xgb = model_xgb.predict(x_test).flatten()
+    
+    # Empilhamento das previsões
+    X_meta = np.column_stack((y_pred_probs_nn, y_pred_probs_xgb))
+    
+    # 4. Meta-modelo: Logistic Regression
+    meta_model = LogisticRegression()
+    meta_model.fit(X_meta, y_test)
+    
+    # Previsões do meta-modelo
+    y_pred_meta = meta_model.predict(X_meta)
+    
+    # Avaliação do meta-modelo
+    print("Acurácia do meta-modelo:", accuracy_score(y_test, y_pred_meta))
+    
+    # Salvando os modelos
+    model_double_chance_nn.save("model_double_chance_nn.keras")  # Rede neural
+    joblib.dump(model_xgb, 'model_xgb_double_chance.pkl')  # XGBoost
+    joblib.dump(meta_model, 'meta_model_double_chance.pkl')  # Meta-modelo
+    
+    melhor_z_positivo = encontrar_melhor_z_binario_positivo(y_test, y_pred_probs_nn)
+    
     return melhor_z_positivo
+'''
+import pandas as pd
+import tempfile
+import shutil
+from autogluon.tabular import TabularPredictor
+
+def NN_double_chance(df=df_temp):
+    # Pré-processamento do dataframe
+    df_temporario = df[['home', 'away', 'media_goals_home', 'media_goals_away', 'media_victories_home',
+                        'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'double_chance1',
+                        'odds_dc1', 'double_chance2', 'odds_dc2', 'double_chance3', 'odds_dc3',
+                        'res_double_chance1', 'res_double_chance2', 'res_double_chance3']].copy()
+    df_temporario['prob_dc1'] = 1 / df_temporario['odds_dc1']
+    df_temporario['prob_dc2'] = 1 / df_temporario['odds_dc2']
+    df_temporario['prob_dc3'] = 1 / df_temporario['odds_dc3']
+    total = df_temporario[['prob_dc1', 'prob_dc2', 'prob_dc3']].sum(axis=1)
+    df_temporario[['prob_dc1', 'prob_dc2', 'prob_dc3']] /= total
+
+
+    df_temporario = preparar_df_double_chance(df_temporario)
+    
+    df_temporario = pd.get_dummies(df_temporario, columns=['double_chance'], prefix='double_chance_type')
+    df_temporario['resultado'] = pd.to_numeric(df_temporario['resultado'], errors='coerce')
+    df_temporario.dropna(inplace=True)
+    df_temporario = df_temporario[df_temporario['resultado'].notna()]
+
+    df_temporario['goal_diff'] = df_temporario['media_goals_home'] - df_temporario['media_goals_away']
+    df_temporario['victory_diff'] = df_temporario['media_victories_home'] - df_temporario['media_victories_away']
+    df_temporario['h2h_diff'] = df_temporario['home_h2h_mean'] - df_temporario['away_h2h_mean']
+
+    # Definição de X e y
+    X = df_temporario[['media_goals_home', 'media_goals_away', 'media_victories_home', 'media_victories_away',
+                       'home_h2h_mean', 'away_h2h_mean','prob', 'odds', 'goal_diff', 'victory_diff', 'h2h_diff']].copy().reset_index(drop=True)
+    
+    type_df = df_temporario[['double_chance_type_1', 'double_chance_type_2', 'double_chance_type_3']].reset_index(drop=True)
+    X_final = pd.concat([X, type_df], axis=1)
+
+    y = df_temporario['resultado'].astype(int).reset_index(drop=True)
+
+    if y.nunique() < 2:
+        print("Variável target com menos de 2 classes. Retornando None.")
+        return None
+
+    print("Colunas de X (double chance):", X_final.columns.tolist())
+
+    # Divisão em treino e teste
+    X_train, X_test, y_train, y_test = train_test_split(X_final, y, test_size=0.2, random_state=42)
+
+    df_ag_train = X_train.copy()
+    df_ag_train['target'] = y_train
+
+    df_ag_test = X_test.copy()
+    df_ag_test['target'] = y_test
+
+    # Diretório temporário
+    temp_dir = tempfile.mkdtemp()
+
+    # Treinamento com AutoGluon
+    predictor = TabularPredictor(label='target', path=temp_dir, problem_type='binary').fit(
+        df_ag_train,
+        presets='best_quality',
+        time_limit=1000
+    )
+
+    # Leaderboard e melhor modelo
+    leaderboard = predictor.leaderboard(df_ag_train, silent=True)
+    try:
+        best_model_name = predictor.model_best
+        best_model_score = leaderboard.loc[leaderboard['model'] == best_model_name, 'score_val'].values[0]
+    except:
+        best_model_name = leaderboard.loc[leaderboard['score_val'].idxmax(), 'model']
+        best_model_score = leaderboard.loc[leaderboard['score_val'].idxmax(), 'score_val']
+
+    
+
+    # Salvar o modelo final
+    final_model_path = "autogluon_double_chance_model"
+    shutil.move(temp_dir, final_model_path)
+
+    # Recarregar modelo salvo
+    predictor = TabularPredictor.load(final_model_path)
+
+    # Predição no conjunto de teste
+    y_pred = predictor.predict(df_ag_test.drop(columns=['target']), model=best_model_name)
+
+    # Avaliação das previsões
+    y_true = df_ag_test['target']
+    
+    print(f"Precisão: {precision_score(y_true, y_pred):.4f}")
+    print(f"Recall: {recall_score(y_true, y_pred):.4f}")
+    print(f"F1-Score: {f1_score(y_true, y_pred):.4f}")
+    print("\nMatriz de Confusão:")
+    print(confusion_matrix(y_true, y_pred))
+    print(f"\nMelhor modelo para Double Chance: {best_model_name}")
+    print(f"Acurácia no treino (validação interna): {best_model_score:.4f}")
+    with open('autogluon_double_chance_model_leaderboard.txt', 'w') as f:
+        f.write(f"Melhor modelo: {best_model_name}\n")
+        f.write(f"Acurácia: {best_model_score:.4f}\n")
+        f.write("\nMétricas de Avaliação no conjunto de teste (Double Chance):")
+        f.write(f"Acurácia: {accuracy_score(y_true, y_pred):.4f}")
+
+    return 0.5
+
 
 #junta draw_no_bet
 def preparar_df_draw_no_bet(df):
     # Seleciona e renomeia o lado 1
-    df1 = df[['home','away','home_goals', 'away_goals', 'media_goals_home', 'media_goals_away',
+    df1 = df[['home','away', 'media_goals_home', 'media_goals_away',
               'media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean',
-              'draw_no_bet_team1', 'odds_dnb1', 'dnb1_indefinido', 'dnb1_perde', 'dnb1_ganha', 'dnb1_reembolso']].copy()
+              'draw_no_bet_team1', 'odds_dnb1', 'dnb1_indefinido', 'dnb1_perde', 'dnb1_ganha', 'dnb1_reembolso','prob_odds_dnb1']].copy()
 
-    df1.columns = ['home','away','home_goals', 'away_goals', 'media_goals_home', 'media_goals_away',
+    df1.columns = ['home','away', 'media_goals_home', 'media_goals_away',
                    'media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean',
-                   'draw_no_bet_team', 'odds', 'indefinido', 'perde', 'ganha', 'reembolso']
+                   'draw_no_bet_team', 'odds', 'indefinido', 'perde', 'ganha', 'reembolso','prob_odds']
 
     # Seleciona e renomeia o lado 2
-    df2 = df[['home','away','home_goals', 'away_goals', 'media_goals_home', 'media_goals_away',
+    df2 = df[['home','away', 'media_goals_home', 'media_goals_away',
               'media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean',
-              'draw_no_bet_team2', 'odds_dnb2', 'dnb2_indefinido', 'dnb2_perde', 'dnb2_ganha', 'dnb2_reembolso']].copy()
+              'draw_no_bet_team2', 'odds_dnb2', 'dnb2_indefinido', 'dnb2_perde', 'dnb2_ganha', 'dnb2_reembolso','prob_odds_dnb2']].copy()
 
-    df2.columns = ['home','away','home_goals', 'away_goals', 'media_goals_home', 'media_goals_away',
+    df2.columns = ['home','away', 'media_goals_home', 'media_goals_away',
                    'media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean',
-                   'draw_no_bet_team', 'odds', 'indefinido', 'perde', 'ganha', 'reembolso']
+                   'draw_no_bet_team', 'odds', 'indefinido', 'perde', 'ganha', 'reembolso','prob_odds']
 
     # Concatena os dois lados
     df_final = pd.concat([df1, df2], ignore_index=True)
@@ -1715,42 +2168,58 @@ def prepNNDraw_no_bet_X(df=df_temp):
     return X_final, z
 '''
 #NN draw_no_bet
+'''
 def NN_draw_no_bet(df=df_temp):
 
-    df_temporario = df[['home','away','home_goals', 'away_goals','media_goals_home', 
-       'media_goals_away', 'media_victories_home','media_victories_away', 'home_h2h_mean','away_h2h_mean', 'draw_no_bet_team1', 'odds_dnb1', 'draw_no_bet_team2', 'odds_dnb2', 'dnb1_indefinido' , 'dnb1_perde','dnb1_ganha', 'dnb1_reembolso',
-       'dnb2_indefinido', 'dnb2_perde', 'dnb2_ganha', 'dnb2_reembolso']]
-    df_temporario = preparar_df_draw_no_bet(df_temporario)
+    # Pré-processamento do dataframe
+    df_temporario = df[['home', 'away', 'home_goals', 'away_goals', 'media_goals_home', 
+                        'media_goals_away', 'media_victories_home', 'media_victories_away', 
+                        'home_h2h_mean', 'away_h2h_mean', 'draw_no_bet_team1', 'odds_dnb1', 
+                        'draw_no_bet_team2', 'odds_dnb2', 'dnb1_indefinido', 'dnb1_perde', 
+                        'dnb1_ganha', 'dnb1_reembolso', 'dnb2_indefinido', 'dnb2_perde', 
+                        'dnb2_ganha', 'dnb2_reembolso']].copy()
 
+    # Pré-processamento específico
+    df_temporario = preparar_df_draw_no_bet(df_temporario)
     df_temporario = pd.get_dummies(df_temporario, columns=['draw_no_bet_team'], prefix='draw_no_bet_team')
     df_temporario = df_temporario[df_temporario['indefinido'] == False]
-
     df_temporario.dropna(inplace=True)
     
+    # Seleção de variáveis
+    X = df_temporario[['media_goals_home', 'media_goals_away', 'media_victories_home', 
+                       'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']].copy()
 
-    X = df_temporario[['media_goals_home', 'media_goals_away','media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']].copy()
-    
+    # Normalização
     scaler_draw_no_bet = StandardScaler()
     X_standardized = scaler_draw_no_bet.fit_transform(X)
+    
+    # Salvando o scaler
     with open('scaler_draw_no_bet.pkl', 'wb') as f:
         pickle.dump(scaler_draw_no_bet, f)
-    X = pd.DataFrame(X_standardized, columns=['media_goals_home', 'media_goals_away',
-                             'media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']).reset_index(drop=True)
 
-    type_df = df_temporario[['draw_no_bet_team_1.0', 'draw_no_bet_team_2.0']]
-    type_df = type_df.reset_index(drop=True)
+    X = pd.DataFrame(X_standardized, columns=['media_goals_home', 'media_goals_away', 
+                                              'media_victories_home', 'media_victories_away', 
+                                              'home_h2h_mean', 'away_h2h_mean', 'odds']).reset_index(drop=True)
 
+    # Tipos de "draw_no_bet"
+    type_df = df_temporario[['draw_no_bet_team_1.0', 'draw_no_bet_team_2.0']].reset_index(drop=True)
     X_final = pd.concat([X, type_df], axis=1)
-    #   1. Criando o y binário: positivo (1) ou não (0)
+
+    # Criação do y binário: 1 ou 0 (Ganha ou Não)
     y_binario = df_temporario['ganha'].astype(int)
     print("Colunas de X (draw_no_bet):", X_final.columns.tolist())
 
-
-    # 2. Reutilizando o X_final já preparado e normalizado
+    # Divisão treino e teste
     x_train_bin, x_test_bin, y_train_bin, y_test_bin = split(X_final, y_binario)
-            # 3. Criando o modelo binário
 
-    modelo_binario_draw_no_bet = tf.keras.Sequential([
+    # 1. Modelo XGBoost
+    model_xgb = xgb.XGBClassifier(n_estimators=100, learning_rate=0.1, max_depth=6, use_label_encoder=False, eval_metric='logloss')
+    model_xgb.fit(x_train_bin, y_train_bin)
+    y_pred = model_xgb.predict(x_test_bin)
+    print("Acurácia dnb xgb:", accuracy_score(y_test_bin, y_pred))
+
+    # 2. Modelo Neural Network
+    model_nn = tf.keras.Sequential([
         tf.keras.layers.Dense(128, activation='relu', input_shape=(x_train_bin.shape[1],)),
         tf.keras.layers.BatchNormalization(),
         tf.keras.layers.Dropout(0.4),
@@ -1762,16 +2231,158 @@ def NN_draw_no_bet(df=df_temp):
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(1, activation='sigmoid')  # Saída binária
     ])
+    
+    model_nn.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001), 
+                     loss='binary_crossentropy', metrics=['accuracy'])
 
-    modelo_binario_draw_no_bet.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001), loss='binary_crossentropy', metrics=['accuracy'])
+    # Treinamento da rede neural
+    hist_bin = model_nn.fit(x_train_bin, y_train_bin, epochs=30)
 
-    # 4. Treinamento
-    hist_bin = modelo_binario_draw_no_bet.fit(x_train_bin, y_train_bin, epochs=30)
-    print(modelo_binario_draw_no_bet.input_shape)
-    y_pred_probs = modelo_binario_draw_no_bet.predict(x_test_bin)
-    melhor_z_positivo = encontrar_melhor_z_binario_positivo(y_test_bin, y_pred_probs)
+    # 3. Obtenção das previsões de ambos os modelos
+    y_pred_probs_nn = model_nn.predict(x_test_bin).flatten()
+    y_pred_probs_xgb = model_xgb.predict(x_test_bin).flatten()
 
-    modelo_binario_draw_no_bet.save("model_binario_draw_no_bet.keras")  # Salva em formato nativo do Keras
+    # Empilhamento das previsões
+    X_meta = np.column_stack((y_pred_probs_nn, y_pred_probs_xgb))
+
+    # 4. Meta-modelo: Logistic Regression
+    meta_model = LogisticRegression()
+    meta_model.fit(X_meta, y_test_bin)
+
+    # Previsões do meta-modelo
+    y_pred_meta = meta_model.predict(X_meta)
+
+    # Avaliação do meta-modelo
+    print("Acurácia do meta-modelo:", accuracy_score(y_test_bin, y_pred_meta))
+
+    # Salvando os modelos
+    model_nn.save("model_nn_draw_no_bet.keras")  # Rede neural
+    joblib.dump(model_xgb, 'model_xgb_draw_no_bet.pkl')  # XGBoost
+    joblib.dump(meta_model, 'meta_model_draw_no_bet.pkl')  # Meta-modelo
+
+    # Encontrando o melhor Z-positivo
+    melhor_z_positivo = encontrar_melhor_z_binario_positivo(y_test_bin, y_pred_probs_nn)
 
     return melhor_z_positivo
+
+'''
+import pandas as pd
+import tempfile
+import shutil
+from autogluon.tabular import TabularPredictor
+
+from autogluon.tabular import TabularPredictor
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+import tempfile
+import shutil
+import os
+
+def NN_draw_no_bet(df):
+    # Pré-processamento
+    df['prob_odds_dnb1'] = 1 / df['odds_dnb1']
+    df['prob_odds_dnb2'] = 1 / df['odds_dnb2']
+    tot = df['prob_odds_dnb1'] + df['prob_odds_dnb2']
+    df['prob_odds_dnb1'] = df['prob_odds_dnb1'] / tot
+    df['prob_odds_dnb2'] = df['prob_odds_dnb2'] / tot
+
+    df_temporario = preparar_df_draw_no_bet(df)
+    df_temporario.drop(columns=['indefinido', 'perde', 'reembolso','home','away'], inplace=True)
+    df_temporario['goal_diff'] = df_temporario['media_goals_home'] - df_temporario['media_goals_away']
+    df_temporario['team_strength_home'] = df_temporario['media_victories_home'] / df_temporario['media_goals_home']
+    df_temporario['team_strength_away'] = df_temporario['media_victories_away'] / df_temporario['media_goals_away']
+
+
+    if df_temporario.empty:
+        print("DataFrame temporário vazio. Retornando None.")
+        return None
+
+    df_temporario.dropna(inplace=True)
+
+    if 'ganha' not in df_temporario.columns:
+        print("Coluna 'ganha' não encontrada no DataFrame. Retornando None.")
+        return None
+
+    df_temporario = df_temporario[df_temporario['ganha'].notna()]
+    df_temporario['ganha'] = df_temporario['ganha'].astype(int)
+    y_binario = df_temporario['ganha'].reset_index(drop=True)
+
+    if y_binario.isna().any():
+        print("Ainda existem valores NaN em y_binario. Retornando None.")
+        return None
+
+    X_final = df_temporario.drop(columns=['ganha']).reset_index(drop=True)
+
+    if len(X_final) != len(y_binario):
+        print(f"Tamanhos diferentes: X_final={len(X_final)}, y_binario={len(y_binario)}. Retornando None.")
+        return None
+
+    if X_final.isna().sum().sum() > 0:
+        print("Ainda existem valores NaN em X_final. Retornando None.")
+        return None
+
+    if y_binario.nunique() < 2:
+        print("Variável target tem menos de 2 classes. Retornando None.")
+        return None
+
+    print("Colunas de X (draw no bet):", X_final.columns.tolist())
+
+    # Divisão em treino e teste
+    X_train, X_test, y_train, y_test = train_test_split(X_final, y_binario, test_size=0.2, random_state=42)
+
+    df_ag_train = X_train.copy()
+    df_ag_train['target'] = y_train
+
+    df_ag_test = X_test.copy()
+    df_ag_test['target'] = y_test
+
+    # Diretório temporário
+    temp_dir = tempfile.mkdtemp()
+
+    # Treinamento
+    predictor = TabularPredictor(label='target', path=temp_dir, problem_type='binary').fit(
+        df_ag_train,
+        presets='best_quality',
+        time_limit=1000
+    )
+
+    # Leaderboard
+    # Leaderboard
+    leaderboard = predictor.leaderboard(df_ag_train, silent=True)
+    try:
+        best_model_name = predictor.model_best  # <-- CORREÇÃO AQUI
+        best_model_score = leaderboard.loc[leaderboard['model'] == best_model_name, 'score_val'].values[0]
+    except:
+        best_model_name = leaderboard.loc[leaderboard['score_val'].idxmax(), 'model']
+        best_model_score = leaderboard.loc[leaderboard['score_val'].idxmax(), 'score_val']
+
     
+
+    # Salvar modelo final
+    final_model_path = "autogluon_draw_no_bet_model"
+    shutil.move(temp_dir, final_model_path)
+
+    # Recarregar
+    predictor = TabularPredictor.load(final_model_path)
+
+    # Predição no conjunto de teste com o melhor modelo
+    y_pred = predictor.predict(df_ag_test.drop(columns=['target']), model=best_model_name)   
+
+    # Avaliação
+    y_true = df_ag_test['target']
+    
+    print(f"Precisão: {precision_score(y_true, y_pred):.4f}")
+    print(f"Recall: {recall_score(y_true, y_pred):.4f}")
+    print(f"F1-Score: {f1_score(y_true, y_pred):.4f}")
+    print("\nMatriz de Confusão:")
+    print(confusion_matrix(y_true, y_pred))
+    print(f"\nMelhor modelo para Draw No Bet: {best_model_name}")
+    print(f"Acurácia no treino (validação interna): {best_model_score:.4f}")
+    with open('autogluon_draw_no_bet_model_leaderboard.txt', 'w') as f:
+        f.write(f"Melhor modelo: {best_model_name}\n")
+        f.write(f"Acurácia: {best_model_score:.4f}\n")
+        f.write("\nMétricas de Avaliação no conjunto de teste (Draw No Bet):")
+        f.write(f"Acurácia: {accuracy_score(y_true, y_pred):.4f}")
+
+    return 0.5
+

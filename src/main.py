@@ -1214,7 +1214,7 @@ def processar_dia_anterior():
 
 def processar_dia_anterior():
     COLUNAS_PADRAO = [
-        'id', 'event_day', 'home', 'away', 'home_goals', 'away_goals', 'tot_goals',
+        'id', 'event_day', 'home', 'away','league', 'home_goals', 'away_goals', 'tot_goals',
         'goals_over_under', 'odd_goals_over1', 'odd_goals_under1',
         'asian_handicap1', 'team_ah1', 'odds_ah1',
         'asian_handicap2', 'team_ah2', 'odds_ah2',
