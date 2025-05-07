@@ -1445,7 +1445,7 @@ def NN_handicap(df=df_temp):
     print(f"F1-Score: {f1_score(y_true, y_pred):.4f}")
     print("\nMatriz de Confusão:")
     print(confusion_matrix(y_true, y_pred))
-    with open('autogluon_handicap_model_leaderboard.txt', 'w') as f:
+    with open('autogluon_handicap_model_leaderboard.txt', 'w+') as f:
         f.write(f"Melhor modelo: {best_model_name}\n")
         f.write(f"Acurácia: {best_model_score:.4f}\n")
         f.write("\nMétricas de Avaliação no conjunto de teste (Handicap):")
@@ -1757,7 +1757,7 @@ def NN_goal_line(df=df_temp):
     print(confusion_matrix(y_true, y_pred))
     print(f"\nMelhor modelo para Goal Line: {best_model_name}")
     print(f"Acurácia no treino (validação interna): {best_model_score:.4f}")
-    with open('autogluon_goal_line_model_leaderboard.txt', 'w') as f:
+    with open('autogluon_goal_line_model_leaderboard.txt', 'w+') as f:
         f.write(f"Melhor modelo: {best_model_name}\n")
         f.write(f"Acurácia: {best_model_score:.4f}\n")
         f.write("\nMétricas de Avaliação no conjunto de teste (Goal Line):")
@@ -1972,7 +1972,9 @@ def NN_double_chance(df=df_temp):
     df_temporario['prob_dc2'] = 1 / df_temporario['odds_dc2']
     df_temporario['prob_dc3'] = 1 / df_temporario['odds_dc3']
     total = df_temporario[['prob_dc1', 'prob_dc2', 'prob_dc3']].sum(axis=1)
-    df_temporario[['prob_dc1', 'prob_dc2', 'prob_dc3']] /= total
+    
+    df_temporario[['prob_dc1', 'prob_dc2', 'prob_dc3']] = df_temporario[['prob_dc1', 'prob_dc2', 'prob_dc3']].div(total, axis=0)
+
 
 
     df_temporario = preparar_df_double_chance(df_temporario)
@@ -2051,7 +2053,7 @@ def NN_double_chance(df=df_temp):
     print(confusion_matrix(y_true, y_pred))
     print(f"\nMelhor modelo para Double Chance: {best_model_name}")
     print(f"Acurácia no treino (validação interna): {best_model_score:.4f}")
-    with open('autogluon_double_chance_model_leaderboard.txt', 'w') as f:
+    with open('autogluon_double_chance_model_leaderboard.txt', 'w+') as f:
         f.write(f"Melhor modelo: {best_model_name}\n")
         f.write(f"Acurácia: {best_model_score:.4f}\n")
         f.write("\nMétricas de Avaliação no conjunto de teste (Double Chance):")
@@ -2378,7 +2380,7 @@ def NN_draw_no_bet(df):
     print(confusion_matrix(y_true, y_pred))
     print(f"\nMelhor modelo para Draw No Bet: {best_model_name}")
     print(f"Acurácia no treino (validação interna): {best_model_score:.4f}")
-    with open('autogluon_draw_no_bet_model_leaderboard.txt', 'w') as f:
+    with open('autogluon_draw_no_bet_model_leaderboard.txt', 'w+') as f:
         f.write(f"Melhor modelo: {best_model_name}\n")
         f.write(f"Acurácia: {best_model_score:.4f}\n")
         f.write("\nMétricas de Avaliação no conjunto de teste (Draw No Bet):")
