@@ -45,7 +45,7 @@ apiclient = BetsAPIClient(api_key=api)
 #CSV_FILE = r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_novo.csv"
 CSV_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'resultados_60.csv')
 #lista dos thresholds das nns
-lista_th = [0.575,0.4,0.575,0.575,0.575,0.575]
+lista_th = [0.6,0.4,0.6,0.6,0.6,0.6]
 list_checa = []
 
 
@@ -118,7 +118,6 @@ def agendar_verificacao_diaria():
             list_checa = []
         except Exception as e:
             logger.error(f"❌ Erro na verificação diária: {e}")
-        
         # Reagenda para o próximo dia
         agendar_verificacao_diaria()
 
@@ -542,6 +541,160 @@ def loop_pega_jogos():
             logger.info("ℹ️ Nenhum jogo encontrado por agora")
         time_module.sleep(10 * 60)  # 10 minutos, ajustado para o intervalo correto
 
+def atualizar_csv_dia_atual():
+    COLUNAS_PADRAO = [
+        'id', 'event_day', 'home', 'away','league', 'home_goals', 'away_goals', 'tot_goals',
+        'goals_over_under', 'odd_goals_over1', 'odd_goals_under1',
+        'asian_handicap1', 'team_ah1', 'odds_ah1',
+        'asian_handicap2', 'team_ah2', 'odds_ah2',
+        'goal_line1', 'type_gl1', 'odds_gl1',
+        'goal_line2', 'type_gl2', 'odds_gl2',
+        'double_chance1', 'odds_dc1',
+        'double_chance2', 'odds_dc2',
+        'double_chance3', 'odds_dc3',
+        'draw_no_bet_team1', 'odds_dnb1',
+        'draw_no_bet_team2', 'odds_dnb2',
+    ]
+
+    dia = datetime.now().strftime("%Y%m%d")
+    logger.info(f"🔄 Atualizando jogos do dia {dia}")
+
+    try:
+        # Carregar dados existentes primeiro
+        ids_existentes = set()
+        if os.path.exists(CSV_FILE):
+            df_existente = pd.read_csv(CSV_FILE, dtype={"event_day": str})
+            ids_existentes = set(df_existente['id'].astype(str))
+            logger.info(f"📊 Total de registros existentes: {len(ids_existentes)}")
+
+        logger.info("🔎 Buscando IDs e dicionário de eventos...")
+        ids, dicio = apiclient.getAllOlds(leagues=apiclient.leagues_ids, day=dia)
+        logger.info(f"✔️ {len(ids)} eventos encontrados.")
+
+        logger.info("📊 Filtrando e transformando odds...")
+        odds_data = apiclient.filtraOddsNovo(ids=ids)
+        df_odds = apiclient.transform_betting_data(odds_data)
+
+        novos_dados = []
+        for dados_evento in dicio:
+            event_id = str(dados_evento.get('id'))
+            
+            # Verificar se o ID já existe
+            if event_id in ids_existentes:
+                logger.info(f"⚠️ ID {event_id} já existe no CSV, pulando...")
+                continue
+                
+            odds_transformadas = df_odds[df_odds['id'] == event_id].to_dict('records')
+
+            if odds_transformadas:
+                merged = {**dados_evento, **odds_transformadas[0], "event_day": dia}
+            else:
+                merged = {**dados_evento, "event_day": dia}
+
+            novos_dados.append(merged)
+
+        if not novos_dados:
+            logger.info("⚠️ Nenhum dado novo para adicionar.")
+            return
+
+        df_novo = pd.DataFrame(novos_dados)
+        logger.info(f"📝 {len(df_novo)} novos registros para adicionar")
+
+        # Garantir que id é string
+        df_novo['id'] = df_novo['id'].astype(str)
+
+        colunas_adicionadas = []
+        for coluna in COLUNAS_PADRAO:
+            if coluna not in df_novo.columns:
+                df_novo[coluna] = None
+                colunas_adicionadas.append(coluna)
+
+        if colunas_adicionadas:
+            logger.info(f"➕ Colunas adicionadas automaticamente: {', '.join(colunas_adicionadas)}")
+
+        df_novo = df_novo[COLUNAS_PADRAO]
+
+        if os.path.exists(CSV_FILE):
+            logger.info("📂 CSV existente encontrado, mesclando dados...")
+            df_existente = pd.read_csv(CSV_FILE, dtype={"event_day": str})
+            df_existente['id'] = df_existente['id'].astype(str)
+            
+            # Verificar duplicatas antes da concatenação
+            duplicatas = set(df_novo['id']).intersection(set(df_existente['id']))
+            if duplicatas:
+                logger.warning(f"⚠️ Encontrados {len(duplicatas)} IDs que já existem no CSV")
+                for dup in duplicatas:
+                    logger.warning(f"ID duplicado: {dup}")
+            
+            # Filtrar apenas registros novos que não existem no CSV
+            df_novo = df_novo[~df_novo['id'].isin(duplicatas)]
+            logger.info(f"📝 Após remover duplicatas, {len(df_novo)} registros novos para adicionar")
+            
+            if len(df_novo) > 0:
+                df_final = pd.concat([df_existente, df_novo], ignore_index=True)
+                df_final['id'] = df_final['id'].astype(str)
+                df_final = df_final.drop_duplicates(subset=['id'], keep='last')
+                
+                # Ordenar por data do evento
+                df_final = df_final.sort_values(by="event_day", ascending=False).reset_index(drop=True)
+                
+                # Verificar duplicatas finais
+                duplicatas_finais = df_final[df_final.duplicated(subset=['id'], keep=False)]
+                if not duplicatas_finais.empty:
+                    logger.warning(f"⚠️ Ainda existem {len(duplicatas_finais)} duplicatas após a concatenação")
+                    for id_dup in duplicatas_finais['id'].unique():
+                        logger.warning(f"ID duplicado final: {id_dup}")
+                
+                df_final.to_csv(CSV_FILE, index=False)
+                logger.info(f"✅ CSV atualizado com {len(df_novo)} eventos adicionados")
+            else:
+                logger.info("ℹ️ Nenhum registro novo para adicionar após remoção de duplicatas")
+        else:
+            logger.info("📄 Nenhum CSV encontrado, criando novo arquivo...")
+            df_novo.to_csv(CSV_FILE, index=False)
+            logger.info(f"✅ Novo CSV criado com {len(df_novo)} eventos")
+        
+    except Exception as e:
+        logger.error(f"❌ Erro ao atualizar dados do dia {dia}: {type(e).__name__}: {e}")
+        raise  # Re-lança a exceção para ser tratada pelo chamador
+
+def remover_duplicatas():
+    global CSV_FILE
+    try:
+        logger.info("🔍 Iniciando remoção de duplicatas...")
+        df_final = pd.read_csv(CSV_FILE)
+        total_antes = len(df_final)
+        
+        # Garantir que id é string
+        df_final['id'] = df_final['id'].astype(str)
+        
+        # Log dos IDs duplicados antes da remoção
+        duplicados = df_final[df_final.duplicated(subset=['id'], keep=False)]
+        if not duplicados.empty:
+            logger.info(f"⚠️ Encontrados {len(duplicados)} registros duplicados:")
+            for id_dup in duplicados['id'].unique():
+                logger.info(f"ID duplicado: {id_dup}")
+        
+        # Remover duplicatas mantendo o mais recente
+        df_final = df_final.drop_duplicates(subset=['id'], keep='last')
+        
+        total_depois = len(df_final)
+        removidos = total_antes - total_depois
+        
+        if removidos > 0:
+            logger.info(f"✅ Removidas {removidos} duplicatas")
+        
+        df_final.to_csv(CSV_FILE, index=False)
+        logger.info("✅ CSV atualizado após remoção de duplicatas")
+    except Exception as e:
+        logger.error(f"❌ Erro ao remover duplicatas: {str(e)}")
+
+def agendar_atualizacao_csv():
+    logger.info("🔄 Agendando atualização do CSV...")
+    atualizar_csv_dia_atual()
+    # Reagenda para daqui 30 minutos
+    threading.Timer(1800, agendar_atualizacao_csv).start()
+
 def main():
     # Set up signal handlers
     signal.signal(signal.SIGTERM, signal_handler)
@@ -559,6 +712,7 @@ def main():
     agendar_processar_dia_anterior()
     agendar_criacao_nns()
     agendar_verificacao_diaria()
+    agendar_atualizacao_csv()
 
     # Start the main loop to keep the program alive and running
     while True:
@@ -643,10 +797,61 @@ def pegaOddsEvento(df):
         delay = max(0, delay)  # evita delays negativos
 
         threading.Timer(delay, acao_do_jogo, args=(row,)).start()
+        threading.Timer(delay + 1300, checa_jogos_do_dia, args=(row['id_jogo'],)).start()
         print(f"Agendado jogo {row['id_jogo']} para {datetime.fromtimestamp(row['send_time'])}")
 
 
+def checa_jogos_do_dia(id,tentativa=0):
+    global list_checa
+    df = pd.read_csv(CSV_FILE)
+    
+    # Garante que 'event_day' é string
+    df["event_day"] = df["event_day"].astype(str)
 
+    # Identifica os dois dias mais recentes
+    ultimos_dois_dias = sorted(df["event_day"].unique())[-2:]
+
+    # Filtra o DataFrame
+    df_apenas_dois_dias = df[df["event_day"].isin(ultimos_dois_dias)]
+
+    # Pré-processamento dos dados
+    df_apenas_dois_dias = NN.preProcessEstatisticasGerais(df_apenas_dois_dias.copy())
+    df_apenas_dois_dias = NN.preProcessOverUnder(df_apenas_dois_dias.copy())
+    df_apenas_dois_dias = NN.preProcessHandicap_i(df_apenas_dois_dias.copy())
+    df_apenas_dois_dias = NN.preProcessGoalLine_i(df_apenas_dois_dias.copy())
+    df_apenas_dois_dias = NN.preProcessDoubleChance(df_apenas_dois_dias.copy())
+    df_apenas_dois_dias = NN.preProcessDrawNoBet_i(df_apenas_dois_dias.copy())
+    
+
+    for a in list_checa:
+        if a['id'] == id:
+            res = verificar_aposta(a,df_apenas_dois_dias)
+            if res is not None:
+                if res == 1:
+                    a['resultado'] = 'ganhou'
+                    
+                elif res == 0.5:
+                    a['resultado'] = 'meio ganho'
+                    
+                elif res == -0.5:
+                    a['resultado'] = 'meio ganho'
+                elif res == -1:
+                    a['resultado'] = 'perdeu'
+                else:
+                    a['resultado'] = 'empate'
+                a = pd.DataFrame(a)
+                a.drop(columns=['id'], inplace=True)
+                
+                mens = df_para_string(a)
+                for chat in chats:
+                    tb.sendMessages(chat, mens)
+            else:
+                if tentativa  < 2:
+                    time_module.sleep(2000)
+                    checa_jogos_do_dia(id,tentativa+1)
+                else:
+                    logger.info(f"❌ Jogo {id} não retornou resultado após 2 tentativas")
+                    return 0
 
 # Função que será executada para cada jogo
 def acao_do_jogo(row):
@@ -1000,15 +1205,23 @@ def predicta_over_under(prepOverUnder_df, dados):
 
 
 
-def predicta_handicap(prepHandicap_df, dados):
-    model_handicap = tf.keras.models.load_model('model_handicap_binario.keras')
-    preds = model_handicap.predict(prepHandicap_df)
+from autogluon.tabular import TabularPredictor
 
-    pred_handicap_1 = float(preds[0])
-    pred_handicap_2 = float(preds[1])
+def predicta_handicap(prepHandicap_df, dados):
+    predictor = TabularPredictor.load("autogluon_handicap_model")
+
+    # Garante que usaremos o melhor modelo
+    best_model = predictor.model_best
+    print(f"🔍 Modelo selecionado: {best_model}")
+    
+    # Usa explicitamente o melhor modelo para previsão
+    preds_proba = predictor.predict_proba(prepHandicap_df, model=best_model)
+
+    pred_handicap_1 = float(preds_proba[0][1]) 
+    pred_handicap_2 = float(preds_proba[1][1]) 
     preds = [pred_handicap_1, pred_handicap_2]
 
-    th_ve = 1.1 # Valor Esperado mínimo
+    th_ve = 1.1
     recomendacoes = []
     th_odd = 1.6
     for i in range(2):
@@ -1016,7 +1229,7 @@ def predicta_handicap(prepHandicap_df, dados):
         odd = float(dados['odds'].iloc[i])
         ve = prob * odd
         if (ve >= th_ve) and (prob >= lista_th[2]) and (odd >= th_odd):
-            if prob > preds[1 - i]:  # '1 - i' é o índice da outra opção
+            if prob > preds[1 - i]:
                 recomendacoes.append((i + 1, ve, prob, odd))
 
     logger.info(f"📊 Handicap - Predições: {preds}, Odds: {dados['odds']}")
@@ -1032,12 +1245,19 @@ def predicta_handicap(prepHandicap_df, dados):
 
 
 
-def predicta_goal_line(prepGoal_line_df, dados):
-    model_goal_line = tf.keras.models.load_model('model_binario_goal_line.keras')
-    preds = model_goal_line.predict(prepGoal_line_df)
 
-    pred_goal_line_1 = float(preds[0])
-    pred_goal_line_2 = float(preds[1])
+def predicta_goal_line(prepGoal_line_df, dados):
+    predictor = TabularPredictor.load("autogluon_goal_line_model")
+
+    # Garante que usaremos o melhor modelo
+    best_model = predictor.model_best
+    print(f"🔍 Modelo selecionado: {best_model}")
+    
+    # Usa explicitamente o melhor modelo para previsão de probabilidades
+    preds_proba = predictor.predict_proba(prepGoal_line_df, model=best_model)
+
+    pred_goal_line_1 = float(preds_proba[0][1])
+    pred_goal_line_2 = float(preds_proba[1][1])
     preds = [pred_goal_line_1, pred_goal_line_2]
 
     th_ve = 1.1  # Valor Esperado mínimo
@@ -1048,7 +1268,7 @@ def predicta_goal_line(prepGoal_line_df, dados):
         odd = float(dados['odds_gl'].iloc[i])
         ve = prob * odd
         if (ve >= th_ve) and (prob >= lista_th[3]) and (odd >= th_odd):
-            if prob > preds[1 - i]:  # '1 - i' é o índice da outra opção
+            if prob > preds[1 - i]:  # Comparação com a outra opção
                 recomendacoes.append((i + 1, ve, prob, odd))
 
     logger.info(f"📊 Goal Line - Predições: {preds}, Odds GL: {dados['odds_gl']}")
@@ -1064,152 +1284,132 @@ def predicta_goal_line(prepGoal_line_df, dados):
 
 
 
-def predicta_double_chance(pred_double_chance_df, dados):
-    model_double_chance = tf.keras.models.load_model('model_double_chance.keras')
-    preds = model_double_chance.predict(pred_double_chance_df)
-    recomendacoes = []
 
-    pred_double_chance_1 = float(preds[0])
-    pred_double_chance_2 = float(preds[1])
-    pred_double_chance_3 = float(preds[2])
+def predicta_double_chance(prepDoubleChance_df, dados):
+    try:
+        predictor = TabularPredictor.load("autogluon_double_chance_model")
 
-    preds = [pred_double_chance_1, pred_double_chance_2, pred_double_chance_3]
+        # Garante que usaremos o melhor modelo
+        best_model = predictor.model_best
+        logger.info(f"🔍 Modelo selecionado (Double Chance): {best_model}")
 
-    th_ve = 1.1
-    th_odd = 1.6
-    for i in range(3):
-        prob = preds[i]
-        odd = float(dados['odds'].iloc[i])
-        ve = prob * odd
-        if (ve >= th_ve) and (prob >= lista_th[4]) and (odd >= th_odd):
-            if i in [0, 1]:
-                if prob > preds[1 - i]:  # Comparação só entre pred[0] e pred[1]
-                    recomendacoes.append((i + 1, ve, prob, odd))
-            else:
-                # Para a terceira opção ("qualquer time ganha"), entra direto se passar os thresholds
-                recomendacoes.append((i + 1, ve, prob, odd))
-    logger.info(f"📊 Double Chance - Predições: {preds}, Odds: {dados['odds']}")
+        # Usa explicitamente o melhor modelo para 
+        preds_proba = predictor.predict_proba(prepDoubleChance_df, model=best_model)
+        
+        # Log das dimensões das previsões
+        logger.info(f"📊 Formato das previsões: {preds_proba.shape}")
+        logger.info(f"📊 Conteúdo das previsões: {preds_proba}")
+        
 
-    if recomendacoes:
-        melhor_opcao = max(recomendacoes, key=lambda x: x[2])  # maior VE
-        logger.info(f"✅ Double Chance opção {melhor_opcao[0]} recomendada | VE={melhor_opcao[1]:.3f} | Prob={melhor_opcao[2]:.2f} | Odd={melhor_opcao[3]}")
-        return (melhor_opcao[0], melhor_opcao[2])
-    else:
-        logger.info("❌ Nenhuma recomendação em Double Chance")
+
+
+        
+        if preds_proba.shape[0] < 3:
+            logger.error(f"❌ Número insuficiente de previsões: {preds_proba.shape[0]}")
+            return (None, None)
+
+        try:
+            pred_dc_1 = float(preds_proba.iloc[0, 1])
+            logger.info(f"📊 Previsão 1: {pred_dc_1}")
+        except Exception as e:
+            logger.error(f"❌ Erro ao processar previsão 1: {str(e)}")
+            return (None, None)
+
+        try:
+            pred_dc_2 = float(preds_proba.iloc[1, 1])
+            
+            logger.info(f"📊 Previsão 2: {pred_dc_2}")
+        except Exception as e:
+            logger.error(f"❌ Erro ao processar previsão 2: {str(e)}")
+            return (None, None)
+
+        try:
+            pred_dc_3 = float(preds_proba.iloc[2, 1])
+            logger.info(f"📊 Previsão 3: {pred_dc_3}")
+        except Exception as e:
+            logger.error(f"❌ Erro ao processar previsão 3: {str(e)}")
+            return (None, None)
+
+        preds = [pred_dc_1, pred_dc_2, pred_dc_3]
+        logger.info(f"📊 Lista de previsões: {preds}")
+
+        th_ve = 1.1
+        th_odd = 1.6
+        recomendacoes = []
+
+        for i in range(3):
+            try:
+                prob = preds[i]
+                odd = float(dados['odds'].iloc[i])
+                ve = prob * odd
+                logger.info(f"📊 Iteração {i+1} - Prob: {prob}, Odd: {odd}, VE: {ve}")
+                
+                if (ve >= th_ve) and (prob >= lista_th[4]) and (odd >= th_odd):
+                    if i in [0, 1]:
+                        if prob > preds[1 - i]:  # Compara apenas entre as duas primeiras
+                            recomendacoes.append((i + 1, ve, prob, odd))
+                    else:
+                        # Para a terceira opção ("qualquer time vence"), entra direto se passar os thresholds
+                        recomendacoes.append((i + 1, ve, prob, odd))
+            except Exception as e:
+                logger.error(f"❌ Erro ao processar iteração {i+1}: {str(e)}")
+                continue
+
+        logger.info(f"📊 Double Chance - Predições: {preds}, Odds: {dados['odds']}")
+        logger.info(f"📊 Recomendações encontradas: {recomendacoes}")
+
+        if recomendacoes:
+            melhor_opcao = max(recomendacoes, key=lambda x: x[2])  # Seleciona pela maior probabilidade
+            logger.info(f"✅ Double Chance opção {melhor_opcao[0]} recomendada (VE: {melhor_opcao[1]:.3f}, Prob: {melhor_opcao[2]:.3f}, Odd: {melhor_opcao[3]:.2f})")
+            return (melhor_opcao[0], melhor_opcao[2])
+        else:
+            logger.info("❌ Nenhuma recomendação em Double Chance")
+            return (None, None)
+    except Exception as e:
+        logger.error(f"❌ Erro durante a previsão do Double Chance: {str(e)}")
         return (None, None)
 
+
 def predicta_draw_no_bet(pred_draw_no_bet_df, dados):
-    model_draw_no_bet = tf.keras.models.load_model('model_binario_draw_no_bet.keras')
-    preds = model_draw_no_bet.predict(pred_draw_no_bet_df)
+    # Carregar o modelo treinado para "Draw No Bet"
+    predictor = TabularPredictor.load("autogluon_draw_no_bet_model")
+    
+    # Garantir que usamos o melhor modelo
+    best_model = predictor.model_best
+    logger.info(f"🔍 Modelo selecionado (Draw No Bet): {best_model}")
 
-    pred_draw_no_bet_1 = float(preds[0])
-    pred_draw_no_bet_2 = float(preds[1])
+    # Obter as probabilidades de predição
+    preds_proba = predictor.predict_proba(pred_draw_no_bet_df, model=best_model)
 
-    preds = [pred_draw_no_bet_1, pred_draw_no_bet_2]
+    # Convertendo as predições para valores flutuantes
+    pred_dnb_1 = float(preds_proba[0][1])
+    pred_dnb_2 = float(preds_proba[1][1])
+    preds = [pred_dnb_1, pred_dnb_2]
 
-    th_ve = 1.1 # Valor esperado mínimo
+    th_ve = 1.1  # Valor esperado mínimo
+    th_odd = 1.6  # Odd mínima
     recomendacoes = []
 
     for i in range(2):
         prob = preds[i]
         odd = float(dados['odds'].iloc[i])
         ve = prob * odd
-        th_odd = 1.6
-        # Verifica se o Valor Esperado é maior que o limite e a probabilidade é alta o suficiente
+
+        # Verifica se o Valor Esperado é maior que o limite e a probabilidade e odd estão boas
         if (ve >= th_ve) and (prob >= lista_th[5]) and (odd >= th_odd):
-            if prob > preds[1 - i]:  # '1 - i' é o índice da outra opção
+            if prob > preds[1 - i]:  # Compara entre as duas opções possíveis
                 recomendacoes.append((i + 1, ve, prob, odd))
 
     logger.info(f"📊 Draw No Bet - Predições: {preds}, Odds: {dados['odds']}")
 
     if recomendacoes:
+        # Seleciona a melhor recomendação com base na maior probabilidade
         melhor_opcao = max(recomendacoes, key=lambda x: x[2])
-        logger.info(f"✅ Draw No Bet opção {melhor_opcao[0]}| VE={melhor_opcao[1]:.3f} | Prob={melhor_opcao[2]:.2f} | Odd={melhor_opcao[3]}")
+        logger.info(f"✅ Draw No Bet opção {melhor_opcao[0]} recomendada (VE: {melhor_opcao[1]:.3f}, Prob: {melhor_opcao[2]:.3f}, Odd: {melhor_opcao[3]:.2f})")
         return (melhor_opcao[0], melhor_opcao[2])
     else:
         logger.info("❌ Nenhuma recomendação em Draw No Bet")
         return (None, None)
-
-
-'''
-def processar_dia_anterior():
-    dia = dia_anterior()
-    print(f"🔄 Processando jogos do dia {dia}")
-
-    try:
-        print("🔎 Buscando IDs e dicionário de eventos...")
-        ids, dicio = apiclient.getAllOlds(leagues=apiclient.leagues_ids, day=dia)
-        print(f"✔️ {len(ids)} eventos encontrados.")
-
-        print("📊 Filtrando e transformando odds...")
-        odds_data = apiclient.filtraOddsNovo(ids=ids)
-        df_odds = apiclient.transform_betting_data(odds_data)
-
-        novos_dados = []
-        for dados_evento in dicio:
-            event_id = dados_evento.get('id')
-            odds_transformadas = df_odds[df_odds['id'] == event_id].to_dict('records')
-
-            if odds_transformadas:
-                merged = {**dados_evento, **odds_transformadas[0], "event_day": dia}
-            else:
-                merged = {**dados_evento, "event_day": dia}
-
-            novos_dados.append(merged)
-
-        if novos_dados:
-            print(f"🧩 {len(novos_dados)} eventos com odds processados.")
-            df_novo = pd.DataFrame(novos_dados)
-
-            # Garante que todas as colunas obrigatórias existam
-            colunas_obrigatorias = [
-                'id', 'event_day', 'home', 'away', 'home_goals', 'away_goals', 'tot_goals',
-                'goals_over_under', 'odd_goals_over1', 'odd_goals_under1',
-                'asian_handicap1', 'team_ah1', 'odds_ah1',
-                'asian_handicap2', 'team_ah2', 'odds_ah2',
-                'goal_line1', 'type_gl1', 'odds_gl1',
-                'goal_line2', 'type_gl2', 'odds_gl2',
-                'double_chance1', 'odds_dc1',
-                'double_chance2', 'odds_dc2',
-                'double_chance3', 'odds_dc3',
-                'draw_no_bet_team1', 'odds_dnb1',
-                'draw_no_bet_team2', 'odds_dnb2',
-            ]
-
-            colunas_adicionadas = []
-            for coluna in colunas_obrigatorias:
-                if coluna not in df_novo.columns:
-                    df_novo[coluna] = None
-                    colunas_adicionadas.append(coluna)
-
-            if colunas_adicionadas:
-                print(f"➕ Colunas adicionadas automaticamente: {', '.join(colunas_adicionadas)}")
-
-            colunas_ordenadas = ['id', 'event_day'] + [col for col in colunas_obrigatorias if col not in ['id', 'event_day']]
-            df_novo = df_novo[colunas_ordenadas]
-
-            if os.path.exists(CSV_FILE):
-                print("📂 CSV existente encontrado, mesclando dados...")
-                df_existente = pd.read_csv(CSV_FILE, dtype={"event_day": str})
-
-                df_final = pd.concat([df_existente, df_novo], ignore_index=True)
-                df_final = df_final.sort_values(by="event_day").reset_index(drop=True)
-
-                primeiro_dia = df_final["event_day"].min()
-                df_final = df_final[df_final["event_day"] != primeiro_dia]
-            else:
-                print("📄 Nenhum CSV encontrado, criando novo arquivo...")
-                df_final = df_novo
-                primeiro_dia = "N/A"
-
-            df_final.to_csv(CSV_FILE, index=False)
-            print(f"✅ Dados atualizados com sucesso! Dia {primeiro_dia} removido, dia {dia} adicionado.")
-        else:
-            print(f"⚠️ Nenhum dado encontrado para o dia {dia}")
-
-    except Exception as e:
-        print(f"❌ Erro ao processar dia {dia}: {type(e).__name__}: {e}")
-'''
 
 
 def processar_dia_anterior():
@@ -1228,18 +1428,6 @@ def processar_dia_anterior():
     ]
     dia = dia_anterior()
     print(f"🔄 Processando jogos do dia {dia}")
-
-    # Carregar dias já processados
-    if os.path.exists(CSV_FILE):
-        df_existente = pd.read_csv(CSV_FILE, dtype={"event_day": str})
-        dias_processados = set(df_existente["event_day"].unique())
-    else:
-        dias_processados = set()
-
-    # Verificar se o dia anterior já foi processado
-    if dia in dias_processados:
-        print(f"✅ O dia {dia} já foi processado.")
-        return
 
     try:
         print("🔎 Buscando IDs e dicionário de eventos...")
@@ -1291,6 +1479,7 @@ def processar_dia_anterior():
                 primeiro_dia = "N/A"
 
             df_final.to_csv(CSV_FILE, index=False)
+            remover_duplicatas()
             print(f"✅ Dados atualizados com sucesso! Dia {primeiro_dia} removido, dia {dia} adicionado.")
         else:
             print(f"⚠️ Nenhum dado encontrado para o dia {dia}")
@@ -1311,5 +1500,124 @@ def signal_handler(signum, frame):
 if __name__ == "__main__":
     main()
 
+import pandas as pd
+import os
+from datetime import datetime
 
+def atualizar_csv_dia_atual():
+    COLUNAS_PADRAO = [
+        'id', 'event_day', 'home', 'away','league', 'home_goals', 'away_goals', 'tot_goals',
+        'goals_over_under', 'odd_goals_over1', 'odd_goals_under1',
+        'asian_handicap1', 'team_ah1', 'odds_ah1',
+        'asian_handicap2', 'team_ah2', 'odds_ah2',
+        'goal_line1', 'type_gl1', 'odds_gl1',
+        'goal_line2', 'type_gl2', 'odds_gl2',
+        'double_chance1', 'odds_dc1',
+        'double_chance2', 'odds_dc2',
+        'double_chance3', 'odds_dc3',
+        'draw_no_bet_team1', 'odds_dnb1',
+        'draw_no_bet_team2', 'odds_dnb2',
+    ]
+
+    dia = datetime.now().strftime("%Y%m%d")
+    logger.info(f"🔄 Atualizando jogos do dia {dia}")
+
+    try:
+        # Carregar dados existentes primeiro
+        ids_existentes = set()
+        if os.path.exists(CSV_FILE):
+            df_existente = pd.read_csv(CSV_FILE, dtype={"event_day": str})
+            ids_existentes = set(df_existente['id'].astype(str))
+            logger.info(f"📊 Total de registros existentes: {len(ids_existentes)}")
+
+        logger.info("🔎 Buscando IDs e dicionário de eventos...")
+        ids, dicio = apiclient.getAllOlds(leagues=apiclient.leagues_ids, day=dia)
+        logger.info(f"✔️ {len(ids)} eventos encontrados.")
+
+        logger.info("📊 Filtrando e transformando odds...")
+        odds_data = apiclient.filtraOddsNovo(ids=ids)
+        df_odds = apiclient.transform_betting_data(odds_data)
+
+        novos_dados = []
+        for dados_evento in dicio:
+            event_id = str(dados_evento.get('id'))
+            
+            # Verificar se o ID já existe
+            if event_id in ids_existentes:
+                logger.info(f"⚠️ ID {event_id} já existe no CSV, pulando...")
+                continue
+                
+            odds_transformadas = df_odds[df_odds['id'] == event_id].to_dict('records')
+
+            if odds_transformadas:
+                merged = {**dados_evento, **odds_transformadas[0], "event_day": dia}
+            else:
+                merged = {**dados_evento, "event_day": dia}
+
+            novos_dados.append(merged)
+
+        if not novos_dados:
+            logger.info("⚠️ Nenhum dado novo para adicionar.")
+            return
+
+        df_novo = pd.DataFrame(novos_dados)
+        logger.info(f"📝 {len(df_novo)} novos registros para adicionar")
+
+        # Garantir que id é string
+        df_novo['id'] = df_novo['id'].astype(str)
+
+        colunas_adicionadas = []
+        for coluna in COLUNAS_PADRAO:
+            if coluna not in df_novo.columns:
+                df_novo[coluna] = None
+                colunas_adicionadas.append(coluna)
+
+        if colunas_adicionadas:
+            logger.info(f"➕ Colunas adicionadas automaticamente: {', '.join(colunas_adicionadas)}")
+
+        df_novo = df_novo[COLUNAS_PADRAO]
+
+        if os.path.exists(CSV_FILE):
+            logger.info("📂 CSV existente encontrado, mesclando dados...")
+            df_existente = pd.read_csv(CSV_FILE, dtype={"event_day": str})
+            df_existente['id'] = df_existente['id'].astype(str)
+            
+            # Verificar duplicatas antes da concatenação
+            duplicatas = set(df_novo['id']).intersection(set(df_existente['id']))
+            if duplicatas:
+                logger.warning(f"⚠️ Encontrados {len(duplicatas)} IDs que já existem no CSV")
+                for dup in duplicatas:
+                    logger.warning(f"ID duplicado: {dup}")
+            
+            # Filtrar apenas registros novos que não existem no CSV
+            df_novo = df_novo[~df_novo['id'].isin(duplicatas)]
+            logger.info(f"📝 Após remover duplicatas, {len(df_novo)} registros novos para adicionar")
+            
+            if len(df_novo) > 0:
+                df_final = pd.concat([df_existente, df_novo], ignore_index=True)
+                df_final['id'] = df_final['id'].astype(str)
+                df_final = df_final.drop_duplicates(subset=['id'], keep='last')
+                
+                # Ordenar por data do evento
+                df_final = df_final.sort_values(by="event_day", ascending=False).reset_index(drop=True)
+                
+                # Verificar duplicatas finais
+                duplicatas_finais = df_final[df_final.duplicated(subset=['id'], keep=False)]
+                if not duplicatas_finais.empty:
+                    logger.warning(f"⚠️ Ainda existem {len(duplicatas_finais)} duplicatas após a concatenação")
+                    for id_dup in duplicatas_finais['id'].unique():
+                        logger.warning(f"ID duplicado final: {id_dup}")
+                
+                df_final.to_csv(CSV_FILE, index=False)
+                logger.info(f"✅ CSV atualizado com {len(df_novo)} eventos adicionados")
+            else:
+                logger.info("ℹ️ Nenhum registro novo para adicionar após remoção de duplicatas")
+        else:
+            logger.info("📄 Nenhum CSV encontrado, criando novo arquivo...")
+            df_novo.to_csv(CSV_FILE, index=False)
+            logger.info(f"✅ Novo CSV criado com {len(df_novo)} eventos")
+        
+    except Exception as e:
+        logger.error(f"❌ Erro ao atualizar dados do dia {dia}: {type(e).__name__}: {e}")
+        raise  # Re-lança a exceção para ser tratada pelo chamador
 

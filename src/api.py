@@ -88,6 +88,8 @@ class BetsAPIClient:
                 res = self.get_old_matches(league_id=league, page=page, day=day)
                 r = res.get('results', [])  # Evita erro se 'results' não estiver presente
                 for registro in r:
+                    if str(registro.get('time_status')) != '3':
+                        continue  # Evita erro se 'results' não estiver presente
                     ss = registro.get('ss')  # Pega o valor de 'ss', se existir, ou None
                     
                     if ss and len(ss) >= 3:  # Verifica se 'ss' não é None e tem pelo menos 3 caracteres
