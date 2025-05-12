@@ -15,6 +15,7 @@ import joblib
 from sklearn.linear_model import LogisticRegression
 from autogluon.tabular import TabularPredictor
 import pandas as pd
+import random
 #tirar input shape
 
 logger = logging.getLogger(__name__)
@@ -2084,8 +2085,6 @@ def NN_double_chance(df=df_temp):
     
     df_temporario[['prob_dc1', 'prob_dc2', 'prob_dc3']] = df_temporario[['prob_dc1', 'prob_dc2', 'prob_dc3']].div(total, axis=0)
 
-
-
     df_temporario = preparar_df_double_chance(df_temporario)
     
     df_temporario = pd.get_dummies(df_temporario, columns=['double_chance'], prefix='double_chance_type')
@@ -2113,7 +2112,7 @@ def NN_double_chance(df=df_temp):
     print("Colunas de X (double chance):", X_final.columns.tolist())
 
     # Divisão em treino e teste
-    X_train, X_test, y_train, y_test = train_test_split(X_final, y, test_size=0.1, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(X_final, y, test_size=0.3, random_state=42)
 
     df_ag_train = X_train.copy()
     df_ag_train['target'] = y_train
@@ -2140,8 +2139,6 @@ def NN_double_chance(df=df_temp):
         best_model_name = leaderboard.loc[leaderboard['score_val'].idxmax(), 'model']
         best_model_score = leaderboard.loc[leaderboard['score_val'].idxmax(), 'score_val']
 
-    
-
     # Salvar o modelo final
     final_model_path = "autogluon_double_chance_model"
     shutil.move(temp_dir, final_model_path)
@@ -2167,6 +2164,163 @@ def NN_double_chance(df=df_temp):
         f.write(f"Acurácia: {best_model_score:.4f}\n")
         f.write("\nMétricas de Avaliação no conjunto de teste (Double Chance):")
         f.write(f"Acurácia: {accuracy_score(y_true, y_pred):.4f}")
+
+    # --- Q-LEARNING A PARTIR DAS FEATURES DO TESTE + Y_PRED ---
+    # Preparar dados para Q-Learning
+    q_df = X_test.copy()
+    q_df['prediction'] = y_pred  # Adiciona as previsões do AutoGluon como feature
+    q_df['actual_result'] = y_true  # Resultados reais para cálculo de recompensas
+    
+    # Adicionar cálculo do EV (Valor Esperado)
+    q_df['ev'] = q_df['prediction'] * q_df['odds']  # EV = Probabilidade estimada * Odd
+    
+    # Normalizar features para discretização
+    from sklearn.preprocessing import MinMaxScaler
+    scaler = MinMaxScaler()
+    q_df_scaled = pd.DataFrame(scaler.fit_transform(q_df.drop(columns=['actual_result', 'ev'])), 
+                              columns=q_df.drop(columns=['actual_result', 'ev']).columns)
+    
+    # Discretização dos estados (simplificado para exemplo)
+    def discretize_state(row):
+        # Simplificação: transformar cada feature em 0 ou 1 baseado na mediana
+        state = []
+        for col in q_df_scaled.columns:
+            state.append(str(int(row[col] > q_df_scaled[col].median())))
+        return '_'.join(state)
+    
+    q_df['state'] = q_df_scaled.apply(discretize_state, axis=1)
+    
+    # Parâmetros do Q-Learning
+    learning_rate = 0.1
+    discount_factor = 0.9
+    exploration_rate = 0.3
+    n_epochs = 100
+    
+    # Ações possíveis: 0 = não apostar, 1 = apostar
+    actions = [0, 1]
+    
+    # Inicializar tabela Q
+    Q = {}
+    
+    # Função para obter recompensa
+    def get_reward(action, actual_result, prediction, odds):
+        if action == 0:  # Não apostou - recompensa neutra
+            return 0
+        
+        # Se apostou
+        if actual_result == 1:  # Ganhou a aposta
+            return odds - 1  # Lucro = odd - 1 (pois apostou 1 unidade)
+        else:  # Perdeu a aposta
+            return -1  # Perdeu o valor apostado
+    
+    # Treinamento do Q-Learning
+    for epoch in range(n_epochs):
+        for idx, row in q_df.iterrows():
+            state = row['state']
+            actual_result = row['actual_result']
+            prediction = row['prediction']
+            odds = row['odds']
+            
+            # Inicializar estado na tabela Q se não existir
+            if state not in Q:
+                Q[state] = {0: 0, 1: 0}  # Valores iniciais para cada ação
+            
+            # Escolha da ação (exploração vs exploração)
+            if random.uniform(0, 1) < exploration_rate:
+                action = random.choice(actions)
+            else:
+                action = max(Q[state].items(), key=lambda x: x[1])[0]
+            
+            # Calcular recompensa
+            reward = get_reward(action, actual_result, prediction, odds)
+            
+            # Próximo estado (neste caso, é o mesmo pois estamos treinando com dados históricos)
+            next_state = state
+            
+            # Atualizar valor Q
+            if next_state in Q:
+                max_next = max(Q[next_state].values())
+            else:
+                max_next = 0
+                
+            Q[state][action] = (1 - learning_rate) * Q[state][action] + \
+                              learning_rate * (reward + discount_factor * max_next)
+    
+    # Após o treinamento, podemos usar a tabela Q para tomar decisões
+    def decide_bet(features, prediction, odds):
+        # Preparar features como no treino
+        features_df = pd.DataFrame([features])
+        features_df['prediction'] = prediction
+        features_scaled = scaler.transform(features_df)
+        
+        # Discretizar estado
+        state = discretize_state(pd.Series(features_scaled[0], index=features_df.columns))
+        
+        # Escolher ação baseada na tabela Q
+        if state in Q:
+            action = max(Q[state].items(), key=lambda x: x[1])[0]
+        else:
+            # Estado nunca visto - política padrão (apostar se odd > 2 e prediction == 1)
+            action = 1 if (odds > 2.0 and prediction == 1) else 0
+        
+        return action
+    
+    # Testar a política aprendida nos dados de teste
+    correct_decisions = 0
+    total_decisions = 0
+    profit = 0
+    
+    # Critérios para análise especial
+    odd_min = 1.6
+    ev_min = 1.1
+    
+    # Dados para análise filtrada
+    filtered_correct = 0
+    filtered_total = 0
+    filtered_profit = 0
+    
+    for idx, row in q_df.iterrows():
+        features = row.drop(['actual_result', 'state', 'prediction', 'ev']).to_dict()
+        action = decide_bet(features, row['prediction'], row['odds'])
+        
+        if action == 1:  # Apostou
+            if row['actual_result'] == 1:
+                profit += (row['odds'] - 1)
+                correct_decisions += 1
+            else:
+                profit -= 1
+            total_decisions += 1
+            
+            # Verificar se atende aos critérios especiais
+            if row['odds'] > odd_min and row['ev'] > ev_min:
+                if row['actual_result'] == 1:
+                    filtered_profit += (row['odds'] - 1)
+                    filtered_correct += 1
+                else:
+                    filtered_profit -= 1
+                filtered_total += 1
+    
+    print(f"\nQ-Learning Performance (Todas as apostas):")
+    print(f"Decisões de aposta: {total_decisions}")
+    print(f"Precisão nas apostas: {correct_decisions/total_decisions:.2f}" if total_decisions > 0 else "Nenhuma aposta")
+    print(f"Lucro: {profit:.2f} unidades")
+
+    print(f"\nQ-Learning Performance (Filtrado: odd > {odd_min} e EV > {ev_min}):")
+    print(f"Decisões de aposta: {filtered_total}")
+    print(f"Precisão nas apostas: {filtered_correct/filtered_total:.2f}" if filtered_total > 0 else "Nenhuma aposta que atende aos critérios")
+    print(f"Lucro: {filtered_profit:.2f} unidades")
+
+    # Salvar métricas adicionais no arquivo
+    with open('autogluon_double_chance_model_leaderboard.txt', 'a') as f:
+        f.write(f"\n\n--- Análise Filtrada (odd > {odd_min} e EV > {ev_min}) ---")
+        f.write(f"\nTotal de apostas filtradas: {filtered_total}")
+        f.write(f"\nPrecisão nas apostas filtradas: {filtered_correct/filtered_total:.4f}" if filtered_total > 0 else "\nNenhuma aposta que atende aos critérios")
+        f.write(f"\nLucro nas apostas filtradas: {filtered_profit:.2f} unidades")
+    
+    # Salvar tabela Q para uso futuro
+    import json
+    with open('q_table_double_chance.json', 'w') as f:
+        json.dump(Q, f)
 
     return 0.5
 
