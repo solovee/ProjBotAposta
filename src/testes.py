@@ -500,5 +500,10 @@ print("✅ CSV atualizado com os dias 20250505 e 20250506. Dois dias mais antigo
 import main
 import NN
 import pandas as pd
+'''
+a = pd.read_csv('df_temp_preprocessado.csv')
+NN.NN_handicap(a)
+'''
 
-main.criaTodasNNs()
+
+
