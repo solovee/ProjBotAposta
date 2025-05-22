@@ -16,6 +16,8 @@ import os
 import signal
 import sys
 
+#arrumar multiclass handicap saida
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -45,8 +47,8 @@ apiclient = BetsAPIClient(api_key=api)
 #CSV_FILE = r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_novo.csv"
 CSV_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'resultados_60.csv')
 #lista dos thresholds das nns
-lista_th = [0.6,0.4,0.6,0.6,0.6,0.6]
-list_checa = [{"id": "174660737", "mercado": "goal_line", "tipo": "over", "linha": "4.5", "odd": 1.8, "jogo": "RIO AVE (HOTSHOT) X FC PORTO (BOULEVARD)"},{"id": "174659969", "mercado": "goal_line", "tipo": "over", "linha": "3.5 , 4.0", "odd": 1.85, "jogo": "ITALY (KLEVER) X GERMANY (SAMURAI)"},{"id": "174660742", "mercado": "handicap", "time": "RIO AVE (HOTSHOT)", "linha": "0.0 , -0.5", "odd": 1.925, "jogo": "BENFICA (INQUISITOR) X RIO AVE (HOTSHOT)"},{"id": "174659975", "mercado": "goal_line", "tipo": "under", "linha": "5.0", "odd": 1.9, "jogo": "GERMANY (SAMURAI) X SPAIN (ZOYIR)"},{"id": "174660021", "mercado": "handicap", "time": "ITALY (KLEVER)", "linha": "0.0 , -0.5", "odd": 1.875, "jogo": "GERMANY (SAMURAI) X ITALY (KLEVER)"},{"id": "174688371", "mercado": "handicap", "time": "TOTTENHAM (ROMEO)", "linha": "0.5", "odd": 1.85, "jogo": "A.BILBAO (DAVID) X TOTTENHAM (ROMEO)"},{"id": "174660797", "mercado": "goal_line", "tipo": "under", "linha": "4.0 , 4.5", "odd": 1.85, "jogo": "RIO AVE (HOTSHOT) X BENFICA (INQUISITOR)"},{"id": "174660029", "mercado": "goal_line", "tipo": "under", "linha": "5.0", "odd": 1.9, "jogo": "SPAIN (ZOYIR) X GERMANY (SAMURAI)"},{"id": "174660035", "mercado": "goal_line", "tipo": "over", "linha": "4.0 , 4.5", "odd": 1.8, "jogo": "NAPOLI (KLEVER) X BOLOGNA (TOHI4)"},{"id": "174688395", "mercado": "goal_line", "tipo": "under", "linha": "4.5 , 5.0", "odd": 1.9, "jogo": "PAOK (LIO) X A.BILBAO (DAVID)"},{"id": "174660050", "mercado": "double_chance", "time": "NAPOLI (KLEVER)", "odd": 1.6, "jogo": "NAPOLI (KLEVER) X ROMA (SAMURAI)"},{"id": "174688412", "mercado": "handicap", "time": "A.BILBAO (DAVID)", "linha": "0.0 , -0.5", "odd": 1.8, "jogo": "TOTTENHAM (ROMEO) X A.BILBAO (DAVID)"},{"id": "174660079", "mercado": "goal_line", "tipo": "over", "linha": "5.0 , 5.5", "odd": 1.875, "jogo": "JUVENTUS (ZOYIR) X BOLOGNA (TOHI4)"},{"id": "174660086", "mercado": "double_chance", "time": "BOLOGNA (TOHI4)", "odd": 2.0, "jogo": "BOLOGNA (TOHI4) X ROMA (SAMURAI)"},{"id": "174688422", "mercado": "handicap", "time": "PAOK (LIO)", "linha": "0.0 , -0.5", "odd": 1.825, "jogo": "A.BILBAO (DAVID) X PAOK (LIO)"},{"id": "174660867", "mercado": "goal_line", "tipo": "under", "linha": "4.5", "odd": 1.9, "jogo": "GHANA (BOULEVARD) X UKRAINE (HOTSHOT)"},{"id": "174660095", "mercado": "double_chance", "time": "NAPOLI (KLEVER)", "odd": 1.6, "jogo": "ROMA (SAMURAI) X NAPOLI (KLEVER)"}]
+lista_th = [0.575,0.4,0.625,0.575,0.575,0.575]
+list_checa = []
 
 
 
@@ -839,7 +841,7 @@ def checa_jogos_do_dia(id,tentativa=0):
                     a['resultado'] = 'perdeu'
                 else:
                     a['resultado'] = 'empate'
-                a = pd.DataFrame(a)
+                a = pd.DataFrame([a])
                 a.drop(columns=['id'], inplace=True)
                 
                 mens = df_para_string(a)
@@ -914,32 +916,36 @@ def preve(df_linha, id):
             tipo_over_under, res_under_over = predicta_over_under(prepOverUnder, dados_OU)
         
         prepHandicap, dados_ah = NN.prepNNHandicap_X(df_linha)
+        prepHandicap_conj = NN.prepNNHandicap_X_conj(df_linha)
 
-        if prepHandicap is None:
+        if prepHandicap is None or prepHandicap_conj is None:
             time_handicap, res_handicap = None, None
         else:
-            time_handicap, res_handicap = predicta_handicap(prepHandicap, dados_ah)
+            time_handicap, res_handicap = predicta_handicap(prepHandicap,prepHandicap_conj, dados_ah)
         
         prepGoal_line, dados_gl = NN.prepNNGoal_line_X(df_linha)
+        prepGoal_line_conj = NN.prepNNGoal_line_X_conj(df_linha)
 
         if prepGoal_line is None:
             linha_gl, res_goal_line = None, None
         else:
-            linha_gl, res_goal_line = predicta_goal_line(prepGoal_line, dados_gl)
+            linha_gl, res_goal_line = predicta_goal_line(prepGoal_line, prepGoal_line_conj, dados_gl)
         
         prepDouble_chance, dados_dc = NN.prepNNDouble_chance_X(df_linha)
+        prepDouble_chance_conj = NN.prepNNDouble_chance_X_conj(df_linha)
 
         if prepDouble_chance is None:
             type_dc, res_double_chance = None, None
         else:
-            type_dc, res_double_chance = predicta_double_chance(prepDouble_chance, dados_dc)
+            type_dc, res_double_chance = predicta_double_chance(prepDouble_chance,prepDouble_chance_conj, dados_dc)
         
         prepDraw_no_bet, dados_dnb = NN.prepNNDraw_no_bet_X(df_linha)
+        prepDraw_no_bet_conj = NN.prepNNDraw_no_bet_X_conj(df_linha)
 
         if prepDraw_no_bet is None:
             time_draw_no_bet, res_draw_no_bet = None, None
         else:
-            time_draw_no_bet, res_draw_no_bet = predicta_draw_no_bet(prepDraw_no_bet, dados_dnb)
+            time_draw_no_bet, res_draw_no_bet = predicta_draw_no_bet(prepDraw_no_bet,prepDraw_no_bet_conj, dados_dnb)
 
         lista_preds_true = [tipo_over_under, res_under_over, time_handicap, res_handicap, linha_gl, res_goal_line, type_dc, res_double_chance,time_draw_no_bet, res_draw_no_bet]
         
@@ -1207,18 +1213,22 @@ def predicta_over_under(prepOverUnder_df, dados):
 
 from autogluon.tabular import TabularPredictor
 
-def predicta_handicap(prepHandicap_df, dados):
+def predicta_handicap(prepHandicap_df,prepHandicap_df_conj, dados):
     predictor = TabularPredictor.load("autogluon_handicap_model")
+    predictor_conj = TabularPredictor.load("autogluon_handicap_model_conj")
 
     # Garante que usaremos o melhor modelo
     best_model = predictor.model_best
     print(f"🔍 Modelo selecionado: {best_model}")
+    best_model_conj = predictor_conj.model_best
     
     # Usa explicitamente o melhor modelo para previsão
     preds_proba = predictor.predict_proba(prepHandicap_df, model=best_model)
+    pred_conj = predictor_conj.predict(prepHandicap_df_conj, model=best_model_conj).iloc[0]
 
     pred_handicap_1 = float(preds_proba[0][1]) 
     pred_handicap_2 = float(preds_proba[1][1]) 
+
     preds = [pred_handicap_1, pred_handicap_2]
 
     th_ve = 1.1
@@ -1230,9 +1240,11 @@ def predicta_handicap(prepHandicap_df, dados):
         ve = prob * odd
         if (ve >= th_ve) and (prob >= lista_th[2]) and (odd >= th_odd):
             if prob > preds[1 - i]:
-                recomendacoes.append((i + 1, ve, prob, odd))
+                if pred_conj == i:
+                    recomendacoes.append((i + 1, ve, prob, odd))
 
     logger.info(f"📊 Handicap - Predições: {preds}, Odds: {dados['odds']}")
+    logger.info(f"📊 Handicap - Pred: {pred_conj}")
 
     if recomendacoes:
         melhor_opcao = max(recomendacoes, key=lambda x: x[2])
@@ -1246,16 +1258,22 @@ def predicta_handicap(prepHandicap_df, dados):
 
 
 
-def predicta_goal_line(prepGoal_line_df, dados):
+def predicta_goal_line(prepGoal_line_df,prepGoal_line_df_conj, dados):
     predictor = TabularPredictor.load("autogluon_goal_line_model")
+    predictor_conj = TabularPredictor.load("autogluon_goal_line_model_conj")
 
     # Garante que usaremos o melhor modelo
     best_model = predictor.model_best
     print(f"🔍 Modelo selecionado: {best_model}")
+    best_model_conj = predictor_conj.model_best
     
     # Usa explicitamente o melhor modelo para previsão de probabilidades
     preds_proba = predictor.predict_proba(prepGoal_line_df, model=best_model)
-
+    pred = predictor_conj.predict(prepGoal_line_df_conj, model=best_model_conj).iloc[0]
+    if pred == 'over':
+        pred = 0
+    elif pred == 'under':
+        pred = 1
     pred_goal_line_1 = float(preds_proba[0][1])
     pred_goal_line_2 = float(preds_proba[1][1])
     preds = [pred_goal_line_1, pred_goal_line_2]
@@ -1269,9 +1287,11 @@ def predicta_goal_line(prepGoal_line_df, dados):
         ve = prob * odd
         if (ve >= th_ve) and (prob >= lista_th[3]) and (odd >= th_odd):
             if prob > preds[1 - i]:  # Comparação com a outra opção
-                recomendacoes.append((i + 1, ve, prob, odd))
+                if pred == i:
+                    recomendacoes.append((i + 1, ve, prob, odd))
 
     logger.info(f"📊 Goal Line - Predições: {preds}, Odds GL: {dados['odds_gl']}")
+    logger.info(f"📊 gl pred - Pred: {pred}")
 
     if recomendacoes:
         melhor_opcao = max(recomendacoes, key=lambda x: x[2])
@@ -1285,16 +1305,19 @@ def predicta_goal_line(prepGoal_line_df, dados):
 
 
 
-def predicta_double_chance(prepDoubleChance_df, dados):
+def predicta_double_chance(prepDoubleChance_df, prepDoubleChance_df_conj, dados):
     try:
         predictor = TabularPredictor.load("autogluon_double_chance_model")
+        predictor_conj = TabularPredictor.load("autogluon_double_chance_model_conj")
 
         # Garante que usaremos o melhor modelo
         best_model = predictor.model_best
         logger.info(f"🔍 Modelo selecionado (Double Chance): {best_model}")
+        best_model_conj = predictor_conj.model_best
 
         # Usa explicitamente o melhor modelo para 
         preds_proba = predictor.predict_proba(prepDoubleChance_df, model=best_model)
+        pred = predictor_conj.predict(prepDoubleChance_df_conj, model=best_model_conj).iloc[0]
         
         # Log das dimensões das previsões
         logger.info(f"📊 Formato das previsões: {preds_proba.shape}")
@@ -1332,6 +1355,7 @@ def predicta_double_chance(prepDoubleChance_df, dados):
 
         preds = [pred_dc_1, pred_dc_2, pred_dc_3]
         logger.info(f"📊 Lista de previsões: {preds}")
+        logger.info(f"📊 pred dc: {pred}")
 
         th_ve = 1.1
         th_odd = 1.6
@@ -1346,8 +1370,10 @@ def predicta_double_chance(prepDoubleChance_df, dados):
                 
                 if (ve >= th_ve) and (prob >= lista_th[4]) and (odd >= th_odd):
                     if i in [0, 1]:
-                        if prob > preds[1 - i]:  # Compara apenas entre as duas primeiras
-                            recomendacoes.append((i + 1, ve, prob, odd))
+                        if prob > preds[1 - i]: 
+                            if pred == i:
+                                 # Compara apenas entre as duas primeiras
+                                recomendacoes.append((i + 1, ve, prob, odd))
                     else:
                         # Para a terceira opção ("qualquer time vence"), entra direto se passar os thresholds
                         recomendacoes.append((i + 1, ve, prob, odd))
@@ -1370,16 +1396,19 @@ def predicta_double_chance(prepDoubleChance_df, dados):
         return (None, None)
 
 
-def predicta_draw_no_bet(pred_draw_no_bet_df, dados):
+def predicta_draw_no_bet(pred_draw_no_bet_df,pred_draw_no_bet_df_conj, dados):
     # Carregar o modelo treinado para "Draw No Bet"
     predictor = TabularPredictor.load("autogluon_draw_no_bet_model")
+    predictor_conj = TabularPredictor.load("autogluon_draw_no_bet_model_conj")
     
     # Garantir que usamos o melhor modelo
     best_model = predictor.model_best
     logger.info(f"🔍 Modelo selecionado (Draw No Bet): {best_model}")
+    best_model_conj = predictor_conj.model_best
 
     # Obter as probabilidades de predição
     preds_proba = predictor.predict_proba(pred_draw_no_bet_df, model=best_model)
+    pred = predictor_conj.predict(pred_draw_no_bet_df_conj, model=best_model_conj).iloc[0]
 
     # Convertendo as predições para valores flutuantes
     pred_dnb_1 = float(preds_proba[0][1])
@@ -1398,9 +1427,11 @@ def predicta_draw_no_bet(pred_draw_no_bet_df, dados):
         # Verifica se o Valor Esperado é maior que o limite e a probabilidade e odd estão boas
         if (ve >= th_ve) and (prob >= lista_th[5]) and (odd >= th_odd):
             if prob > preds[1 - i]:  # Compara entre as duas opções possíveis
-                recomendacoes.append((i + 1, ve, prob, odd))
+                if pred == i:
+                    recomendacoes.append((i + 1, ve, prob, odd))
 
     logger.info(f"📊 Draw No Bet - Predições: {preds}, Odds: {dados['odds']}")
+    logger.info(f"📊 pred dnb: {pred}")
 
     if recomendacoes:
         # Seleciona a melhor recomendação com base na maior probabilidade

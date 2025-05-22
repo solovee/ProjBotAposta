@@ -16,6 +16,13 @@ from sklearn.linear_model import LogisticRegression
 from autogluon.tabular import TabularPredictor
 import pandas as pd
 import random
+
+# Importando funções de discretização e a classe Q-Learning
+from qlearning import (
+    discretizar_goals, discretizar_vitorias, discretizar_odds, 
+    discretizar_goal_diff, discretizar_league, q_learning_dc,
+    QLearningDoubleChanсeImproved, preparar_df_para_q_learning, QLearningGoalLine,QLearningDrawNoBet, QLearningHandicap,q_learning_h
+)
 #tirar input shape
 
 logger = logging.getLogger(__name__)
@@ -459,10 +466,8 @@ def calcular_medias_h2h(home_id, away_id, index):
     """
     df = df_temp.copy()
 
-    # Filtrar confrontos entre os dois times (em qualquer ordem)
-    confrontos = df[((df['home'] == home_id) & (df['away'] == away_id))]
-    if confrontos.empty:
-        confrontos = df[((df['home'] == away_id) & (df['away'] == home_id))|
+    
+    confrontos = df[((df['home'] == away_id) & (df['away'] == home_id))|
                     ((df['home'] == away_id) & (df['away'] == home_id))]
 
     # Filtrar apenas confrontos ocorridos antes da data do jogo atual
@@ -508,9 +513,8 @@ def calcular_medias_h2h_X(home_id, away_id):
     df = df_temp.copy()
 
     # Filtrar todos os confrontos entre os times
-    confrontos = df[((df['home'] == home_id) & (df['away'] == away_id)) ]
-    if confrontos.empty:
-        confrontos = df[((df['home'] == home_id) & (df['away'] == away_id))|
+    
+    confrontos = df[((df['home'] == home_id) & (df['away'] == away_id))|
                     ((df['home'] == away_id) & (df['away'] == home_id))]
 
     if confrontos.empty:
@@ -1027,6 +1031,77 @@ def prepNNHandicap_X(df=df_temp):
     print("Colunas de X (handicap):", X_final.columns.tolist())
     return X_final, z
 
+def prepNNHandicap_X_conj(df=df_temp):
+    required_columns = ['media_goals_home', 'media_goals_away','home_h2h_mean', 'away_h2h_mean',
+                        'asian_handicap1_1', 'asian_handicap1_2','team_ah1','odds_ah1', 
+                        'asian_handicap2_1', 'asian_handicap2_2','team_ah2','odds_ah2','league']
+    if not all(col in df.columns for col in required_columns):
+        missing_cols = [col for col in required_columns if col not in df.columns]
+        print(f"❌ Colunas ausentes em 'conj handicap': {', '.join(missing_cols)}")
+        return None, None
+    df_temporario = df[required_columns].copy()
+    df_temporario['odds_ah1'] = pd.to_numeric(df_temporario['odds_ah1'], errors='coerce')
+    df_temporario['odds_ah2'] = pd.to_numeric(df_temporario['odds_ah2'], errors='coerce')
+
+    df_temporario['favorite_by_odds'] = df_temporario['odds_ah1'] < df_temporario['odds_ah2']
+    df_temporario['odds_ratio'] = df_temporario['odds_ah1'] / df_temporario['odds_ah2']
+    
+    
+    df_temporario['goals_diff'] = df_temporario['media_goals_home'] - df_temporario['media_goals_away']
+    df_temporario['h2h_diff'] = df_temporario['home_h2h_mean'] - df_temporario['away_h2h_mean']
+
+    df_temporario.dropna(inplace=True)
+    if df_temporario.empty:
+        print("❌ DataFrame vazio após dropna em prepNNhandicap*")
+        return None, None
+    
+    
+    
+
+    
+    X = df_temporario[['media_goals_home', 'media_goals_away','home_h2h_mean', 'away_h2h_mean',
+                        'asian_handicap1_1', 'asian_handicap1_2','team_ah1','odds_ah1', 
+                        'asian_handicap2_1', 'asian_handicap2_2','team_ah2','odds_ah2','league','odds_ratio','favorite_by_odds','goals_diff','h2h_diff']]
+    
+ 
+    return X
+
+def prepNNGoal_line_X_conj(df=df_temp):
+    required_columns = ['home','away','times','h2h_mean' ,'media_goals_home' ,'media_goals_away',
+                        'goal_line1_1','goal_line1_2','type_gl1','odds_gl1', 'odds_gl2',
+                        'goal_line2_1','goal_line2_2','type_gl2', 'league']
+    if not all(col in df.columns for col in required_columns):
+        missing_cols = [col for col in required_columns if col not in df.columns]
+        print(f"❌ Colunas ausentes em 'prepNNGoal_line_X': {', '.join(missing_cols)}")
+        return None, None
+    df_temporario = df[required_columns].copy()
+    df_temporario['odds_gl1'] = pd.to_numeric(df_temporario['odds_gl1'], errors='coerce')
+    df_temporario['odds_gl2'] = pd.to_numeric(df_temporario['odds_gl2'], errors='coerce')
+
+    df_temporario['prob_gl1'] = 1 / df_temporario['odds_gl1']
+    df_temporario['prob_gl2'] = 1 / df_temporario['odds_gl2']
+    soma = df_temporario['prob_gl1'] + df_temporario['prob_gl2']
+    df_temporario['prob_gl1'] = df_temporario['prob_gl1'].div(soma, axis=0)
+    df_temporario['prob_gl2'] = df_temporario['prob_gl2'].div(soma, axis=0)
+    
+    
+    df_temporario['split_line'] = (df_temporario['goal_line1_1'] != df_temporario['goal_line1_2']).astype(int)
+    df_temporario['goals_diff'] = df_temporario['media_goals_home'] - df_temporario['media_goals_away']
+
+ 
+    df_temporario.dropna(inplace=True)
+    if df_temporario.empty:
+        print("❌ DataFrame vazio após dropna em prepNNgl*")
+        return None, None
+
+    
+    X = df_temporario[['h2h_mean' ,'media_goals_home' ,'media_goals_away',
+                        'goal_line1_1','goal_line1_2','type_gl1','odds_gl1', 'odds_gl2',
+                        'goal_line2_1','goal_line2_2','type_gl2', 'league','prob_gl1','prob_gl2','split_line','goals_diff']].copy()
+    
+  
+    return X
+
 def prepNNGoal_line_X(df=df_temp):
     required_columns = ['home','away','times','h2h_mean' ,'media_goals_home' ,'media_goals_away',
                         'goal_line1_1','goal_line1_2','type_gl1','odds_gl1', 'odds_gl2',
@@ -1049,7 +1124,7 @@ def prepNNGoal_line_X(df=df_temp):
     df_temporario['split_line'] = (df_temporario['goal_line_1'] != df_temporario['goal_line_2']).astype(int)
     df_temporario['goals_diff'] = df_temporario['media_goals_home'] - df_temporario['media_goals_away']
 
- 
+
     df_temporario.dropna(inplace=True)
     if df_temporario.empty:
         print("❌ DataFrame vazio após dropna em prepNNgl*")
@@ -1074,7 +1149,7 @@ def prepNNGoal_line_X(df=df_temp):
     return X_final, z
 
 def prepNNDouble_chance_X(df=df_temp):
-    required_columns = ['home','away','times','media_goals_home','media_goals_away','media_victories_home', 'media_victories_away', 
+    required_columns = ['home','away','times','media_goals_home','media_goals_away','media_victories_home', 'league','media_victories_away', 
                         'home_h2h_mean', 'away_h2h_mean', 'double_chance1','odds_dc1', 
                         'double_chance2', 'odds_dc2', 'double_chance3', 'odds_dc3']
     if not all(col in df.columns for col in required_columns):
@@ -1107,7 +1182,7 @@ def prepNNDouble_chance_X(df=df_temp):
     
     
     df_temporario = pd.get_dummies(df_temporario, columns=['double_chance'], prefix='double_chance_type')
-    X = df_temporario[['media_goals_home', 'media_goals_away', 'media_victories_home', 'media_victories_away',
+    X = df_temporario[['media_goals_home', 'media_goals_away', 'media_victories_home', 'media_victories_away','league',
                        'home_h2h_mean', 'away_h2h_mean','prob', 'odds', 'goal_diff', 'victory_diff', 'h2h_diff']].copy()
     try:
         '''
@@ -1123,6 +1198,45 @@ def prepNNDouble_chance_X(df=df_temp):
     X_final = pd.concat([X, type_df], axis=1)
     print("Colunas de X (doublechance):", X_final.columns.tolist())
     return X_final, z
+
+def prepNNDouble_chance_X_conj(df=df_temp):
+    required_columns = ['home','away','times','media_goals_home','media_goals_away','media_victories_home', 'media_victories_away', 'league',
+                        'home_h2h_mean', 'away_h2h_mean', 'double_chance1','odds_dc1', 
+                        'double_chance2', 'odds_dc2', 'double_chance3', 'odds_dc3']
+    if not all(col in df.columns for col in required_columns):
+        missing_cols = [col for col in required_columns if col not in df.columns]
+        print(f"❌ Colunas ausentes em 'prepNNDouble_chance_X': {', '.join(missing_cols)}")
+        return None, None
+
+    df_temporario = df[required_columns].copy()
+    df_temporario['odds_dc1'] = pd.to_numeric(df_temporario['odds_dc1'], errors='coerce')
+    df_temporario['odds_dc2'] = pd.to_numeric(df_temporario['odds_dc2'], errors='coerce')
+    df_temporario['odds_dc3'] = pd.to_numeric(df_temporario['odds_dc3'], errors='coerce')
+
+    df_temporario['prob_dc1'] = 1 / df_temporario['odds_dc1']
+    df_temporario['prob_dc2'] = 1 / df_temporario['odds_dc2']
+    df_temporario['prob_dc3'] = 1 / df_temporario['odds_dc3']
+    total = df_temporario[['prob_dc1', 'prob_dc2', 'prob_dc3']].sum(axis=1)
+    
+    df_temporario[['prob_dc1', 'prob_dc2', 'prob_dc3']] = df_temporario[['prob_dc1', 'prob_dc2', 'prob_dc3']].div(total, axis=0)
+
+    
+
+    df_temporario['goal_diff'] = df_temporario['media_goals_home'] - df_temporario['media_goals_away']
+    df_temporario['victory_diff'] = df_temporario['media_victories_home'] - df_temporario['media_victories_away']
+    df_temporario['h2h_diff'] = df_temporario['home_h2h_mean'] - df_temporario['away_h2h_mean']
+    df_temporario.dropna(inplace=True)
+    if df_temporario.empty:
+        print("❌ DataFrame vazio após dropna em prepNNdc*")
+        return None, None
+    
+    
+    X = df_temporario[['media_goals_home','media_goals_away','media_victories_home', 'media_victories_away', 'league',
+                        'home_h2h_mean', 'away_h2h_mean', 'double_chance1','odds_dc1', 
+                        'double_chance2', 'odds_dc2', 'double_chance3', 'odds_dc3','prob_dc1','prob_dc2','prob_dc3','goal_diff','victory_diff','h2h_diff']].copy()
+    
+    
+    return X
 
 def prepNNDraw_no_bet_X(df=df_temp):
     required_columns = ['home','away','times', 'media_goals_home', 'media_goals_away', 'media_victories_home','media_victories_away',
@@ -1174,6 +1288,45 @@ def prepNNDraw_no_bet_X(df=df_temp):
     
     print("Colunas de X (draw_no_bet):", X_final.columns.tolist())
     return X_final, z
+
+
+def prepNNDraw_no_bet_X_conj(df=df_temp):
+    required_columns = ['home','away','times', 'media_goals_home', 'media_goals_away', 'media_victories_home','media_victories_away',
+                        'home_h2h_mean','away_h2h_mean', 'draw_no_bet_team1', 'odds_dnb1', 'draw_no_bet_team2', 'odds_dnb2']
+    if not all(col in df.columns for col in required_columns):
+        missing_cols = [col for col in required_columns if col not in df.columns]
+        print(f"❌ Colunas ausentes em 'prepNNDraw_no_bet_X': {', '.join(missing_cols)}")
+        return None, None
+
+    df_temporario = df[required_columns].copy()
+
+    df_temporario['odds_dnb1'] = pd.to_numeric(df_temporario['odds_dnb1'], errors='coerce')
+    df_temporario['odds_dnb2'] = pd.to_numeric(df_temporario['odds_dnb2'], errors='coerce')
+
+    df_temporario['prob_odds_dnb1'] = 1 / df_temporario['odds_dnb1']
+    df_temporario['prob_odds_dnb2'] = 1 / df_temporario['odds_dnb2']
+    tot = df_temporario['prob_odds_dnb1'] + df_temporario['prob_odds_dnb2']
+    df_temporario['prob_odds_dnb1'] = df_temporario['prob_odds_dnb1'].div(tot, axis=0)
+    df_temporario['prob_odds_dnb2'] = df_temporario['prob_odds_dnb2'].div(tot, axis=0)
+
+    
+
+    df_temporario['goal_diff'] = df_temporario['media_goals_home'] - df_temporario['media_goals_away']
+    df_temporario['team_strength_home'] = df_temporario['media_victories_home'] / df_temporario['media_goals_home']
+    df_temporario['team_strength_away'] = df_temporario['media_victories_away'] / df_temporario['media_goals_away']
+
+
+    df_temporario.dropna(inplace=True)
+    if df_temporario.empty:
+        print("❌ DataFrame vazio após dropna em prepNNdnb*")
+        return None, None
+    
+  
+    
+    X = df_temporario[['media_goals_home', 'media_goals_away', 'media_victories_home','media_victories_away',
+                        'home_h2h_mean','away_h2h_mean', 'draw_no_bet_team1', 'odds_dnb1', 'draw_no_bet_team2', 'odds_dnb2','prob_odds_dnb1','prob_odds_dnb2','goal_diff','team_strength_home','team_strength_away']].copy()
+    
+    return X
 
 
 
@@ -1507,18 +1660,17 @@ def NN_handicap(df=df_temp):
 
 
     df_conj = df_conj[['media_goals_home', 'media_goals_away','home_h2h_mean', 'away_h2h_mean','asian_handicap1_1', 'asian_handicap1_2','team_ah1','odds_ah1', 'asian_handicap2_1', 'asian_handicap2_2','team_ah2','odds_ah2', 'league','favorite_by_odds','odds_ratio','goals_diff','h2h_diff','resultado']].copy()
+    
 
     train_conj, test_conj = train_test_split(df_conj, test_size=0.1, random_state=42)
 
     
 
-   
-
     # Diretório temporário
     temp_dir = tempfile.mkdtemp()
 
     # Treinamento com AutoGluon
-    predictor = TabularPredictor(label='resultado', path=temp_dir, problem_type='multiclass').fit(
+    predictor = TabularPredictor(label='resultado', path=temp_dir, problem_type='binary').fit(
         train_conj,
         presets='best_quality',
         time_limit=1000
@@ -1549,11 +1701,9 @@ def NN_handicap(df=df_temp):
     y_true = test_conj['resultado']
 
 
-
-    
-    print(f"Precisão: {precision_score(y_true, y_pred, average='macro'):.4f}")
-    print(f"Recall: {recall_score(y_true, y_pred, average='macro'):.4f}")
-    print(f"F1-Score: {f1_score(y_true, y_pred, average='macro'):.4f}")
+    print(f"Precisão: {precision_score(y_true, y_pred):.4f}")
+    print(f"Recall: {recall_score(y_true, y_pred):.4f}")
+    print(f"F1-Score: {f1_score(y_true, y_pred):.4f}")
 
     print("\nMatriz de Confusão:")
     print(confusion_matrix(y_true, y_pred))
@@ -1562,11 +1712,11 @@ def NN_handicap(df=df_temp):
     with open('autogluon_handicap_model_leaderboard_conj.txt', 'w+') as f:
         f.write(f"Melhor modelo: {best_model_name}\n")
         f.write(f"Acurácia (validação interna): {best_model_score:.4f}\n")
-        f.write("\nMétricas de Avaliação no conjunto de teste (Double Chance):\n")
+        f.write("\nMétricas de Avaliação no conjunto de teste (handicap):\n")
         f.write(f"Acurácia: {accuracy_score(y_true, y_pred):.4f}\n")
-        f.write(f"Precisão (macro): {precision_score(y_true, y_pred, average='macro'):.4f}\n")
-        f.write(f"Recall (macro): {recall_score(y_true, y_pred, average='macro'):.4f}\n")
-        f.write(f"F1-Score (macro): {f1_score(y_true, y_pred, average='macro'):.4f}\n")
+        f.write(f"Precisão (macro): {precision_score(y_true, y_pred):.4f}\n")
+        f.write(f"Recall (macro): {recall_score(y_true, y_pred):.4f}\n")
+        f.write(f"F1-Score (macro): {f1_score(y_true, y_pred):.4f}\n")
 
     
     
@@ -1904,12 +2054,13 @@ def NN_goal_line(df=df_temp):
                         'goal_line1_1', 'goal_line1_2', 'odds_gl1', 'odds_gl2',
                         'league', 'prob_gl1','prob_gl2','goals_diff','gl1_positivo','gl2_positivo']].copy()
     df_conj['split_line'] = (df_conj['goal_line1_1'] != df_conj['goal_line1_2']).astype(int)
+    
 
     def transformar_target(row):
         if (row['gl1_positivo'] == 1):
-            return 'over'
+            return 0
         elif (row['gl2_positivo'] == 1):
-            return 'under'
+            return 1
         else:
             return None
         
@@ -1917,14 +2068,57 @@ def NN_goal_line(df=df_temp):
     df_conj['resultado'] = df_conj.apply(transformar_target, axis=1)
     df_conj = df_conj[df_conj['resultado'].notna()]  # Remove os casos de reembolso
     df_conj.drop(columns=['gl1_positivo','gl2_positivo'], inplace=True)
+    '''
+    # **** PASSO 1: TREINAR O MODELO Q-LEARNING ****
+    print("\n=== Treinando modelo Q-Learning para Goal Line ===")
     
+    
+    
+    # Dividir em conjunto de treino e teste para o Q-Learning
+    train_q, test_q = train_test_split(df_conj, test_size=0.05, random_state=42)
+    
+    # Inicializar e treinar o agente Q-Learning
+    agent = QLearningGoalLine(alpha=0.1, gamma=0.6, epsilon=0.1)
+    agent.train(train_q, num_episodes=1000)  # Ajuste o número de episódios conforme necessário
+    
+    # Avaliar o modelo Q-Learning
+    q_evaluation = agent.evaluate(test_q)
+    print(f"\nModelo Q-Learning - Acurácia: {q_evaluation['accuracy']:.4f}")
+    print(f"Previsões corretas: {q_evaluation['correct_predictions']}/{q_evaluation['total_predictions']}")
+    print(f"unidades: {q_evaluation['uni']}")
+    
+    print("\nAcurácia por tipo de gl (Q-Learning):")
+    for action, accuracy in q_evaluation['accuracy_by_action'].items():
+        dc_type = {0: "OVER", 1: "UNDER"}
+        correct = q_evaluation['results_by_action'][action]['correct']
+        total = q_evaluation['results_by_action'][action]['total']
+        print(f"{dc_type[action]}: {accuracy:.4f} ({correct}/{total})")
+        
+    with open('q_learning_gl.txt','w+') as f:
+        f.write(f"\nModelo Q-Learning - Acurácia: {q_evaluation['accuracy']:.4f}")
+        f.write(f"Previsões corretas: {q_evaluation['correct_predictions']}/{q_evaluation['total_predictions']}")
+        f.write(f"unidades: {q_evaluation['uni']}")
+        
+        f.write("\nAcurácia por tipo de gl (Q-Learning):")
+        for action, accuracy in q_evaluation['accuracy_by_action'].items():
+            dc_type = {0: "OVER", 1: "UNDER"}
+            correct = q_evaluation['results_by_action'][action]['correct']
+            total = q_evaluation['results_by_action'][action]['total']
+            f.write(f"{dc_type[action]}: {accuracy:.4f} ({correct}/{total})")
+    
+    # Salvar o modelo Q-Learning
+    agent.save_model('q_learning_gl_model_final.pkl')
+    '''
     train_conj, test_conj = train_test_split(df_conj, test_size=0.1, random_state=42)
+    train_conj['resultado'] = train_conj['resultado'].astype(int)
+    test_conj['resultado'] = test_conj['resultado'].astype(int)
+
 
     # Diretório temporário
     temp_dir = tempfile.mkdtemp()
 
     # Treinamento com AutoGluon
-    predictor = TabularPredictor(label='resultado', path=temp_dir, problem_type='multiclass').fit(
+    predictor = TabularPredictor(label='resultado', path=temp_dir, problem_type='binary').fit(
         train_conj,
         presets='best_quality',
         time_limit=1000
@@ -1947,16 +2141,33 @@ def NN_goal_line(df=df_temp):
 
     # Recarrega o modelo salvo
     predictor = TabularPredictor.load(predictor_path)
+    
+
+    
 
     # Predição no conjunto de teste
-    y_pred = predictor.predict(test_conj.drop(columns=['resultado']), model=best_model_name)
+    try:
+
+        y_pred = predictor.predict(test_conj.drop(columns=['resultado']), model=best_model_name)
+    except:
+        y_pred = predictor.predict(test_conj.drop(columns=['resultado']), model=predictor.model_best)
+    
+        # Normalização dos valores previstos
+    if y_pred.dtype == object or y_pred.dtype == str:
+        y_pred = y_pred.str.lower()  # garantir lowercase para evitar 'Over' ou 'UNDER'
+        y_pred = y_pred.map({'over': 0, 'under': 1})
+    elif set(y_pred.unique()).issubset({0, 1}):
+        pass  # já está no formato esperado
+    else:
+        raise ValueError(f"y_pred contém valores inesperados: {y_pred.unique()}")
+
 
     # Avaliação das previsões
     y_true = test_conj['resultado']
     
-    print(f"Precisão: {precision_score(y_true, y_pred, average='macro'):.4f}")
-    print(f"Recall: {recall_score(y_true, y_pred, average='macro'):.4f}")
-    print(f"F1-Score: {f1_score(y_true, y_pred, average='macro'):.4f}")
+    print(f"Precisão: {precision_score(y_true, y_pred):.4f}")
+    print(f"Recall: {recall_score(y_true, y_pred):.4f}")
+    print(f"F1-Score: {f1_score(y_true, y_pred):.4f}")
 
     print("\nMatriz de Confusão:")
     print(confusion_matrix(y_true, y_pred))
@@ -1965,11 +2176,11 @@ def NN_goal_line(df=df_temp):
     with open('autogluon_goal_line_model_leaderboard_conj.txt', 'w+') as f:
         f.write(f"Melhor modelo: {best_model_name}\n")
         f.write(f"Acurácia (validação interna): {best_model_score:.4f}\n")
-        f.write("\nMétricas de Avaliação no conjunto de teste (Double Chance):\n")
+        f.write("\nMétricas de Avaliação no conjunto de teste (goal_line):\n")
         f.write(f"Acurácia: {accuracy_score(y_true, y_pred):.4f}\n")
-        f.write(f"Precisão (macro): {precision_score(y_true, y_pred, average='macro'):.4f}\n")
-        f.write(f"Recall (macro): {recall_score(y_true, y_pred, average='macro'):.4f}\n")
-        f.write(f"F1-Score (macro): {f1_score(y_true, y_pred, average='macro'):.4f}\n")
+        f.write(f"Precisão (macro): {precision_score(y_true, y_pred):.4f}\n")
+        f.write(f"Recall (macro): {recall_score(y_true, y_pred):.4f}\n")
+        f.write(f"F1-Score (macro): {f1_score(y_true, y_pred):.4f}\n")
 
 
 
@@ -2111,7 +2322,7 @@ def prepNNDouble_chance(df=df_temp):
 
 def preparar_df_double_chance_X(df):
     colunas_comuns = ['home','away','times','media_goals_home', 'media_goals_away', 'media_victories_home',
-                      'media_victories_away', 'home_h2h_mean', 'away_h2h_mean']
+                      'media_victories_away', 'league','home_h2h_mean', 'away_h2h_mean']
     
     # Cria df para cada linha de double chance
     df1 = df[colunas_comuns + ['odds_dc1', 'prob_dc1']].copy()
@@ -2509,12 +2720,18 @@ def NN_double_chance(df=df_temp):
     '''
 
 
-def NN_double_chance(df=df_temp):
+
+def NN_double_chance(df):
+    """
+    Treinamento de modelo para Double Chance incluindo Q-Learning junto com AutoGluon
+    """
     # Pré-processamento do dataframe
-    df_temporario = df[['home', 'away', 'media_goals_home', 'media_goals_away','league', 'media_victories_home',
+    df_temporario = df[['home', 'away', 'media_goals_home', 'media_goals_away', 'league', 'media_victories_home',
                         'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'double_chance1',
                         'odds_dc1', 'double_chance2', 'odds_dc2', 'double_chance3', 'odds_dc3',
-                        'res_double_chance1', 'res_double_chance2', 'res_double_chance3','res_game_home', 'res_game_away', 'res_game_empate']].copy()
+                        'res_double_chance1', 'res_double_chance2', 'res_double_chance3',
+                        'res_game_home', 'res_game_away', 'res_game_empate']].copy()
+    
     df_temporario['prob_dc1'] = 1 / df_temporario['odds_dc1']
     df_temporario['prob_dc2'] = 1 / df_temporario['odds_dc2']
     df_temporario['prob_dc3'] = 1 / df_temporario['odds_dc3']
@@ -2522,17 +2739,71 @@ def NN_double_chance(df=df_temp):
     
     df_temporario[['prob_dc1', 'prob_dc2', 'prob_dc3']] = df_temporario[['prob_dc1', 'prob_dc2', 'prob_dc3']].div(total, axis=0)
 
-    #NN CONJUNTA
-    df_conj = df_temporario.copy()
-    df_conj['goal_diff'] = df_conj['media_goals_home'] - df_conj['media_goals_away']
-    df_conj['victory_diff'] = df_conj['media_victories_home'] - df_conj['media_victories_away']
-    df_conj['h2h_diff'] = df_conj['home_h2h_mean'] - df_conj['away_h2h_mean']
-    df_conj.dropna(inplace=True)
-    X_conj = df_conj[['media_goals_home', 'media_goals_away','league', 'media_victories_home',
-                        'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'double_chance1',
-                        'odds_dc1', 'double_chance2', 'odds_dc2', 'double_chance3', 'odds_dc3','goal_diff','victory_diff','h2h_diff']].copy()
-    y_conj = df_conj[['res_game_home', 'res_game_away', 'res_game_empate']].copy()
+    # Adicionar cálculos de diferenças
+    df_temporario['goal_diff'] = df_temporario['media_goals_home'] - df_temporario['media_goals_away']
+    df_temporario['victory_diff'] = df_temporario['media_victories_home'] - df_temporario['media_victories_away']
+    df_temporario['h2h_diff'] = df_temporario['home_h2h_mean'] - df_temporario['away_h2h_mean']
+    df_temporario.dropna(inplace=True)
+    
+    # **** PASSO 1: TREINAR O MODELO Q-LEARNING ****
+    print("\n=== Treinando modelo Q-Learning para Double Chance ===")
+    
+    # Preparar o DataFrame para Q-Learning (isso já calcula as diferenças)
+    df_q = preparar_df_para_q_learning(df_temporario)
+    
+    
 
+    
+
+   
+    # Dividir em conjunto de treino e teste para o Q-Learning
+    train_q, test_q = train_test_split(df_q, test_size=0.1, random_state=42)
+    
+    # Inicializar e treinar o agente Q-Learning
+    agent = QLearningDoubleChanсeImproved(
+        alpha=0.15,
+        gamma=0.95, 
+        epsilon=0.4,
+        epsilon_decay=0.998,
+        min_epsilon=0.02,
+        reward_scaling=True,
+        feature_engineering=True
+    )
+    agent.train(train_q, num_episodes=500)  # Ajuste o número de episódios conforme necessário
+    
+    # Avaliar o modelo Q-Learning
+    q_evaluation = agent.evaluate(test_q)
+    print(f"\nModelo Q-Learning - Acurácia: {q_evaluation['accuracy']:.4f}")
+    print(f"Previsões corretas: {q_evaluation['correct_predictions']}/{q_evaluation['total_predictions']}")
+    
+    
+    print("\nAcurácia por tipo de Double Chance (Q-Learning):")
+    for action, accuracy in q_evaluation['accuracy_by_action'].items():
+        dc_type = {0: "DC1 (Casa ou Empate)", 1: "DC2 (Fora ou Empate)", 2: "DC3 (Casa ou Fora)"}
+        correct = q_evaluation['results_by_action'][action]['correct']
+        total = q_evaluation['results_by_action'][action]['total']
+        print(f"{dc_type[action]}: {accuracy:.4f} ({correct}/{total})")
+    
+    with open('q_learning_dc.txt','w+') as f:
+        f.write(f"\nModelo Q-Learning - Acurácia: {q_evaluation['accuracy']:.4f}")
+        f.write(f"Previsões corretas: {q_evaluation['correct_predictions']}/{q_evaluation['total_predictions']}")
+        f.write(f"unidades: {q_evaluation['uni']}")
+        
+        f.write("\nAcurácia por tipo de Double Chance (Q-Learning):")
+        for action, accuracy in q_evaluation['accuracy_by_action'].items():
+            dc_type = {0: "DC1 (Casa ou Empate)", 1: "DC2 (Fora ou Empate)", 2: "DC3 (Casa ou Fora)"}
+            correct = q_evaluation['results_by_action'][action]['correct']
+            total = q_evaluation['results_by_action'][action]['total']
+            f.write(f"{dc_type[action]}: {accuracy:.4f} ({correct}/{total})")
+    
+    # Salvar o modelo Q-Learning
+    agent.save_model('q_learning_dc_model_final.pkl')
+    '''
+    # **** PASSO 2: TREINAR O MODELO AUTOGLUON CONJUNTO ****
+    print("\n=== Treinando modelo AutoGluon conjunto ===")
+    
+    df_conj = df_temporario.copy()
+    
     def transformar_target(row):
         if row['res_game_home'] == 1:
             return 0
@@ -2540,26 +2811,21 @@ def NN_double_chance(df=df_temp):
             return 1
         else:
             return None
-        
-
+    
     df_conj['resultado'] = df_conj.apply(transformar_target, axis=1)
     df_conj = df_conj[df_conj['resultado'].notna()].copy()
-    df_modelo = df_conj[['media_goals_home', 'media_goals_away','league', 'media_victories_home',
+    df_modelo = df_conj[['media_goals_home', 'media_goals_away', 'league', 'media_victories_home',
                      'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'double_chance1',
                      'odds_dc1', 'double_chance2', 'odds_dc2', 'double_chance3', 'odds_dc3',
-                     'goal_diff','victory_diff','h2h_diff', 'resultado']].copy()
+                     'goal_diff', 'victory_diff', 'h2h_diff', 'resultado']].copy()
    
     train_conj, test_conj = train_test_split(df_modelo, test_size=0.1, random_state=42)
-
-    
-
-   
 
     # Diretório temporário
     temp_dir = tempfile.mkdtemp()
 
     # Treinamento com AutoGluon
-    predictor = TabularPredictor(label='resultado', path=temp_dir, problem_type='multiclass').fit(
+    predictor = TabularPredictor(label='resultado', path=temp_dir, problem_type='binary').fit(
         train_conj,
         presets='best_quality',
         time_limit=1000
@@ -2583,57 +2849,77 @@ def NN_double_chance(df=df_temp):
     y_pred = predictor.predict(test_conj.drop(columns=['resultado']), model=best_model_name)
 
     # Avaliação das previsões
-    
-    from sklearn.metrics import precision_score
-
-# Garantir que ambos estão como strings
     y_true = test_conj['resultado']
-
-
-
     
-    print(f"Precisão: {precision_score(y_true, y_pred, average='macro'):.4f}")
-    print(f"Recall: {recall_score(y_true, y_pred, average='macro'):.4f}")
-    print(f"F1-Score: {f1_score(y_true, y_pred, average='macro'):.4f}")
+    print(f"Precisão (AutoGluon conjunto): {precision_score(y_true, y_pred):.4f}")
+    print(f"Recall (AutoGluon conjunto): {recall_score(y_true, y_pred):.4f}")
+    print(f"F1-Score (AutoGluon conjunto): {f1_score(y_true, y_pred):.4f}")
 
-    print("\nMatriz de Confusão:")
+    print("\nMatriz de Confusão (AutoGluon conjunto):")
     print(confusion_matrix(y_true, y_pred))
-    print(f"\nMelhor modelo para Double Chance: {best_model_name}")
+    print(f"\nMelhor modelo para Double Chance (AutoGluon conjunto): {best_model_name}")
     print(f"Acurácia no treino (validação interna): {best_model_score:.4f}")
+    
     with open('autogluon_double_chance_model_leaderboard_conj.txt', 'w+') as f:
         f.write(f"Melhor modelo: {best_model_name}\n")
         f.write(f"Acurácia (validação interna): {best_model_score:.4f}\n")
         f.write("\nMétricas de Avaliação no conjunto de teste (Double Chance):\n")
         f.write(f"Acurácia: {accuracy_score(y_true, y_pred):.4f}\n")
-        f.write(f"Precisão (macro): {precision_score(y_true, y_pred, average='macro'):.4f}\n")
-        f.write(f"Recall (macro): {recall_score(y_true, y_pred, average='macro'):.4f}\n")
-        f.write(f"F1-Score (macro): {f1_score(y_true, y_pred, average='macro'):.4f}\n")
+        f.write(f"Precisão (macro): {precision_score(y_true, y_pred):.4f}\n")
+        f.write(f"Recall (macro): {recall_score(y_true, y_pred):.4f}\n")
+        f.write(f"F1-Score (macro): {f1_score(y_true, y_pred):.4f}\n")
 
+    # **** PASSO 3: TREINAR O MODELO AUTOGLUON ESPECÍFICO ****
+    print("\n=== Treinando modelo AutoGluon específico ===")
 
-
-
-
-
-
-    df_temporario = preparar_df_double_chance(df_temporario)
+    # IMPORTANTE: Fazer uma cópia do df_temporario que ainda tem goal_diff, victory_diff e h2h_diff
+    df_especifico = df_temporario.copy()
     
-    df_temporario = pd.get_dummies(df_temporario, columns=['double_chance'], prefix='double_chance_type')
-    df_temporario['resultado'] = pd.to_numeric(df_temporario['resultado'], errors='coerce')
-    df_temporario.dropna(inplace=True)
-    df_temporario = df_temporario[df_temporario['resultado'].notna()]
+    # Agora aplicar preparar_df_double_chance em uma cópia separada
+    df_especifico = preparar_df_double_chance(df_especifico)
+    
+    # Criar as colunas de diferença novamente se elas foram removidas
+    if 'goal_diff' not in df_especifico.columns:
+        df_especifico['goal_diff'] = df_especifico['media_goals_home'] - df_especifico['media_goals_away']
+    
+    if 'victory_diff' not in df_especifico.columns:
+        df_especifico['victory_diff'] = df_especifico['media_victories_home'] - df_especifico['media_victories_away']
+    
+    if 'h2h_diff' not in df_especifico.columns:
+        df_especifico['h2h_diff'] = df_especifico['home_h2h_mean'] - df_especifico['away_h2h_mean']
+    
+    df_especifico = pd.get_dummies(df_especifico, columns=['double_chance'], prefix='double_chance_type')
+    df_especifico['resultado'] = pd.to_numeric(df_especifico['resultado'], errors='coerce')
+    df_especifico.dropna(inplace=True)
+    df_especifico = df_especifico[df_especifico['resultado'].notna()]
 
-    df_temporario['goal_diff'] = df_temporario['media_goals_home'] - df_temporario['media_goals_away']
-    df_temporario['victory_diff'] = df_temporario['media_victories_home'] - df_temporario['media_victories_away']
-    df_temporario['h2h_diff'] = df_temporario['home_h2h_mean'] - df_temporario['away_h2h_mean']
-
+    # Verifique se todas as colunas necessárias estão presentes
+    required_cols = ['media_goals_home', 'media_goals_away', 'league', 'media_victories_home', 'media_victories_away',
+                    'home_h2h_mean', 'away_h2h_mean', 'prob', 'odds', 'goal_diff', 'victory_diff', 'h2h_diff']
+    
+    for col in required_cols:
+        if col not in df_especifico.columns:
+            print(f"Coluna '{col}' ausente em df_especifico. Colunas disponíveis: {df_especifico.columns.tolist()}")
+            return None
+    
     # Definição de X e y
-    X = df_temporario[['media_goals_home', 'media_goals_away','league', 'media_victories_home', 'media_victories_away',
-                       'home_h2h_mean', 'away_h2h_mean','prob', 'odds', 'goal_diff', 'victory_diff', 'h2h_diff']].copy().reset_index(drop=True)
+    X = df_especifico[required_cols].copy().reset_index(drop=True)
     
-    type_df = df_temporario[['double_chance_type_1', 'double_chance_type_2', 'double_chance_type_3']].reset_index(drop=True)
+    # Verifique se as colunas de tipo estão presentes
+    type_cols = ['double_chance_type_1', 'double_chance_type_2', 'double_chance_type_3']
+    missing_type_cols = [col for col in type_cols if col not in df_especifico.columns]
+    
+    if missing_type_cols:
+        print(f"Colunas ausentes após get_dummies: {missing_type_cols}")
+        print(f"Colunas disponíveis: {df_especifico.columns.tolist()}")
+        # Crie colunas vazias para os tipos ausentes
+        for col in missing_type_cols:
+            df_especifico[col] = 0
+    
+    type_df = df_especifico[['double_chance_type_1', 'double_chance_type_2', 'double_chance_type_3']].reset_index(drop=True)
     X_final = pd.concat([X, type_df], axis=1)
 
-    y = df_temporario['resultado'].astype(int).reset_index(drop=True)
+    y = df_especifico['resultado'].astype(int).reset_index(drop=True)
 
     if y.nunique() < 2:
         print("Variável target com menos de 2 classes. Retornando None.")
@@ -2682,23 +2968,211 @@ def NN_double_chance(df=df_temp):
     # Avaliação das previsões
     y_true = df_ag_test['target']
     
-    print(f"Precisão: {precision_score(y_true, y_pred):.4f}")
-    print(f"Recall: {recall_score(y_true, y_pred):.4f}")
-    print(f"F1-Score: {f1_score(y_true, y_pred):.4f}")
-    print("\nMatriz de Confusão:")
+    print(f"Precisão (AutoGluon específico): {precision_score(y_true, y_pred):.4f}")
+    print(f"Recall (AutoGluon específico): {recall_score(y_true, y_pred):.4f}")
+    print(f"F1-Score (AutoGluon específico): {f1_score(y_true, y_pred):.4f}")
+    print("\nMatriz de Confusão (AutoGluon específico):")
     print(confusion_matrix(y_true, y_pred))
-    print(f"\nMelhor modelo para Double Chance: {best_model_name}")
+    print(f"\nMelhor modelo para Double Chance (AutoGluon específico): {best_model_name}")
     print(f"Acurácia no treino (validação interna): {best_model_score:.4f}")
+    
     with open('autogluon_double_chance_model_leaderboard.txt', 'w+') as f:
         f.write(f"Melhor modelo: {best_model_name}\n")
         f.write(f"Acurácia: {best_model_score:.4f}\n")
         f.write("\nMétricas de Avaliação no conjunto de teste (Double Chance):")
         f.write(f"Acurácia: {accuracy_score(y_true, y_pred):.4f}")
+    '''
+    return 0.6
 
+'''
+def NN_double_chance(df=df_temp, enable_dqn=True, dqn_mode='optimized'):
     
+    Função principal que combina AutoGluon e DQN para Double Chance
+    
+    Parâmetros:
+    - df: DataFrame com os dados
+    - enable_dqn: True para ativar treinamento DQN, False para apenas AutoGluon
+    - dqn_mode: 'optimized' para versão otimizada, 'quick' para teste rápido
+    
+    
+    # ===== PARTE ORIGINAL DO AUTOGLUON =====
+    print("=== INICIANDO TREINAMENTO AUTOGLUON ===")
+    
+    # Pré-processamento do dataframe
+    df_temporario = df[['home', 'away', 'media_goals_home', 'media_goals_away','league', 'media_victories_home',
+                        'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'double_chance1',
+                        'odds_dc1', 'double_chance2', 'odds_dc2', 'double_chance3', 'odds_dc3',
+                        'res_double_chance1', 'res_double_chance2', 'res_double_chance3','res_game_home', 'res_game_away', 'res_game_empate']].copy()
+    
+    df_temporario['prob_dc1'] = 1 / df_temporario['odds_dc1']
+    df_temporario['prob_dc2'] = 1 / df_temporario['odds_dc2']
+    df_temporario['prob_dc3'] = 1 / df_temporario['odds_dc3']
+    total = df_temporario[['prob_dc1', 'prob_dc2', 'prob_dc3']].sum(axis=1)
+    
+    df_temporario[['prob_dc1', 'prob_dc2', 'prob_dc3']] = df_temporario[['prob_dc1', 'prob_dc2', 'prob_dc3']].div(total, axis=0)
 
-    return 0.5
+    # NN CONJUNTA (seu código original do AutoGluon)
+    df_conj = df_temporario.copy()
+    df_conj['goal_diff'] = df_conj['media_goals_home'] - df_conj['media_goals_away']
+    df_conj['victory_diff'] = df_conj['media_victories_home'] - df_conj['media_victories_away']
+    df_conj['h2h_diff'] = df_conj['home_h2h_mean'] - df_conj['away_h2h_mean']
+    df_conj.dropna(inplace=True)
 
+    def transformar_target(row):
+        if row['res_game_home'] == 1:
+            return 0
+        elif row['res_game_away'] == 1:
+            return 1
+        else:
+            return None
+
+    df_conj['resultado'] = df_conj.apply(transformar_target, axis=1)
+    df_conj = df_conj[df_conj['resultado'].notna()].copy()
+    df_modelo = df_conj[['media_goals_home', 'media_goals_away','league', 'media_victories_home',
+                     'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'double_chance1',
+                     'odds_dc1', 'double_chance2', 'odds_dc2', 'double_chance3', 'odds_dc3',
+                     'goal_diff','victory_diff','h2h_diff', 'resultado']].copy()
+   
+    train_conj, test_conj = train_test_split(df_modelo, test_size=0.1, random_state=42)
+
+    # Diretório temporário
+    temp_dir = tempfile.mkdtemp()
+
+    # Treinamento com AutoGluon
+    predictor = TabularPredictor(label='resultado', path=temp_dir, problem_type='multiclass').fit(
+        train_conj,
+        presets='best_quality',
+        time_limit=1000
+    )
+
+    # Leaderboard e melhor modelo
+    leaderboard = predictor.leaderboard(train_conj, silent=True)
+    try:
+        best_model_name = predictor.model_best
+        best_model_score = leaderboard.loc[leaderboard['model'] == best_model_name, 'score_val'].values[0]
+    except:
+        best_model_name = leaderboard.loc[leaderboard['score_val'].idxmax(), 'model']
+        best_model_score = leaderboard.loc[leaderboard['score_val'].idxmax(), 'score_val']
+
+    # Salvar o modelo final
+    final_model_path = "autogluon_double_chance_model_conj"
+    shutil.move(temp_dir, final_model_path)
+    predictor = TabularPredictor.load(final_model_path)
+
+    # Predição no conjunto de teste
+    y_pred = predictor.predict(test_conj.drop(columns=['resultado']), model=best_model_name)
+
+    # Avaliação das previsões AutoGluon
+    y_true = test_conj['resultado']
+    
+    autogluon_results = {
+        'accuracy': accuracy_score(y_true, y_pred),
+        'precision': precision_score(y_true, y_pred, average='macro'),
+        'recall': recall_score(y_true, y_pred, average='macro'),
+        'f1': f1_score(y_true, y_pred, average='macro'),
+        'confusion_matrix': confusion_matrix(y_true, y_pred),
+        'best_model': best_model_name,
+        'best_score': best_model_score
+    }
+    
+    print(f"AutoGluon - Precisão: {autogluon_results['precision']:.4f}")
+    print(f"AutoGluon - Recall: {autogluon_results['recall']:.4f}")
+    print(f"AutoGluon - F1-Score: {autogluon_results['f1']:.4f}")
+    print(f"AutoGluon - Melhor modelo: {best_model_name}")
+    print(f"AutoGluon - Acurácia: {best_model_score:.4f}")
+
+    # ===== INTEGRAÇÃO COM DQN =====
+    dqn_results = None
+    
+    if enable_dqn:
+        print("\n=== INICIANDO TREINAMENTO DQN ===")
+        
+        try:
+            if dqn_mode == 'quick':
+                print("Modo DQN: TESTE RÁPIDO")
+                dqn_agent = quick_DQN_test(df_temporario)
+                dqn_results = {'agent': dqn_agent, 'mode': 'quick_test'}
+                
+            elif dqn_mode == 'optimized':
+                print("Modo DQN: OTIMIZADO")
+                dqn_agent, dqn_scaler = optimized_DQN_double_chance(df_temporario)
+                dqn_results = {
+                    'agent': dqn_agent, 
+                    'scaler': dqn_scaler, 
+                    'mode': 'optimized'
+                }
+            
+            print("✅ Treinamento DQN concluído com sucesso!")
+            
+        except Exception as e:
+            print(f"❌ Erro no treinamento DQN: {str(e)}")
+            print("Continuando apenas com AutoGluon...")
+            dqn_results = None
+    
+    # ===== SALVAR RESULTADOS COMBINADOS =====
+    print("\n=== SALVANDO RESULTADOS ===")
+    
+    with open('combined_model_results.txt', 'w+') as f:
+        f.write("=== RESULTADOS AUTOGLUON ===\n")
+        f.write(f"Melhor modelo: {best_model_name}\n")
+        f.write(f"Acurácia (validação interna): {best_model_score:.4f}\n")
+        f.write(f"Acurácia teste: {autogluon_results['accuracy']:.4f}\n")
+        f.write(f"Precisão (macro): {autogluon_results['precision']:.4f}\n")
+        f.write(f"Recall (macro): {autogluon_results['recall']:.4f}\n")
+        f.write(f"F1-Score (macro): {autogluon_results['f1']:.4f}\n")
+        f.write(f"Matriz de Confusão:\n{autogluon_results['confusion_matrix']}\n\n")
+        
+        if dqn_results:
+            f.write("=== RESULTADOS DQN ===\n")
+            f.write(f"Modo DQN utilizado: {dqn_results['mode']}\n")
+            f.write("Modelo DQN treinado e salvo com sucesso!\n")
+            if dqn_results['mode'] == 'optimized':
+                f.write("Métricas detalhadas disponíveis em 'optimized_dqn_metrics.txt'\n")
+        else:
+            f.write("=== DQN NÃO EXECUTADO ===\n")
+    
+    print("✅ Resultados salvos em 'combined_model_results.txt'")
+    
+    # ===== RETORNO ===
+    return {
+        'autogluon': {
+            'predictor': predictor,
+            'results': autogluon_results
+        },
+        'dqn': dqn_results
+    }
+
+
+# ===== FUNÇÕES DE USO =====
+
+def run_with_autogluon_only(df):
+    """Executa apenas AutoGluon"""
+    return NN_double_chance(df, enable_dqn=False)
+
+def run_with_quick_dqn(df=df_temp):
+    """Executa AutoGluon + DQN teste rápido"""
+    return NN_double_chance(df, enable_dqn=True, dqn_mode='quick')
+
+def run_with_optimized_dqn(df):
+    """Executa AutoGluon + DQN otimizado"""
+    return NN_double_chance(df, enable_dqn=True, dqn_mode='optimized')
+
+
+# ===== EXEMPLO DE USO =====
+# Para usar, chame uma das funções assim:
+
+# # Só AutoGluon
+# results = run_with_autogluon_only(df_temp)
+
+# # AutoGluon + DQN rápido (para testes)
+# results = run_with_quick_dqn(df_temp)
+
+# # AutoGluon + DQN otimizado (produção)
+# results = run_with_optimized_dqn(df_temp)
+
+# # Ou diretamente:
+# results = NN_double_chance(df_temp, enable_dqn=True, dqn_mode='optimized')
+'''
 
 #junta draw_no_bet
 def preparar_df_draw_no_bet(df):
@@ -3204,10 +3678,49 @@ def NN_draw_no_bet(df):
 
     df_conj['resultado'] = df_conj.apply(transformar_res, axis=1)
     df_conj = df_conj[df_conj['resultado'].notna()].copy()
+    # **** PASSO 1: TREINAR O MODELO Q-LEARNING ****
+    print("\n=== Treinando modelo Q-Learning para Double Chance ===")
+    
+    # Dividir em conjunto de treino e teste para o Q-Learning
+    train_q, test_q = train_test_split(df_conj, test_size=0.1, random_state=42)
+    
+    # Inicializar e treinar o agente Q-Learning
+    agent = QLearningDrawNoBet(alpha=0.1, gamma=0.6, epsilon=0.1)
+    agent.train(train_q, num_episodes=500)  # Ajuste o número de episódios conforme necessário
+    
+    # Avaliar o modelo Q-Learning
+    q_evaluation = agent.evaluate(test_q)
+    print(f"\nModelo Q-Learning - Acurácia: {q_evaluation['accuracy']:.4f}")
+    print(f"Previsões corretas: {q_evaluation['correct_predictions']}/{q_evaluation['total_predictions']}")
+    print(f"unidades: {q_evaluation['uni']}")
+    
+    print("\nAcurácia por tipo de DNB (Q-Learning):")
+    for action, accuracy in q_evaluation['accuracy_by_action'].items():
+        dc_type = {0: "vitoria time home", 1: "vitoria time away"}
+        correct = q_evaluation['results_by_action'][action]['correct']
+        total = q_evaluation['results_by_action'][action]['total']
+        print(f"{dc_type[action]}: {accuracy:.4f} ({correct}/{total})")
+    
+    with open('q_learning_dc.txt','w+') as f:
+        f.write(f"\nModelo Q-Learning - Acurácia: {q_evaluation['accuracy']:.4f}")
+        f.write(f"Previsões corretas: {q_evaluation['correct_predictions']}/{q_evaluation['total_predictions']}")
+        f.write(f"unidades: {q_evaluation['uni']}")
+        
+        f.write("\nAcurácia por tipo de DNB (Q-Learning):")
+        for action, accuracy in q_evaluation['accuracy_by_action'].items():
+            dc_type = {0: "vitoria time home", 1: "vitoria time away"}
+            correct = q_evaluation['results_by_action'][action]['correct']
+            total = q_evaluation['results_by_action'][action]['total']
+            f.write(f"{dc_type[action]}: {accuracy:.4f} ({correct}/{total})")
+    
+    # Salvar o modelo Q-Learning
+    agent.save_model('q_learning_dnb_model_final.pkl')
 
     df_conj = df_conj[['media_goals_home', 'media_goals_away',
               'media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean',
-              'draw_no_bet_team1', 'odds_dnb1', 'prob_odds_dnb1','draw_no_bet_team2', 'odds_dnb2', 'prob_odds_dnb2', 'resultado']].copy()
+              'draw_no_bet_team1', 'odds_dnb1', 'prob_odds_dnb1','draw_no_bet_team2', 'odds_dnb2', 'prob_odds_dnb2', 'team_strength_home','team_strength_away','resultado']].copy()
+
+    
 
     train_conj, test_conj = train_test_split(df_conj, test_size=0.1, random_state=42)
 
@@ -3219,7 +3732,7 @@ def NN_draw_no_bet(df):
     temp_dir = tempfile.mkdtemp()
 
     # Treinamento com AutoGluon
-    predictor = TabularPredictor(label='resultado', path=temp_dir, problem_type='multiclass').fit(
+    predictor = TabularPredictor(label='resultado', path=temp_dir, problem_type='binary').fit(
         train_conj,
         presets='best_quality',
         time_limit=1000
@@ -3252,9 +3765,9 @@ def NN_draw_no_bet(df):
 
 
     
-    print(f"Precisão: {precision_score(y_true, y_pred, average='macro'):.4f}")
-    print(f"Recall: {recall_score(y_true, y_pred, average='macro'):.4f}")
-    print(f"F1-Score: {f1_score(y_true, y_pred, average='macro'):.4f}")
+    print(f"Precisão: {precision_score(y_true, y_pred):.4f}")
+    print(f"Recall: {recall_score(y_true, y_pred):.4f}")
+    print(f"F1-Score: {f1_score(y_true, y_pred):.4f}")
 
     print("\nMatriz de Confusão:")
     print(confusion_matrix(y_true, y_pred))
@@ -3263,11 +3776,11 @@ def NN_draw_no_bet(df):
     with open('autogluon_draw_no_bet_model_leaderboard_conj.txt', 'w+') as f:
         f.write(f"Melhor modelo: {best_model_name}\n")
         f.write(f"Acurácia (validação interna): {best_model_score:.4f}\n")
-        f.write("\nMétricas de Avaliação no conjunto de teste (Double Chance):\n")
+        f.write("\nMétricas de Avaliação no conjunto de teste (dnb):\n")
         f.write(f"Acurácia: {accuracy_score(y_true, y_pred):.4f}\n")
-        f.write(f"Precisão (macro): {precision_score(y_true, y_pred, average='macro'):.4f}\n")
-        f.write(f"Recall (macro): {recall_score(y_true, y_pred, average='macro'):.4f}\n")
-        f.write(f"F1-Score (macro): {f1_score(y_true, y_pred, average='macro'):.4f}\n")
+        f.write(f"Precisão (macro): {precision_score(y_true, y_pred):.4f}\n")
+        f.write(f"Recall (macro): {recall_score(y_true, y_pred):.4f}\n")
+        f.write(f"F1-Score (macro): {f1_score(y_true, y_pred):.4f}\n")
 
 
     df_temporario = preparar_df_draw_no_bet(df)
@@ -3370,3 +3883,437 @@ def NN_draw_no_bet(df):
         f.write(f"Acurácia: {accuracy_score(y_true, y_pred):.4f}")
 
     return 0.5
+
+
+
+
+    
+def ql_gl(df=df_temp):
+    # Pré-processamento do dataframe
+    df_temporario = df[['home', 'away', 'h2h_mean', 'media_goals_home', 'media_goals_away',
+                        'goal_line1_1', 'goal_line1_2', 'type_gl1', 'odds_gl1', 'odds_gl2',
+                        'goal_line2_1', 'goal_line2_2', 'type_gl2', 'gl1_indefinido', 'gl1_negativo',
+                        'gl1_positivo', 'gl1_reembolso', 'gl2_indefinido', 'gl2_negativo', 'gl2_positivo',
+                        'gl2_reembolso', 'league']].copy()
+    
+    df_temporario['prob_gl1'] = 1 / df_temporario['odds_gl1']
+    df_temporario['prob_gl2'] = 1 / df_temporario['odds_gl2']
+    soma = df_temporario['prob_gl1'] + df_temporario['prob_gl2']
+    df_temporario['prob_gl1'] /= soma
+    df_temporario['prob_gl2'] /= soma
+
+    #CONJ
+    
+    df_conj = df_temporario.copy()
+    df_conj['goals_diff'] = df_conj['media_goals_home'] - df_conj['media_goals_away']
+    df_conj.dropna(inplace=True)
+    df_conj = df_conj[['h2h_mean', 'media_goals_home', 'media_goals_away',
+                        'goal_line1_1', 'goal_line1_2', 'odds_gl1', 'odds_gl2',
+                        'league', 'prob_gl1','prob_gl2','goals_diff','gl1_positivo','gl2_positivo']].copy()
+    df_conj['split_line'] = (df_conj['goal_line1_1'] != df_conj['goal_line1_2']).astype(int)
+    
+
+    def transformar_target(row):
+        if (row['gl1_positivo'] == 1):
+            return 0
+        elif (row['gl2_positivo'] == 1):
+            return 1
+        else:
+            return None
+        
+
+    df_conj['resultado'] = df_conj.apply(transformar_target, axis=1)
+    df_conj = df_conj[df_conj['resultado'].notna()]  # Remove os casos de reembolso
+    df_conj.drop(columns=['gl1_positivo','gl2_positivo'], inplace=True)
+    
+    # **** PASSO 1: TREINAR O MODELO Q-LEARNING ****
+    print("\n=== Treinando modelo Q-Learning para Goal Line ===")
+    
+    
+    
+    # Dividir em conjunto de treino e teste para o Q-Learning
+    train_q, test_q = train_test_split(df_conj, test_size=0.05, random_state=42)
+    
+    # Inicializar e treinar o agente Q-Learning
+    agent = QLearningGoalLine(alpha=0.1, gamma=0.6, epsilon=0.1)
+    agent.train(train_q, num_episodes=1000)  # Ajuste o número de episódios conforme necessário
+    
+    # Avaliar o modelo Q-Learning
+    q_evaluation = agent.evaluate(test_q)
+    print(f"\nModelo Q-Learning - Acurácia: {q_evaluation['accuracy']:.4f}")
+    print(f"Previsões corretas: {q_evaluation['correct_predictions']}/{q_evaluation['total_predictions']}")
+    print(f"unidades: {q_evaluation['uni']}")
+    
+    print("\nAcurácia por tipo de gl (Q-Learning):")
+    for action, accuracy in q_evaluation['accuracy_by_action'].items():
+        dc_type = {0: "OVER", 1: "UNDER"}
+        correct = q_evaluation['results_by_action'][action]['correct']
+        total = q_evaluation['results_by_action'][action]['total']
+        print(f"{dc_type[action]}: {accuracy:.4f} ({correct}/{total})")
+        
+    with open('q_learning_gl.txt','w+') as f:
+        f.write(f"\nModelo Q-Learning - Acurácia: {q_evaluation['accuracy']:.4f}")
+        f.write(f"Previsões corretas: {q_evaluation['correct_predictions']}/{q_evaluation['total_predictions']}")
+        f.write(f"unidades: {q_evaluation['uni']}")
+        
+        f.write("\nAcurácia por tipo de gl (Q-Learning):")
+        for action, accuracy in q_evaluation['accuracy_by_action'].items():
+            dc_type = {0: "OVER", 1: "UNDER"}
+            correct = q_evaluation['results_by_action'][action]['correct']
+            total = q_evaluation['results_by_action'][action]['total']
+            f.write(f"{dc_type[action]}: {accuracy:.4f} ({correct}/{total})")
+    
+    # Salvar o modelo Q-Learning
+    agent.save_model('q_learning_gl_model_final.pkl')
+    
+
+def ql_dc(df=df_temp):
+    """
+    Treinamento de modelo para Double Chance incluindo Q-Learning junto com AutoGluon
+    """
+    # Pré-processamento do dataframe
+    df_temporario = df[['home', 'away', 'media_goals_home', 'media_goals_away', 'league', 'media_victories_home',
+                        'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'double_chance1',
+                        'odds_dc1', 'double_chance2', 'odds_dc2', 'double_chance3', 'odds_dc3',
+                        'res_double_chance1', 'res_double_chance2', 'res_double_chance3',
+                        'res_game_home', 'res_game_away', 'res_game_empate']].copy()
+    
+    df_temporario['prob_dc1'] = 1 / df_temporario['odds_dc1']
+    df_temporario['prob_dc2'] = 1 / df_temporario['odds_dc2']
+    df_temporario['prob_dc3'] = 1 / df_temporario['odds_dc3']
+    total = df_temporario[['prob_dc1', 'prob_dc2', 'prob_dc3']].sum(axis=1)
+    
+    df_temporario[['prob_dc1', 'prob_dc2', 'prob_dc3']] = df_temporario[['prob_dc1', 'prob_dc2', 'prob_dc3']].div(total, axis=0)
+
+    # Adicionar cálculos de diferenças
+    df_temporario['goal_diff'] = df_temporario['media_goals_home'] - df_temporario['media_goals_away']
+    df_temporario['victory_diff'] = df_temporario['media_victories_home'] - df_temporario['media_victories_away']
+    df_temporario['h2h_diff'] = df_temporario['home_h2h_mean'] - df_temporario['away_h2h_mean']
+    df_temporario.dropna(inplace=True)
+    
+    # **** PASSO 1: TREINAR O MODELO Q-LEARNING ****
+    print("\n=== Treinando modelo Q-Learning para Double Chance ===")
+    
+    # Preparar o DataFrame para Q-Learning (isso já calcula as diferenças)
+    df_q = preparar_df_para_q_learning(df_temporario)
+    
+    # Dividir em conjunto de treino e teste para o Q-Learning
+    train_q, test_q = train_test_split(df_q, test_size=0.1, random_state=42)
+    
+    # Inicializar e treinar o agente Q-Learning
+    agent = QLearningDoubleChanсe(alpha=0.1, gamma=0.6, epsilon=0.1)
+    agent.train(train_q, num_episodes=1000)  # Ajuste o número de episódios conforme necessário
+    
+    # Avaliar o modelo Q-Learning
+    q_evaluation = agent.evaluate(test_q)
+    print(f"\nModelo Q-Learning - Acurácia: {q_evaluation['accuracy']:.4f}")
+    print(f"Previsões corretas: {q_evaluation['correct_predictions']}/{q_evaluation['total_predictions']}")
+    print(f"unidades: {q_evaluation['uni']}")
+    
+    print("\nAcurácia por tipo de Double Chance (Q-Learning):")
+    for action, accuracy in q_evaluation['accuracy_by_action'].items():
+        dc_type = {0: "DC1 (Casa ou Empate)", 1: "DC2 (Fora ou Empate)", 2: "DC3 (Casa ou Fora)"}
+        correct = q_evaluation['results_by_action'][action]['correct']
+        total = q_evaluation['results_by_action'][action]['total']
+        print(f"{dc_type[action]}: {accuracy:.4f} ({correct}/{total})")
+    
+    with open('q_learning_dc.txt','w+') as f:
+        f.write(f"\nModelo Q-Learning - Acurácia: {q_evaluation['accuracy']:.4f}")
+        f.write(f"Previsões corretas: {q_evaluation['correct_predictions']}/{q_evaluation['total_predictions']}")
+        f.write(f"unidades: {q_evaluation['uni']}")
+        
+        f.write("\nAcurácia por tipo de Double Chance (Q-Learning):")
+        for action, accuracy in q_evaluation['accuracy_by_action'].items():
+            dc_type = {0: "DC1 (Casa ou Empate)", 1: "DC2 (Fora ou Empate)", 2: "DC3 (Casa ou Fora)"}
+            correct = q_evaluation['results_by_action'][action]['correct']
+            total = q_evaluation['results_by_action'][action]['total']
+            f.write(f"{dc_type[action]}: {accuracy:.4f} ({correct}/{total})")
+    
+    # Salvar o modelo Q-Learning
+    agent.save_model('q_learning_dc_model_final.pkl')
+    
+        
+
+def ql_dnb(df=df_temp):
+    # Pré-processamento
+    df['prob_odds_dnb1'] = 1 / df['odds_dnb1']
+    df['prob_odds_dnb2'] = 1 / df['odds_dnb2']
+    tot = df['prob_odds_dnb1'] + df['prob_odds_dnb2']
+    df['prob_odds_dnb1'] = df['prob_odds_dnb1'] / tot
+    df['prob_odds_dnb2'] = df['prob_odds_dnb2'] / tot
+
+    df_conj = df[['media_goals_home', 'media_goals_away',
+              'media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean',
+              'draw_no_bet_team1', 'odds_dnb1', 'dnb1_ganha', 'prob_odds_dnb1','draw_no_bet_team2', 'odds_dnb2','dnb2_ganha', 'prob_odds_dnb2']].copy()
+    df_conj['goal_diff'] = df_conj['media_goals_home'] - df_conj['media_goals_away']
+    df_conj['team_strength_home'] = df_conj['media_victories_home'] / df_conj['media_goals_home']
+    df_conj['team_strength_away'] = df_conj['media_victories_away'] / df_conj['media_goals_away']
+    df_conj.dropna(inplace=True)
+
+    def transformar_res(row):
+        if row['dnb1_ganha'] == 1:
+            return 0
+        elif row['dnb2_ganha'] == 1:
+            return 1
+        else:
+            return None
+        
+
+    df_conj['resultado'] = df_conj.apply(transformar_res, axis=1)
+    df_conj = df_conj[df_conj['resultado'].notna()].copy()
+    # **** PASSO 1: TREINAR O MODELO Q-LEARNING ****
+    print("\n=== Treinando modelo Q-Learning para DNB ===")
+    
+    # Dividir em conjunto de treino e teste para o Q-Learning
+    train_q, test_q = train_test_split(df_conj, test_size=0.1, random_state=42)
+    
+    # Inicializar e treinar o agente Q-Learning
+    agent = QLearningDrawNoBet(alpha=0.1, gamma=0.6, epsilon=0.1)
+    agent.train(train_q, num_episodes=1000)  # Ajuste o número de episódios conforme necessário
+    
+    # Avaliar o modelo Q-Learning
+    q_evaluation = agent.evaluate(test_q)
+    print(f"\nModelo Q-Learning - Acurácia: {q_evaluation['accuracy']:.4f}")
+    print(f"Previsões corretas: {q_evaluation['correct_predictions']}/{q_evaluation['total_predictions']}")
+    print(f"unidades: {q_evaluation['uni']}")
+    
+    print("\nAcurácia por tipo de DNB (Q-Learning):")
+    for action, accuracy in q_evaluation['accuracy_by_action'].items():
+        dc_type = {0: "vitoria time home", 1: "vitoria time away"}
+        correct = q_evaluation['results_by_action'][action]['correct']
+        total = q_evaluation['results_by_action'][action]['total']
+        print(f"{dc_type[action]}: {accuracy:.4f} ({correct}/{total})")
+    
+    with open('q_learning_dnb.txt','w+') as f:
+        f.write(f"\nModelo Q-Learning - Acurácia: {q_evaluation['accuracy']:.4f}")
+        f.write(f"Previsões corretas: {q_evaluation['correct_predictions']}/{q_evaluation['total_predictions']}")
+        f.write(f"unidades: {q_evaluation['uni']}")
+        
+        f.write("\nAcurácia por tipo de DNB (Q-Learning):")
+        for action, accuracy in q_evaluation['accuracy_by_action'].items():
+            dc_type = {0: "vitoria time home", 1: "vitoria time away"}
+            correct = q_evaluation['results_by_action'][action]['correct']
+            total = q_evaluation['results_by_action'][action]['total']
+            f.write(f"{dc_type[action]}: {accuracy:.4f} ({correct}/{total})")
+    
+    # Salvar o modelo Q-Learning
+    agent.save_model('q_learning_dnb_model_final.pkl')
+
+
+
+def ql_h(df=df_temp):
+    # Pré-processamento
+    df_temporario = df[['media_goals_home', 'media_goals_away','home_h2h_mean', 'away_h2h_mean',
+                        'asian_handicap1_1', 'asian_handicap1_2','team_ah1','odds_ah1', 
+                        'ah1_indefinido','ah1_negativo', 'ah1_positivo','ah1_reembolso', 
+                        'asian_handicap2_1', 'asian_handicap2_2','team_ah2','odds_ah2', 
+                        'ah2_indefinido','ah2_negativo', 'ah2_positivo','ah2_reembolso', 'league']].copy()
+
+    #CONJ
+
+    df_conj = df_temporario.copy()
+    df_conj['favorite_by_odds'] = df_conj['odds_ah1'] < df_conj['odds_ah2']
+    df_conj['odds_ratio'] = df_conj['odds_ah1'] / df_conj['odds_ah2']
+    df_conj['goals_diff'] = df_conj['media_goals_home'] - df_conj['media_goals_away']
+    df_conj['h2h_diff'] = df_conj['home_h2h_mean'] - df_conj['away_h2h_mean']
+
+    
+    
+    
+    
+    def transformar_resultado(row):
+        if row['ah1_positivo'] == 1:
+            return 0
+        elif row['ah2_positivo'] == 1:
+            return 1
+        else:
+            return None
+        
+
+    df_conj['resultado'] = df_conj.apply(transformar_resultado, axis=1)
+    df_conj = df_conj[df_conj['resultado'].notna()].copy()
+    df_conj.dropna(inplace=True)
+    # **** PASSO 1: TREINAR O MODELO Q-LEARNING ****
+    print("\n=== Treinando modelo Q-Learning para ah ===")
+    
+    # Dividir em conjunto de treino e teste para o Q-Learning
+    train_q, test_q = train_test_split(df_conj, test_size=0.1, random_state=42)
+    
+    # Inicializar e treinar o agente Q-Learning
+    agent = QLearningHandicap(alpha=0.1, gamma=0.6, epsilon=0.1)
+    agent.train(train_q, num_episodes=1000)  # Ajuste o número de episódios conforme necessário
+    
+    # Avaliar o modelo Q-Learning
+    q_evaluation = agent.evaluate(test_q)
+    print(f"\nModelo Q-Learning - Acurácia: {q_evaluation['accuracy']:.4f}")
+    print(f"Previsões corretas: {q_evaluation['correct_predictions']}/{q_evaluation['total_predictions']}")
+    print(f"unidades: {q_evaluation['uni']}")
+    
+    print("\nAcurácia por tipo de AH (Q-Learning):")
+    for action, accuracy in q_evaluation['accuracy_by_action'].items():
+        dc_type = {0: "vitoria time home", 1: "vitoria time away"}
+        correct = q_evaluation['results_by_action'][action]['correct']
+        total = q_evaluation['results_by_action'][action]['total']
+        print(f"{dc_type[action]}: {accuracy:.4f} ({correct}/{total})")
+    
+    with open('q_learning_h.txt','w+') as f:
+        f.write(f"\nModelo Q-Learning - Acurácia: {q_evaluation['accuracy']:.4f}")
+        f.write(f"Previsões corretas: {q_evaluation['correct_predictions']}/{q_evaluation['total_predictions']}")
+        f.write(f"unidades: {q_evaluation['uni']}")
+        
+        f.write("\nAcurácia por tipo de DNB (Q-Learning):")
+        for action, accuracy in q_evaluation['accuracy_by_action'].items():
+            dc_type = {0: "vitoria time home", 1: "vitoria time away"}
+            correct = q_evaluation['results_by_action'][action]['correct']
+            total = q_evaluation['results_by_action'][action]['total']
+            f.write(f"{dc_type[action]}: {accuracy:.4f} ({correct}/{total})")
+    
+    # Salvar o modelo Q-Learning
+    agent.save_model('q_learning_h_model_final.pkl')
+
+'''
+def ql_h(df=df_temp):
+    # Pré-processamento
+    df_temporario = df[['media_goals_home', 'media_goals_away','home_h2h_mean', 'away_h2h_mean',
+                        'asian_handicap1_1', 'asian_handicap1_2','team_ah1','odds_ah1', 
+                        'ah1_indefinido','ah1_negativo', 'ah1_positivo','ah1_reembolso', 
+                        'asian_handicap2_1', 'asian_handicap2_2','team_ah2','odds_ah2', 
+                        'ah2_indefinido','ah2_negativo', 'ah2_positivo','ah2_reembolso', 'league']].copy()
+
+    # CONJ
+    df_conj = df_temporario.copy()
+    df_conj['favorite_by_odds'] = (df_conj['odds_ah1'] < df_conj['odds_ah2']).astype(int)
+    df_conj['odds_ratio'] = df_conj['odds_ah1'] / df_conj['odds_ah2']
+    df_conj['goals_diff'] = df_conj['media_goals_home'] - df_conj['media_goals_away']
+    df_conj['h2h_diff'] = df_conj['home_h2h_mean'] - df_conj['away_h2h_mean']
+    
+    def transformar_resultado(row):
+        if row['ah1_positivo'] == 1:
+            return 0
+        elif row['ah2_positivo'] == 1:
+            return 1
+        else:
+            return None
+    
+    df_conj['resultado'] = df_conj.apply(transformar_resultado, axis=1)
+    df_conj = df_conj[df_conj['resultado'].notna()].copy()
+    df_conj.dropna(inplace=True)
+    
+    # **** PASSO 1: TREINAR O MODELO Q-LEARNING ****
+    print("\n=== Treinando modelo Q-Learning para Handicap Asiático ===")
+    
+    # Dividir em conjunto de treino e teste para o Q-Learning
+    train_q, test_q = train_test_split(df_conj, test_size=0.1, random_state=42)
+    
+    # Configuração do experimento
+    experimentos = [
+        
+        {
+            "nome": "Modelo com PCA (5 componentes)",
+            "config": {
+                "use_pca": True, 
+                "n_pca_components": 5, 
+                "use_hash": False
+            }
+        },
+        {
+            "nome": "Modelo com Hashing de Estado",
+            "config": {
+                "use_pca": False, 
+                "use_hash": True
+            }
+        }
+    ]
+    
+    # Executar experimentos
+    resultados = []
+    
+    for i, experimento in enumerate(experimentos):
+        print(f"\n--- Executando {experimento['nome']} ---")
+        
+        # Inicializar e treinar o agente Q-Learning com as configurações específicas
+        agent = QLearningHandicap(alpha=0.1, gamma=0.6, epsilon=0.1)
+        
+        # No primeiro experimento, usamos a representação de estado original para comparação
+        if i == 0:
+            # Criar uma versão do agente que usa a função original q_learning_h
+            class OriginalQLearningHandicap(QLearningHandicap):
+                def create_state_representation(self, row):
+                    return q_learning_h(row)
+            
+            agent = OriginalQLearningHandicap(alpha=0.1, gamma=0.6, epsilon=0.1)
+            agent.train(train_q, num_episodes=1000)
+        else:
+            # Para os outros experimentos, usamos as novas funcionalidades
+            agent.train(
+                train_q, 
+                num_episodes=1000,
+                use_pca=experimento['config'].get('use_pca', False),
+                n_pca_components=experimento['config'].get('n_pca_components', 5),
+                use_hash=experimento['config'].get('use_hash', False)
+            )
+        
+        # Avaliar o modelo
+        q_evaluation = agent.evaluate(test_q)
+        
+        # Guardar resultados
+        resultados.append({
+            "nome": experimento['nome'],
+            "acuracia": q_evaluation['accuracy'],
+            "unidades": q_evaluation['uni'],
+            "acuracia_por_acao": q_evaluation['accuracy_by_action'],
+            "resultados_por_acao": q_evaluation['results_by_action']
+        })
+        
+        # Exibir resultados
+        print(f"Acurácia: {q_evaluation['accuracy']:.4f}")
+        print(f"Previsões corretas: {q_evaluation['correct_predictions']}/{q_evaluation['total_predictions']}")
+        print(f"Unidades: {q_evaluation['uni']:.2f}")
+        
+        print("\nAcurácia por tipo de handicap:")
+        for action, accuracy in q_evaluation['accuracy_by_action'].items():
+            ah_type = {0: "Over (Home)", 1: "Under (Away)"}
+            correct = q_evaluation['results_by_action'][action]['correct']
+            total = q_evaluation['results_by_action'][action]['total']
+            print(f"{ah_type[action]}: {accuracy:.4f} ({correct}/{total})")
+        
+        # Salvar o modelo do melhor experimento
+        if i == 0:
+            agent.save_model('q_learning_h_model_baseline.pkl')
+        elif i == len(experimentos) - 1 or q_evaluation['accuracy'] > max([r['acuracia'] for r in resultados[:-1]]):
+            agent.save_model('q_learning_h_model_otimizado.pkl')
+    
+    # Comparar resultados
+    print("\n===== COMPARAÇÃO DOS MODELOS =====")
+    for resultado in resultados:
+        print(f"{resultado['nome']}: Acurácia = {resultado['acuracia']:.4f}, Unidades = {resultado['unidades']:.2f}")
+    
+    # Identificar o melhor modelo
+    melhor_modelo = max(resultados, key=lambda x: x['acuracia'])
+    print(f"\nMelhor modelo: {melhor_modelo['nome']} com acurácia de {melhor_modelo['acuracia']:.4f}")
+    
+    # Salvar relatório completo
+    with open('q_learning_h_report.txt', 'w+') as f:
+        f.write("===== RELATÓRIO DE TREINAMENTO Q-LEARNING (HANDICAP ASIÁTICO) =====\n\n")
+        
+        for resultado in resultados:
+            f.write(f"\n--- {resultado['nome']} ---\n")
+            f.write(f"Acurácia: {resultado['acuracia']:.4f}\n")
+            f.write(f"Unidades: {resultado['unidades']:.2f}\n")
+            
+            f.write("\nAcurácia por tipo de handicap:\n")
+            for action, accuracy in resultado['acuracia_por_acao'].items():
+                ah_type = {0: "Over (Home)", 1: "Under (Away)"}
+                correct = resultado['resultados_por_acao'][action]['correct']
+                total = resultado['resultados_por_acao'][action]['total']
+                f.write(f"{ah_type[action]}: {accuracy:.4f} ({correct}/{total})\n")
+        
+        f.write(f"\n\nMELHOR MODELO: {melhor_modelo['nome']} com acurácia de {melhor_modelo['acuracia']:.4f}\n")
+    
+    # Retornar o melhor modelo para uso posterior
+    return melhor_modelo['nome'], melhor_modelo['acuracia']
+'''
+def atua():
+    df = df_temp.copy()
+    df = preProcessGeneral(df)
+    df.to_csv('df_temp_preprocessado.csv', index=False)
