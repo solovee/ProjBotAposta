@@ -503,8 +503,11 @@ import pandas as pd
 import dqndc
 
 
-
+'''
 a = pd.read_csv('df_temp_preprocessado.csv')
 NN.NN_double_chance(a)
 
+'''
+
+main.checa()
 

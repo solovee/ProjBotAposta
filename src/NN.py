@@ -20,8 +20,8 @@ import random
 # Importando funções de discretização e a classe Q-Learning
 from qlearning import (
     discretizar_goals, discretizar_vitorias, discretizar_odds, 
-    discretizar_goal_diff, discretizar_league, q_learning_dc,
-    QLearningDoubleChanсeImproved, preparar_df_para_q_learning, QLearningGoalLine,QLearningDrawNoBet, QLearningHandicap,q_learning_h
+    discretizar_goal_diff, discretizar_league, q_learning_dc,q_learning_gl,
+    QLearningDoubleChanсe, preparar_df_para_q_learning, QLearningGoalLine,QLearningDrawNoBet, QLearningHandicap,q_learning_h
 )
 #tirar input shape
 
@@ -2760,15 +2760,7 @@ def NN_double_chance(df):
     train_q, test_q = train_test_split(df_q, test_size=0.1, random_state=42)
     
     # Inicializar e treinar o agente Q-Learning
-    agent = QLearningDoubleChanсeImproved(
-        alpha=0.15,
-        gamma=0.95, 
-        epsilon=0.4,
-        epsilon_decay=0.998,
-        min_epsilon=0.02,
-        reward_scaling=True,
-        feature_engineering=True
-    )
+    agent = QLearningDoubleChanсe()
     agent.train(train_q, num_episodes=500)  # Ajuste o número de episódios conforme necessário
     
     # Avaliar o modelo Q-Learning
@@ -2798,7 +2790,7 @@ def NN_double_chance(df):
     
     # Salvar o modelo Q-Learning
     agent.save_model('q_learning_dc_model_final.pkl')
-    '''
+    
     # **** PASSO 2: TREINAR O MODELO AUTOGLUON CONJUNTO ****
     print("\n=== Treinando modelo AutoGluon conjunto ===")
     
@@ -2981,7 +2973,7 @@ def NN_double_chance(df):
         f.write(f"Acurácia: {best_model_score:.4f}\n")
         f.write("\nMétricas de Avaliação no conjunto de teste (Double Chance):")
         f.write(f"Acurácia: {accuracy_score(y_true, y_pred):.4f}")
-    '''
+    
     return 0.6
 
 '''
@@ -3888,6 +3880,10 @@ def NN_draw_no_bet(df):
 
 
     
+from sklearn.model_selection import train_test_split
+import pandas as pd
+import numpy as np
+
 def ql_gl(df=df_temp):
     # Pré-processamento do dataframe
     df_temporario = df[['home', 'away', 'h2h_mean', 'media_goals_home', 'media_goals_away',
@@ -3895,7 +3891,7 @@ def ql_gl(df=df_temp):
                         'goal_line2_1', 'goal_line2_2', 'type_gl2', 'gl1_indefinido', 'gl1_negativo',
                         'gl1_positivo', 'gl1_reembolso', 'gl2_indefinido', 'gl2_negativo', 'gl2_positivo',
                         'gl2_reembolso', 'league']].copy()
-    
+
     df_temporario['prob_gl1'] = 1 / df_temporario['odds_gl1']
     df_temporario['prob_gl2'] = 1 / df_temporario['odds_gl2']
     soma = df_temporario['prob_gl1'] + df_temporario['prob_gl2']
@@ -3903,7 +3899,7 @@ def ql_gl(df=df_temp):
     df_temporario['prob_gl2'] /= soma
 
     #CONJ
-    
+
     df_conj = df_temporario.copy()
     df_conj['goals_diff'] = df_conj['media_goals_home'] - df_conj['media_goals_away']
     df_conj.dropna(inplace=True)
@@ -3911,7 +3907,6 @@ def ql_gl(df=df_temp):
                         'goal_line1_1', 'goal_line1_2', 'odds_gl1', 'odds_gl2',
                         'league', 'prob_gl1','prob_gl2','goals_diff','gl1_positivo','gl2_positivo']].copy()
     df_conj['split_line'] = (df_conj['goal_line1_1'] != df_conj['goal_line1_2']).astype(int)
-    
 
     def transformar_target(row):
         if (row['gl1_positivo'] == 1):
@@ -3920,52 +3915,50 @@ def ql_gl(df=df_temp):
             return 1
         else:
             return None
-        
 
     df_conj['resultado'] = df_conj.apply(transformar_target, axis=1)
     df_conj = df_conj[df_conj['resultado'].notna()]  # Remove os casos de reembolso
     df_conj.drop(columns=['gl1_positivo','gl2_positivo'], inplace=True)
-    
-    # **** PASSO 1: TREINAR O MODELO Q-LEARNING ****
+
+    #  PASSO 1: TREINAR O MODELO Q-LEARNING 
     print("\n=== Treinando modelo Q-Learning para Goal Line ===")
-    
-    
-    
+
     # Dividir em conjunto de treino e teste para o Q-Learning
     train_q, test_q = train_test_split(df_conj, test_size=0.05, random_state=42)
-    
+
     # Inicializar e treinar o agente Q-Learning
-    agent = QLearningGoalLine(alpha=0.1, gamma=0.6, epsilon=0.1)
+    agent = QLearningGoalLine()
     agent.train(train_q, num_episodes=1000)  # Ajuste o número de episódios conforme necessário
-    
+
     # Avaliar o modelo Q-Learning
     q_evaluation = agent.evaluate(test_q)
     print(f"\nModelo Q-Learning - Acurácia: {q_evaluation['accuracy']:.4f}")
     print(f"Previsões corretas: {q_evaluation['correct_predictions']}/{q_evaluation['total_predictions']}")
     print(f"unidades: {q_evaluation['uni']}")
-    
+
     print("\nAcurácia por tipo de gl (Q-Learning):")
     for action, accuracy in q_evaluation['accuracy_by_action'].items():
         dc_type = {0: "OVER", 1: "UNDER"}
         correct = q_evaluation['results_by_action'][action]['correct']
         total = q_evaluation['results_by_action'][action]['total']
         print(f"{dc_type[action]}: {accuracy:.4f} ({correct}/{total})")
-        
+
     with open('q_learning_gl.txt','w+') as f:
         f.write(f"\nModelo Q-Learning - Acurácia: {q_evaluation['accuracy']:.4f}")
         f.write(f"Previsões corretas: {q_evaluation['correct_predictions']}/{q_evaluation['total_predictions']}")
         f.write(f"unidades: {q_evaluation['uni']}")
-        
+
         f.write("\nAcurácia por tipo de gl (Q-Learning):")
         for action, accuracy in q_evaluation['accuracy_by_action'].items():
             dc_type = {0: "OVER", 1: "UNDER"}
             correct = q_evaluation['results_by_action'][action]['correct']
             total = q_evaluation['results_by_action'][action]['total']
             f.write(f"{dc_type[action]}: {accuracy:.4f} ({correct}/{total})")
-    
+
     # Salvar o modelo Q-Learning
     agent.save_model('q_learning_gl_model_final.pkl')
-    
+
+
 
 def ql_dc(df=df_temp):
     """

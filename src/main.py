@@ -1,5 +1,6 @@
 import time as time_module  # para ainda usar time.sleep
 from datetime import datetime, timedelta, time
+import qlearning
 
 import tensorflow as tf
 from api import BetsAPIClient, dia_anterior
@@ -15,6 +16,7 @@ import threading
 import os
 import signal
 import sys
+import pickle
 
 #arrumar multiclass handicap saida
 
@@ -1225,6 +1227,18 @@ def predicta_handicap(prepHandicap_df,prepHandicap_df_conj, dados):
     # Usa explicitamente o melhor modelo para previsão
     preds_proba = predictor.predict_proba(prepHandicap_df, model=best_model)
     pred_conj = predictor_conj.predict(prepHandicap_df_conj, model=best_model_conj).iloc[0]
+    try:
+        ql_h = qlearning.QLearningHandicap()
+        ql_h.load_model('q_learning_h_model_final.pkl')
+        estado = qlearning.q_learning_h(prepHandicap_df_conj)
+        if estado in ql_h.q_table:
+            pred_ql = ql_h.choose_action(estado, epsilon=0)
+        else:
+            pred_ql = pred_conj
+
+    except:
+        print('PROBLEMAS COM QL GL')
+        pred_ql = pred_conj
 
     pred_handicap_1 = float(preds_proba[0][1]) 
     pred_handicap_2 = float(preds_proba[1][1]) 
@@ -1240,7 +1254,7 @@ def predicta_handicap(prepHandicap_df,prepHandicap_df_conj, dados):
         ve = prob * odd
         if (ve >= th_ve) and (prob >= lista_th[2]) and (odd >= th_odd):
             if prob > preds[1 - i]:
-                if pred_conj == i:
+                if pred_conj == i and pred_conj == pred_ql:
                     recomendacoes.append((i + 1, ve, prob, odd))
 
     logger.info(f"📊 Handicap - Predições: {preds}, Odds: {dados['odds']}")
@@ -1262,6 +1276,7 @@ def predicta_goal_line(prepGoal_line_df,prepGoal_line_df_conj, dados):
     predictor = TabularPredictor.load("autogluon_goal_line_model")
     predictor_conj = TabularPredictor.load("autogluon_goal_line_model_conj")
 
+    
     # Garante que usaremos o melhor modelo
     best_model = predictor.model_best
     print(f"🔍 Modelo selecionado: {best_model}")
@@ -1270,6 +1285,18 @@ def predicta_goal_line(prepGoal_line_df,prepGoal_line_df_conj, dados):
     # Usa explicitamente o melhor modelo para previsão de probabilidades
     preds_proba = predictor.predict_proba(prepGoal_line_df, model=best_model)
     pred = predictor_conj.predict(prepGoal_line_df_conj, model=best_model_conj).iloc[0]
+    try:
+        ql_gl = qlearning.QLearningGoalLine()
+        ql_gl.load_model('q_learning_gl_model_final.pkl')
+        estado = qlearning.q_learning_gl(prepGoal_line_df_conj)
+        if estado in ql_gl.q_table:
+            pred_ql = ql_gl.choose_action(estado, epsilon=0)
+        else:
+            pred_ql = pred
+
+    except:
+        print('PROBLEMAS COM QL GL')
+        pred_ql = pred
     if pred == 'over':
         pred = 0
     elif pred == 'under':
@@ -1287,11 +1314,12 @@ def predicta_goal_line(prepGoal_line_df,prepGoal_line_df_conj, dados):
         ve = prob * odd
         if (ve >= th_ve) and (prob >= lista_th[3]) and (odd >= th_odd):
             if prob > preds[1 - i]:  # Comparação com a outra opção
-                if pred == i:
+                if pred == i and pred == pred_ql:
                     recomendacoes.append((i + 1, ve, prob, odd))
 
     logger.info(f"📊 Goal Line - Predições: {preds}, Odds GL: {dados['odds_gl']}")
     logger.info(f"📊 gl pred - Pred: {pred}")
+    logger.info(f"📊 ql gl pred - Pred: {pred_ql}")
 
     if recomendacoes:
         melhor_opcao = max(recomendacoes, key=lambda x: x[2])
@@ -1309,6 +1337,8 @@ def predicta_double_chance(prepDoubleChance_df, prepDoubleChance_df_conj, dados)
     try:
         predictor = TabularPredictor.load("autogluon_double_chance_model")
         predictor_conj = TabularPredictor.load("autogluon_double_chance_model_conj")
+        
+        
 
         # Garante que usaremos o melhor modelo
         best_model = predictor.model_best
@@ -1318,6 +1348,19 @@ def predicta_double_chance(prepDoubleChance_df, prepDoubleChance_df_conj, dados)
         # Usa explicitamente o melhor modelo para 
         preds_proba = predictor.predict_proba(prepDoubleChance_df, model=best_model)
         pred = predictor_conj.predict(prepDoubleChance_df_conj, model=best_model_conj).iloc[0]
+
+
+        try:
+            ql_dc = qlearning.QLearningDoubleChanсe()
+            ql_dc.load_model('q_learning_dc_model_final.pkl')
+            estado = qlearning.q_learning_dc(prepDoubleChance_df_conj)
+            if estado in ql_dc.q_table:
+                pred_dc = ql_dc.choose_action(estado, epsilon=0)
+            else:
+                pred_dc = pred
+        except:
+            print('PROBLEMAS COM O QL')
+            pred_dc = pred
         
         # Log das dimensões das previsões
         logger.info(f"📊 Formato das previsões: {preds_proba.shape}")
@@ -1371,10 +1414,11 @@ def predicta_double_chance(prepDoubleChance_df, prepDoubleChance_df_conj, dados)
                 if (ve >= th_ve) and (prob >= lista_th[4]) and (odd >= th_odd):
                     if i in [0, 1]:
                         if prob > preds[1 - i]: 
-                            if pred == i:
+                            if pred == i and pred == pred_dc:
                                  # Compara apenas entre as duas primeiras
                                 recomendacoes.append((i + 1, ve, prob, odd))
                     else:
+                        
                         # Para a terceira opção ("qualquer time vence"), entra direto se passar os thresholds
                         recomendacoes.append((i + 1, ve, prob, odd))
             except Exception as e:
@@ -1410,6 +1454,19 @@ def predicta_draw_no_bet(pred_draw_no_bet_df,pred_draw_no_bet_df_conj, dados):
     preds_proba = predictor.predict_proba(pred_draw_no_bet_df, model=best_model)
     pred = predictor_conj.predict(pred_draw_no_bet_df_conj, model=best_model_conj).iloc[0]
 
+    try:
+        ql_dnb = qlearning.QLearningDrawNoBet()
+        ql_dnb.load_model('q_learning_dnb_model_final.pkl')
+        estado = qlearning.q_learning_gl(pred_draw_no_bet_df_conj)
+        if estado in ql_dnb.q_table:
+            pred_ql = ql_dnb.choose_action(estado, epsilon=0)
+        else:
+            pred_ql = pred
+
+    except:
+        print('PROBLEMAS COM QL dnb')
+        pred_ql = pred
+
     # Convertendo as predições para valores flutuantes
     pred_dnb_1 = float(preds_proba[0][1])
     pred_dnb_2 = float(preds_proba[1][1])
@@ -1427,7 +1484,7 @@ def predicta_draw_no_bet(pred_draw_no_bet_df,pred_draw_no_bet_df_conj, dados):
         # Verifica se o Valor Esperado é maior que o limite e a probabilidade e odd estão boas
         if (ve >= th_ve) and (prob >= lista_th[5]) and (odd >= th_odd):
             if prob > preds[1 - i]:  # Compara entre as duas opções possíveis
-                if pred == i:
+                if pred == i and pred == pred_ql:
                     recomendacoes.append((i + 1, ve, prob, odd))
 
     logger.info(f"📊 Draw No Bet - Predições: {preds}, Odds: {dados['odds']}")
