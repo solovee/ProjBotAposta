@@ -147,7 +147,7 @@ while dias_processados != set(dias_todos):
         df_novo = df_novo[COLUNAS_PADRAO]
         
         # Ordenar por event_day
-        df_novo = df_novo.sort_values(by="event_day", ascending=False)
+        df_novo = df_novo.sort_values(by="time", ascending=False)
 
         if not os.path.exists(CSV_FILE):
             df_novo.to_csv(CSV_FILE, index=False)  # Cria um novo arquivo

@@ -51,7 +51,7 @@ apiclient = BetsAPIClient(api_key=api)
 CSV_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'resultados_60.csv')
 #lista dos thresholds das nns
 lista_th = [0.575,0.4,0.625,0.6,0.6,0.6]
-list_checa = []
+list_checa = [{"id": "175414411", "mercado": "goal_line", "tipo": "over", "linha": "4.0", "odd": 1.85, "jogo": "REAL MADRID (BOLEC) X MAN CITY (PECONI)"},{"id": "175386838", "mercado": "double_chance", "time": "VILLARREAL (RAZVAN)", "odd": 1.6, "jogo": "VILLARREAL (RAZVAN) X REAL MADRID (JETLI)"},{"id": "175414548", "mercado": "goal_line", "tipo": "over", "linha": "5.0", "odd": 1.875, "jogo": "ASTON VILLA (JESUS) X BENFICA (ROMEO)"},{"id": "175414536", "mercado": "handicap", "time": "BAYER 04 (MOLOTOV)", "linha": "0.0 , -0.5", "odd": 1.9, "jogo": "BARCELONA (DAVID) X BAYER 04 (MOLOTOV)"},{"id": "175414423", "mercado": "goal_line", "tipo": "over", "linha": "5.0 , 5.5", "odd": 1.9, "jogo": "EINTRACHT (STEKSY) X ROMA (GIOX)"},{"id": "175414429", "mercado": "goal_line", "tipo": "under", "linha": "4.5", "odd": 1.9, "jogo": "FENERBAHCE (BOKI) X TOTTENHAM (BOLEC)"},{"id": "175414442", "mercado": "goal_line", "tipo": "over", "linha": "5.0 , 5.5", "odd": 1.85, "jogo": "ROMA (GIOX) X MAN UTD (PECONI)"}]
 
 
 
@@ -641,7 +641,7 @@ def atualizar_csv_dia_atual():
                 df_final = df_final.drop_duplicates(subset=['id'], keep='last')
                 
                 # Ordenar por data do evento
-                df_final = df_final.sort_values(by="event_day", ascending=False).reset_index(drop=True)
+                df_final = df_final.sort_values(by="time", ascending=False).reset_index(drop=True)
                 
                 # Verificar duplicatas finais
                 duplicatas_finais = df_final[df_final.duplicated(subset=['id'], keep=False)]
@@ -1140,7 +1140,7 @@ def preve(df_linha, id):
     except Exception as e:
         logger.error(f"❌ Erro durante a previsão: {str(e)}")
         return []
-
+2
 
 def times_para_jogo(times):
     #('arsenal','mai')
@@ -1558,7 +1558,7 @@ def processar_dia_anterior():
                 print("📂 CSV existente encontrado, mesclando dados...")
                 df_existente = pd.read_csv(CSV_FILE, dtype={"event_day": str})
                 df_final = pd.concat([df_existente, df_novo], ignore_index=True)
-                df_final = df_final.sort_values(by="event_day", ascending=False).reset_index(drop=True)
+                df_final = df_final.sort_values(by="time", ascending=False).reset_index(drop=True)
 
                 primeiro_dia = df_final["event_day"].min()
                 df_final = df_final[df_final["event_day"] != primeiro_dia]
@@ -1711,7 +1711,7 @@ def atualizar_csv_dia_atual():
                 df_final = df_final.drop_duplicates(subset=['id'], keep='last')
                 
                 # Ordenar por data do evento
-                df_final = df_final.sort_values(by="event_day", ascending=False).reset_index(drop=True)
+                df_final = df_final.sort_values(by="time", ascending=False).reset_index(drop=True)
                 
                 # Verificar duplicatas finais
                 duplicatas_finais = df_final[df_final.duplicated(subset=['id'], keep=False)]

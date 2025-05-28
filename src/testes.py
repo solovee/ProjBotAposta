@@ -518,5 +518,5 @@ main.main()
 import pandas as pd
 
 
-main.criaTodasNNs()
-main.main()
+
+main.checa()
