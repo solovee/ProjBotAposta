@@ -91,6 +91,7 @@ class BetsAPIClient:
                     if str(registro.get('time_status')) != '3':
                         continue  # Evita erro se 'results' não estiver presente
                     ss = registro.get('ss')  # Pega o valor de 'ss', se existir, ou None
+                    time = registro.get('time')
                     
                     if ss and len(ss) >= 3:  # Verifica se 'ss' não é None e tem pelo menos 3 caracteres
                         home_goals = int(ss.split('-')[0])  # Pega os gols do time da casa
@@ -106,6 +107,7 @@ class BetsAPIClient:
                         'home_goals': home_goals,
                         'away_goals': away_goals,
                         'tot_goals': (home_goals + away_goals) if home_goals is not None and away_goals is not None else None,
+                        'time': time
                         
                     }
                     di.append(dic)
@@ -768,5 +770,27 @@ class BetsAPIClient:
             rows.append(row)
         
         return pd.DataFrame(rows)
+    
+
+
+    def getResult(self, lista):
+        url = f'{self.base_url}result'
+        event_ids = ','.join(map(str, lista))
+        params = {
+            'token': self.api_key,
+            'event_id': event_ids
+        }
+        response = requests.get(url, params=params)
+        resp = response.json()
+        r = resp.get('results', [])  # Evita erro se 'results' não estiver presente
+        lis = []
+        
+        
+        for a in r:
+            time = a.get('time')
+            lis.append(time)
+        return lis
+
+
         
 

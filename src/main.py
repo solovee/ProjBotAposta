@@ -36,6 +36,7 @@ load_dotenv()
 
 api = os.getenv("API_KEY")
 chat_id = int(os.getenv("CHAT_ID"))
+#novo -4954876315
 # -1002610837223
 chats = [chat_id]
 
@@ -49,7 +50,7 @@ apiclient = BetsAPIClient(api_key=api)
 #CSV_FILE = r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_novo.csv"
 CSV_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'resultados_60.csv')
 #lista dos thresholds das nns
-lista_th = [0.575,0.4,0.625,0.575,0.575,0.575]
+lista_th = [0.575,0.4,0.625,0.6,0.6,0.6]
 list_checa = []
 
 
@@ -547,7 +548,7 @@ def loop_pega_jogos():
 
 def atualizar_csv_dia_atual():
     COLUNAS_PADRAO = [
-        'id', 'event_day', 'home', 'away','league', 'home_goals', 'away_goals', 'tot_goals',
+        'id', 'event_day', 'home', 'away','league', 'time','home_goals', 'away_goals', 'tot_goals',
         'goals_over_under', 'odd_goals_over1', 'odd_goals_under1',
         'asian_handicap1', 'team_ah1', 'odds_ah1',
         'asian_handicap2', 'team_ah2', 'odds_ah2',
@@ -1502,7 +1503,7 @@ def predicta_draw_no_bet(pred_draw_no_bet_df,pred_draw_no_bet_df_conj, dados):
 
 def processar_dia_anterior():
     COLUNAS_PADRAO = [
-        'id', 'event_day', 'home', 'away','league', 'home_goals', 'away_goals', 'tot_goals',
+        'id', 'event_day', 'home', 'away','league','time', 'home_goals', 'away_goals', 'tot_goals',
         'goals_over_under', 'odd_goals_over1', 'odd_goals_under1',
         'asian_handicap1', 'team_ah1', 'odds_ah1',
         'asian_handicap2', 'team_ah2', 'odds_ah2',
@@ -1594,7 +1595,7 @@ from datetime import datetime
 
 def atualizar_csv_dia_atual():
     COLUNAS_PADRAO = [
-        'id', 'event_day', 'home', 'away','league', 'home_goals', 'away_goals', 'tot_goals',
+        'id', 'event_day', 'home', 'away','league','time', 'home_goals', 'away_goals', 'tot_goals',
         'goals_over_under', 'odd_goals_over1', 'odd_goals_under1',
         'asian_handicap1', 'team_ah1', 'odds_ah1',
         'asian_handicap2', 'team_ah2', 'odds_ah2',
@@ -1607,8 +1608,13 @@ def atualizar_csv_dia_atual():
         'draw_no_bet_team2', 'odds_dnb2',
     ]
 
-    dia = datetime.now().strftime("%Y%m%d")
-    logger.info(f"🔄 Atualizando jogos do dia {dia}")
+    # Definir dias para buscar (igual à função pegaJogosDoDia)
+    dias_para_buscar = [datetime.now().strftime("%Y%m%d")]
+    if datetime.now().hour >= 20:
+        dia_seguinte = (datetime.now() + timedelta(days=1)).strftime('%Y%m%d')
+        dias_para_buscar.append(dia_seguinte)
+    
+    logger.info(f"📅 Dias para buscar: {dias_para_buscar}")
 
     try:
         # Carregar dados existentes primeiro
@@ -1618,16 +1624,34 @@ def atualizar_csv_dia_atual():
             ids_existentes = set(df_existente['id'].astype(str))
             logger.info(f"📊 Total de registros existentes: {len(ids_existentes)}")
 
-        logger.info("🔎 Buscando IDs e dicionário de eventos...")
-        ids, dicio = apiclient.getAllOlds(leagues=apiclient.leagues_ids, day=dia)
-        logger.info(f"✔️ {len(ids)} eventos encontrados.")
+        # Buscar dados para todos os dias
+        todos_ids = []
+        todos_dicionarios = []
+        
+        for dia in dias_para_buscar:
+            logger.info(f"🔎 Buscando IDs e dicionário de eventos para o dia {dia}...")
+            ids, dicio = apiclient.getAllOlds(leagues=apiclient.leagues_ids, day=dia)
+            logger.info(f"✔️ {len(ids)} eventos encontrados para o dia {dia}.")
+            
+            # Adicionar o dia do evento a cada dicionário
+            for evento in dicio:
+                evento['event_day'] = dia
+            
+            todos_ids.extend(ids)
+            todos_dicionarios.extend(dicio)
+
+        logger.info(f"✔️ Total de {len(todos_ids)} eventos encontrados em todos os dias.")
+
+        if not todos_ids:
+            logger.info("⚠️ Nenhum evento encontrado para os dias especificados.")
+            return
 
         logger.info("📊 Filtrando e transformando odds...")
-        odds_data = apiclient.filtraOddsNovo(ids=ids)
+        odds_data = apiclient.filtraOddsNovo(ids=todos_ids)
         df_odds = apiclient.transform_betting_data(odds_data)
 
         novos_dados = []
-        for dados_evento in dicio:
+        for dados_evento in todos_dicionarios:
             event_id = str(dados_evento.get('id'))
             
             # Verificar se o ID já existe
@@ -1638,9 +1662,9 @@ def atualizar_csv_dia_atual():
             odds_transformadas = df_odds[df_odds['id'] == event_id].to_dict('records')
 
             if odds_transformadas:
-                merged = {**dados_evento, **odds_transformadas[0], "event_day": dia}
+                merged = {**dados_evento, **odds_transformadas[0]}
             else:
-                merged = {**dados_evento, "event_day": dia}
+                merged = dados_evento.copy()
 
             novos_dados.append(merged)
 
@@ -1706,6 +1730,5 @@ def atualizar_csv_dia_atual():
             logger.info(f"✅ Novo CSV criado com {len(df_novo)} eventos")
         
     except Exception as e:
-        logger.error(f"❌ Erro ao atualizar dados do dia {dia}: {type(e).__name__}: {e}")
+        logger.error(f"❌ Erro ao atualizar dados dos dias {dias_para_buscar}: {type(e).__name__}: {e}")
         raise  # Re-lança a exceção para ser tratada pelo chamador
-

@@ -7262,3 +7262,275 @@ ST)"}
 --- NOVO LOTE (2025-05-23T01:39:40.514996) ---
 
 --- NOVO LOTE (2025-05-23T01:39:40.587990) ---
+
+--- NOVO LOTE (2025-05-26T19:11:01.540202) ---
+
+--- NOVO LOTE (2025-05-26T19:11:01.549221) ---
+
+--- NOVO LOTE (2025-05-26T19:12:55.404341) ---
+
+--- NOVO LOTE (2025-05-26T19:12:55.406333) ---
+
+--- NOVO LOTE (2025-05-26T19:24:40.402297) ---
+
+--- NOVO LOTE (2025-05-26T19:24:40.466833) ---
+
+--- NOVO LOTE (2025-05-26T19:25:29.775453) ---
+
+--- NOVO LOTE (2025-05-26T19:35:33.014624) ---
+
+--- NOVO LOTE (2025-05-26T19:35:33.015449) ---
+{"id": "175306055", "mercado": "handicap", "time": "CZECHIA (KRAY)", "linha": "0.0", "odd": 1.775, "jogo": "UKRAINE (INQUISITOR) X CZECHIA (KRAY)"}
+
+--- NOVO LOTE (2025-05-26T19:37:18.333901) ---
+{"id": "175306060", "mercado": "double_chance", "time": "NAPOLI (TOHI4)", "odd": 1.666, "jogo": "NAPOLI (TOHI4) X JUVENTUS (SAMURAI)"}
+
+--- NOVO LOTE (2025-05-26T19:37:18.339907) ---
+{"id": "175320040", "mercado": "double_chance", "time": "BOLOGNA (MAKSDH)", "odd": 1.615, "jogo": "BOLOGNA (MAKSDH) X ROMA (SERENITY)"}
+
+--- NOVO LOTE (2025-05-26T19:48:09.989356) ---
+{"id": "175306083", "mercado": "handicap", "time": "GHANA (HOTSHOT)", "linha": "0.0 , -0.5", "odd": 1.9, "jogo": "USA (LAIKINGDAST) X GHANA (HOTSHOT)"}
+
+--- NOVO LOTE (2025-05-26T19:48:09.991370) ---
+{"id": "175306090", "mercado": "handicap", "time": "DENMARK (KODAK)", "linha": "0.0", "odd": 1.9, "jogo": "CZECHIA (KRAY) X DENMARK (KODAK)"}
+
+--- NOVO LOTE (2025-05-26T19:48:40.405715) ---
+
+--- NOVO LOTE (2025-05-26T19:49:04.445906) ---
+{"id": "175320054", "mercado": "handicap", "time": "BOLOGNA (MAKSDH)", "linha": "0.0 , -0.5", "odd": 1.775, "jogo": "JUVENTUS (SAMURAI) X BOLOGNA (MAKSDH)"}
+
+--- NOVO LOTE (2025-05-26T19:55:18.542924) ---
+
+--- NOVO LOTE (2025-05-26T19:55:18.544345) ---
+{"id": "175307474", "mercado": "goal_line", "tipo": "under", "linha": "4.5 , 5.0", "odd": 1.85, "jogo": "PANATHINAIKOS (LUCAS) X FIORENTINA (CARLOS)"}
+
+--- NOVO LOTE (2025-05-26T20:00:53.595748) ---
+
+--- NOVO LOTE (2025-05-26T20:00:53.681294) ---
+
+--- NOVO LOTE (2025-05-26T20:00:53.682291) ---
+
+--- NOVO LOTE (2025-05-26T20:01:01.969390) ---
+
+--- NOVO LOTE (2025-05-26T20:09:53.334024) ---
+
+--- NOVO LOTE (2025-05-26T20:09:53.366057) ---
+
+--- NOVO LOTE (2025-05-26T20:11:34.555762) ---
+{"id": "175306119", "mercado": "handicap", "time": "GHANA (HOTSHOT)", "linha": "0.0 , -0.5", "odd": 1.875, "jogo": "UKRAINE (INQUISITOR) X GHANA (HOTSHOT)"}
+
+--- NOVO LOTE (2025-05-26T20:12:40.368834) ---
+
+--- NOVO LOTE (2025-05-26T20:13:05.382452) ---
+
+--- NOVO LOTE (2025-05-26T20:23:41.254589) ---
+
+--- NOVO LOTE (2025-05-26T20:23:42.496547) ---
+
+--- NOVO LOTE (2025-05-26T20:24:40.443345) ---
+
+--- NOVO LOTE (2025-05-26T20:24:40.510902) ---
+
+--- NOVO LOTE (2025-05-26T20:25:19.003929) ---
+{"id": "175307496", "mercado": "handicap", "time": "REAL BETIS (SATO)", "linha": "0.5 , 1.0", "odd": 1.85, "jogo": "FIORENTINA (CARLOS) X REAL BETIS (SATO)"}
+A (DELPIERO)"}
+
+--- NOVO LOTE (2025-05-26T20:35:35.411646) ---
+
+--- NOVO LOTE (2025-05-26T20:35:35.412645) ---
+{"id": "175306156", "mercado": "goal_line", "tipo": "over", "linha": "5.0", "odd": 1.85, "jogo": "USA (LAIKINGDAST) X DENMARK (KODAK)"}
+
+--- NOVO LOTE (2025-05-26T20:40:20.655743) ---
+
+--- NOVO LOTE (2025-05-26T20:40:20.656382) ---
+{"id": "175307500", "mercado": "handicap", "time": "RAPID VIENNA (DELPIERO)", "linha": "0.0 , 0.5", "odd": 1.775, "jogo": "FIORENTINA (CARLOS) X RAPID VIENNA (DELPIERO)"}
+
+--- NOVO LOTE (2025-05-26T20:41:28.746052) ---
+
+--- NOVO LOTE (2025-05-26T20:41:28.746052) ---
+
+--- NOVO LOTE (2025-05-26T20:51:20.089456) ---
+
+--- NOVO LOTE (2025-05-26T20:51:20.222986) ---
+
+--- NOVO LOTE (2025-05-26T20:51:32.920500) ---
+
+--- NOVO LOTE (2025-05-26T20:51:32.923505) ---
+{"id": "175306168", "mercado": "double_chance", "time": "DENMARK (KODAK)", "odd": 1.6, "jogo": "DENMARK (KODAK) X CZECHIA (KRAY)"}
+
+--- NOVO LOTE (2025-05-26T20:54:52.801919) ---
+
+--- NOVO LOTE (2025-05-26T20:54:52.856471) ---
+
+--- NOVO LOTE (2025-05-26T20:58:48.125742) ---
+
+--- NOVO LOTE (2025-05-26T21:01:24.550506) ---
+
+--- NOVO LOTE (2025-05-26T21:01:24.784620) ---
+
+--- NOVO LOTE (2025-05-26T21:01:57.974175) ---
+
+--- NOVO LOTE (2025-05-26T21:10:19.505752) ---
+
+--- NOVO LOTE (2025-05-26T21:10:19.506746) ---
+{"id": "175307522", "mercado": "goal_line", "tipo": "under", "linha": "4.5 , 5.0", "odd": 1.85, "jogo": "INTER (CARLOS) X NAPOLI (LUCAS)"}
+
+--- NOVO LOTE (2025-05-26T21:11:28.079667) ---
+
+--- NOVO LOTE (2025-05-26T21:11:28.081664) ---
+
+--- NOVO LOTE (2025-05-26T21:12:40.274053) ---
+
+--- NOVO LOTE (2025-05-26T21:12:40.288570) ---
+
+--- NOVO LOTE (2025-05-26T21:24:31.017784) ---
+{"id": "175306207", "mercado": "handicap", "time": "GHANA (HOTSHOT)", "linha": "0.0 , -0.5", "odd": 1.85, "jogo": "DENMARK (KODAK) X GHANA (HOTSHOT)"}
+
+--- NOVO LOTE (2025-05-26T21:24:31.748558) ---
+
+--- NOVO LOTE (2025-05-26T21:25:21.437008) ---
+
+--- NOVO LOTE (2025-05-26T21:25:21.445018) ---
+{"id": "175307529", "mercado": "goal_line", "tipo": "over", "linha": "4.0 , 4.5", "odd": 1.825, "jogo": "AC MILAN (DELPIERO) X LAZIO (SATO)"}
+
+--- NOVO LOTE (2025-05-26T21:34:39.108387) ---
+
+--- NOVO LOTE (2025-05-26T21:34:39.114412) ---
+
+--- NOVO LOTE (2025-05-26T21:40:18.575986) ---
+{"id": "175307553", "mercado": "goal_line", "tipo": "under", "linha": "5.5", "odd": 1.85, "jogo": "LAZIO (SATO) X INTER (CARLOS)"}
+
+--- NOVO LOTE (2025-05-26T21:40:18.580987) ---
+{"id": "175307547", "mercado": "goal_line", "tipo": "over", "linha": "3.5", "odd": 1.775, "jogo": "AC MILAN (DELPIERO) X NAPOLI (LUCAS)"}
+
+--- NOVO LOTE (2025-05-26T21:47:43.010975) ---
+
+--- NOVO LOTE (2025-05-26T21:47:43.525616) ---
+{"id": "175306222", "mercado": "handicap", "time": "NACIONAL (SAMURAI)", "linha": "0.0 , 0.5", "odd": 1.75, "jogo": "COLO COLO (TOHI4) X NACIONAL (SAMURAI)"}
+
+--- NOVO LOTE (2025-05-26T21:54:40.280435) ---
+
+--- NOVO LOTE (2025-05-26T21:54:40.292439) ---
+
+--- NOVO LOTE (2025-05-26T21:55:20.020411) ---
+{"id": "175307560", "mercado": "handicap", "time": "INTER (CARLOS)", "linha": "0.0 , -0.5", "odd": 1.9, "jogo": "AC MILAN (DELPIERO) X INTER (CARLOS)"}
+
+--- NOVO LOTE (2025-05-26T21:55:20.079405) ---
+{"id": "175307564", "mercado": "goal_line", "tipo": "under", "linha": "4.5 , 5.0", "odd": 1.825, "jogo": "NAPOLI (LUCAS) X JUVENTUS (MIGUEL)"}
+
+--- NOVO LOTE (2025-05-26T21:58:40.289574) ---
+
+--- NOVO LOTE (2025-05-26T21:58:40.459702) ---
+
+--- NOVO LOTE (2025-05-26T22:07:32.302954) ---
+{"id": "175306259", "mercado": "goal_line", "tipo": "under", "linha": "4.0 , 4.5", "odd": 1.9, "jogo": "REAL MADRID (LAIKINGDAST) X PSG (HOTSHOT)"}
+
+--- NOVO LOTE (2025-05-26T22:07:33.637583) ---
+{"id": "175306261", "mercado": "handicap", "time": "LIVERPOOL (KODAK)", "linha": "0.0", "odd": 1.85, "jogo": "BAYERN (KRAY) X LIVERPOOL (KODAK)"}
+
+--- NOVO LOTE (2025-05-26T22:10:37.207862) ---
+
+--- NOVO LOTE (2025-05-26T22:10:38.639067) ---
+{"id": "175307576", "mercado": "goal_line", "tipo": "under", "linha": "5.0", "odd": 1.825, "jogo": "NAPOLI (LUCAS) X LAZIO (SATO)"}
+
+--- NOVO LOTE (2025-05-26T22:10:40.482797) ---
+
+--- NOVO LOTE (2025-05-26T22:10:40.554898) ---
+
+--- NOVO LOTE (2025-05-26T22:19:32.592114) ---
+
+--- NOVO LOTE (2025-05-26T22:19:34.809329) ---
+
+--- NOVO LOTE (2025-05-26T22:22:40.424121) ---
+
+--- NOVO LOTE (2025-05-26T22:23:09.692251) ---
+{"id": "175306277", "mercado": "handicap", "time": "PENAROL (ZOYIR)", "linha": "1.0", "odd": 1.8, "jogo": "COLO COLO (TOHI4) X PENAROL (ZOYIR)"}
+
+--- NOVO LOTE (2025-05-26T22:25:26.109163) ---
+{"id": "175307578", "mercado": "goal_line", "tipo": "over", "linha": "4.0 , 4.5", "odd": 1.85, "jogo": "LAZIO (SATO) X JUVENTUS (MIGUEL)"}
+
+--- NOVO LOTE (2025-05-26T22:25:26.540844) ---
+{"id": "175307580", "mercado": "goal_line", "tipo": "under", "linha": "5.0", "odd": 1.85, "jogo": "NAPOLI (LUCAS) X INTER (CARLOS)"}
+
+--- NOVO LOTE (2025-05-26T22:31:07.400114) ---
+{"id": "175306300", "mercado": "handicap", "time": "PSG (HOTSHOT)", "linha": "0.0 , -0.5", "odd": 1.875, "jogo": "BARCELONA (INQUISITOR) X PSG (HOTSHOT)"}
+
+--- NOVO LOTE (2025-05-26T22:32:19.740871) ---
+
+--- NOVO LOTE (2025-05-26T22:34:40.649289) ---
+
+--- NOVO LOTE (2025-05-26T22:34:40.692236) ---
+
+--- NOVO LOTE (2025-05-26T22:44:15.719671) ---
+{"id": "175307589", "mercado": "handicap", "time": "AC MILAN (DELPIERO)", "linha": "0.0 , -0.5", "odd": 1.775, "jogo": "LAZIO (SATO) X AC MILAN (DELPIERO)"}
+
+--- NOVO LOTE (2025-05-26T22:45:13.472495) ---
+
+--- NOVO LOTE (2025-05-26T22:46:32.578445) ---
+{"id": "175306309", "mercado": "goal_line", "tipo": "under", "linha": "4.5", "odd": 1.9, "jogo": "REAL MADRID (LAIKINGDAST) X BARCELONA (INQUISITOR)"}
+
+--- NOVO LOTE (2025-05-26T22:46:42.583235) ---
+
+--- NOVO LOTE (2025-05-26T22:46:53.354807) ---
+
+--- NOVO LOTE (2025-05-26T22:48:12.857156) ---
+
+--- NOVO LOTE (2025-05-26T22:55:52.162281) ---
+
+--- NOVO LOTE (2025-05-26T22:55:52.165819) ---
+{"id": "175307599", "mercado": "handicap", "time": "AC MILAN (DELPIERO)", "linha": "0.0 , -0.5", "odd": 1.875, "jogo": "NAPOLI (LUCAS) X AC MILAN (DELPIERO)"}
+
+--- NOVO LOTE (2025-05-26T23:02:12.655386) ---
+
+--- NOVO LOTE (2025-05-26T23:02:31.863803) ---
+
+--- NOVO LOTE (2025-05-26T23:06:58.565749) ---
+
+--- NOVO LOTE (2025-05-26T23:07:24.073501) ---
+
+--- NOVO LOTE (2025-05-26T23:10:17.690482) ---
+
+--- NOVO LOTE (2025-05-26T23:10:20.462282) ---
+
+--- NOVO LOTE (2025-05-26T23:10:40.741331) ---
+
+--- NOVO LOTE (2025-05-26T23:10:40.754394) ---
+
+--- NOVO LOTE (2025-05-26T23:22:20.176717) ---
+
+--- NOVO LOTE (2025-05-26T23:22:20.221110) ---
+
+--- NOVO LOTE (2025-05-26T23:22:40.330982) ---
+
+--- NOVO LOTE (2025-05-26T23:22:40.331983) ---
+
+--- NOVO LOTE (2025-05-26T23:26:38.138714) ---
+
+--- NOVO LOTE (2025-05-26T23:26:49.482282) ---
+
+--- NOVO LOTE (2025-05-26T23:32:07.459762) ---
+{"id": "175306360", "mercado": "goal_line", "tipo": "under", "linha": "5.0", "odd": 1.925, "jogo": "REAL MADRID (LAIKINGDAST) X BAYERN (KRAY)"}
+
+--- NOVO LOTE (2025-05-26T23:32:52.781915) ---
+
+--- NOVO LOTE (2025-05-26T23:42:40.275535) ---
+
+--- NOVO LOTE (2025-05-26T23:42:40.280537) ---
+
+--- NOVO LOTE (2025-05-26T23:54:40.295506) ---
+
+--- NOVO LOTE (2025-05-26T23:54:40.443434) ---
+
+--- NOVO LOTE (2025-05-27T00:09:40.354444) ---
+
+--- NOVO LOTE (2025-05-27T00:09:40.445974) ---
+
+--- NOVO LOTE (2025-05-27T00:24:40.474029) ---
+
+--- NOVO LOTE (2025-05-27T00:24:40.517047) ---
+
+--- NOVO LOTE (2025-05-27T11:41:25.516486) ---
+
+--- NOVO LOTE (2025-05-27T11:46:40.834766) ---
+
+--- NOVO LOTE (2025-05-27T11:46:40.907762) ---
