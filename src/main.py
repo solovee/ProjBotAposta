@@ -38,7 +38,7 @@ api = os.getenv("API_KEY")
 chat_id = int(os.getenv("CHAT_ID"))
 #novo -4954876315
 # -1002610837223
-chats = [chat_id]
+chats = [chat_id, -4954876315]
 
 
 
@@ -51,7 +51,7 @@ apiclient = BetsAPIClient(api_key=api)
 CSV_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'resultados_60.csv')
 #lista dos thresholds das nns
 lista_th = [0.575,0.4,0.625,0.6,0.6,0.6]
-list_checa = [{"id": "175414411", "mercado": "goal_line", "tipo": "over", "linha": "4.0", "odd": 1.85, "jogo": "REAL MADRID (BOLEC) X MAN CITY (PECONI)"},{"id": "175386838", "mercado": "double_chance", "time": "VILLARREAL (RAZVAN)", "odd": 1.6, "jogo": "VILLARREAL (RAZVAN) X REAL MADRID (JETLI)"},{"id": "175414548", "mercado": "goal_line", "tipo": "over", "linha": "5.0", "odd": 1.875, "jogo": "ASTON VILLA (JESUS) X BENFICA (ROMEO)"},{"id": "175414536", "mercado": "handicap", "time": "BAYER 04 (MOLOTOV)", "linha": "0.0 , -0.5", "odd": 1.9, "jogo": "BARCELONA (DAVID) X BAYER 04 (MOLOTOV)"},{"id": "175414423", "mercado": "goal_line", "tipo": "over", "linha": "5.0 , 5.5", "odd": 1.9, "jogo": "EINTRACHT (STEKSY) X ROMA (GIOX)"},{"id": "175414429", "mercado": "goal_line", "tipo": "under", "linha": "4.5", "odd": 1.9, "jogo": "FENERBAHCE (BOKI) X TOTTENHAM (BOLEC)"},{"id": "175414442", "mercado": "goal_line", "tipo": "over", "linha": "5.0 , 5.5", "odd": 1.85, "jogo": "ROMA (GIOX) X MAN UTD (PECONI)"}]
+list_checa = [{"id": "175474951", "mercado": "double_chance", "time": "AC MILAN (KLAUS)", "odd": 1.5, "jogo": "AC MILAN (KLAUS) X INTER (VENDETTA)"},{"id": "175474956", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "2.000", "jogo": "NAPOLI (DENNIS) X JUVENTUS (DEMPSEY)"},{"id": "175474960", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "1.727", "jogo": "AC MILAN (KLAUS) X JUVENTUS (DEMPSEY)"},{"id": "175474964", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "2.250", "jogo": "NAPOLI (DENNIS) X LAZIO (JACK)"},{"id": "175474967", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "1.750", "jogo": "LAZIO (JACK) X JUVENTUS (DEMPSEY)"},{"id": "175474985", "mercado": "double_chance", "time": "AC MILAN (KLAUS)", "odd": 1.5, "jogo": "NAPOLI (DENNIS) X AC MILAN (KLAUS)"},{"id": "175474997", "mercado": "double_chance", "time": "INTER (VENDETTA)", "odd": 1.5, "jogo": "INTER (VENDETTA) X AC MILAN (KLAUS)"},{"id": "175475023", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "1.700", "jogo": "JUVENTUS (DEMPSEY) X AC MILAN (KLAUS)"},{"id": "175475029", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "2.150", "jogo": "LAZIO (JACK) X NAPOLI (DENNIS)"},{"id": "175475035", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "1.950", "jogo": "ARSENAL (DEMPSEY) X INTER (JACK)"},{"id": "175475044", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "2.100", "jogo": "ARSENAL (DEMPSEY) X REAL MADRID (VENDETTA)"},{"id": "175475041", "mercado": "double_chance", "time": "BAYERN (KLAUS)", "odd": 1.55, "jogo": "BAYERN (KLAUS) X INTER (JACK)"},{"id": "175475066", "mercado": "handicap", "time": "REAL MADRID (VENDETTA)", "linha": "0.0 , -0.5", "odd": 1.875, "jogo": "INTER (JACK) X REAL MADRID (VENDETTA)"},{"id": "175475077", "mercado": "goal_line", "tipo": "under", "linha": "2.5", "odd": 1.925, "jogo": "PSG (DENNIS) X ARSENAL (DEMPSEY)"},{"id": "175475072", "mercado": "handicap", "time": "REAL MADRID (VENDETTA)", "linha": "0.0", "odd": 1.875, "jogo": "BAYERN (KLAUS) X REAL MADRID (VENDETTA)"},{"id": "175475097", "mercado": "double_chance", "time": "PSG (DENNIS)", "odd": 1.533, "jogo": "PSG (DENNIS) X INTER (JACK)"},{"id": "175475084", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "1.900", "jogo": "BAYERN (KLAUS) X ARSENAL (DEMPSEY)"},{"id": "175475105", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "1.750", "jogo": "INTER (JACK) X ARSENAL (DEMPSEY)"},{"id": "175482966", "mercado": "goal_line", "tipo": "over", "linha": "4.5 , 5.0", "odd": 1.8, "jogo": "NAPOLI (NIKKITTA) X FIORENTINA (CL1VLIND)"},{"id": "175482986", "mercado": "double_chance", "time": "NAPOLI (NIKKITTA)", "odd": 1.533, "jogo": "BOLOGNA (SENIOR) X NAPOLI (NIKKITTA)"},{"id": "175475136", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "2.250", "jogo": "ARSENAL (DEMPSEY) X PSG (DENNIS)"},{"id": "175475145", "mercado": "double_chance", "time": "PSG (DENNIS)", "odd": 1.727, "jogo": "INTER (JACK) X PSG (DENNIS)"},{"id": "175475141", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "1.700", "jogo": "ARSENAL (DEMPSEY) X BAYERN (KLAUS)"},{"id": "175475160", "mercado": "handicap", "time": "PAOK (DENNIS)", "linha": "0.0", "odd": 1.85, "jogo": "TOTTENHAM (VENDETTA) X PAOK (DENNIS)"},{"id": "175475150", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "1.750", "jogo": "LAZIO (DEMPSEY) X A.BILBAO (JACK)"},{"id": "175475171", "mercado": "handicap", "time": "TOTTENHAM (VENDETTA)", "linha": "0.0", "odd": 1.875, "jogo": "LAZIO (DEMPSEY) X TOTTENHAM (VENDETTA)"},{"id": "175483038", "mercado": "goal_line", "tipo": "over", "linha": "4.0", "odd": 1.825, "jogo": "NAPOLI (NIKKITTA) X BOLOGNA (SENIOR)"},{"id": "175475174", "mercado": "goal_line", "tipo": "under", "linha": "3.0", "odd": 1.9, "jogo": "LYON (KLAUS) X PAOK (DENNIS)"},{"id": "175475176", "mercado": "handicap", "time": "TOTTENHAM (VENDETTA)", "linha": "0.0 , -0.5", "odd": 1.95, "jogo": "A.BILBAO (JACK) X TOTTENHAM (VENDETTA)"},{"id": "175483068", "mercado": "goal_line", "tipo": "under", "linha": "5.0", "odd": 1.925, "jogo": "BOLOGNA (SENIOR) X JUVENTUS (ARCOS)"},{"id": "175475184", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "2.050", "jogo": "PAOK (DENNIS) X LAZIO (DEMPSEY)"},{"id": "175475191", "mercado": "double_chance", "time": "LAZIO (DEMPSEY)", "odd": 1.615, "jogo": "LYON (KLAUS) X LAZIO (DEMPSEY)"},{"id": "175475203", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "1.727", "jogo": "A.BILBAO (JACK) X LAZIO (DEMPSEY)"},{"id": "175475208", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "2.300", "jogo": "PAOK (DENNIS) X TOTTENHAM (VENDETTA)"},{"id": "175475218", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "2.100", "jogo": "TOTTENHAM (VENDETTA) X LAZIO (DEMPSEY)"},{"id": "175475241", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "2.250", "jogo": "TOTTENHAM (VENDETTA) X A.BILBAO (JACK)"},{"id": "175475230", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "2.250", "jogo": "PAOK (DENNIS) X LYON (KLAUS)"},{"id": "175475247", "mercado": "handicap", "time": "LYON (KLAUS)", "linha": "0.0 , 0.5", "odd": 1.85, "jogo": "TOTTENHAM (VENDETTA) X LYON (KLAUS)"},{"id": "175475252", "mercado": "handicap", "time": "PAOK (DENNIS)", "linha": "0.0", "odd": 1.85, "jogo": "LAZIO (DEMPSEY) X PAOK (DENNIS)"},{"id": "175475256", "mercado": "double_chance", "time": "LAZIO (DEMPSEY)", "odd": 1.571, "jogo": "LAZIO (DEMPSEY) X LYON (KLAUS)"},{"id": "175494080", "mercado": "goal_line", "tipo": "over", "linha": "3.0 , 3.5", "odd": 1.875, "jogo": "ROMA (SHELBY) X OLYMPIAKOS (ARTHUR)"},{"id": "175494086", "mercado": "goal_line", "tipo": "under", "linha": "4.5", "odd": 1.9, "jogo": "AJAX (THOR) X REAL SOCIEDAD (PRINCE)"},{"id": "175494098", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "1.800", "jogo": "OLYMPIAKOS (ARTHUR) X MAN UTD (PROFESSOR)"},{"id": "175494101", "mercado": "goal_line", "tipo": "over", "linha": "4.0 , 4.5", "odd": 1.925, "jogo": "AJAX (THOR) X MAN UTD (PROFESSOR)"},{"id": "175494134", "mercado": "handicap", "time": "MAN UTD (PROFESSOR)", "linha": "0.0", "odd": 1.925, "jogo": "ROMA (SHELBY) X MAN UTD (PROFESSOR)"},{"id": "175494139", "mercado": "handicap", "time": "REAL SOCIEDAD (PRINCE)", "linha": "0.0", "odd": 1.9, "jogo": "ROMA (SHELBY) X REAL SOCIEDAD (PRINCE)"},{"id": "175494137", "mercado": "double_chance", "time": "OLYMPIAKOS (ARTHUR)", "odd": 1.55, "jogo": "OLYMPIAKOS (ARTHUR) X AJAX (THOR)"},{"id": "175494143", "mercado": "goal_line", "tipo": "under", "linha": "2.5", "odd": 1.925, "jogo": "MAN UTD (PROFESSOR) X OLYMPIAKOS (ARTHUR)"},{"id": "175494141", "mercado": "goal_line", "tipo": "over", "linha": "4.0 , 4.5", "odd": 1.85, "jogo": "ROMA (SHELBY) X AJAX (THOR)"},{"id": "175494145", "mercado": "goal_line", "tipo": "over", "linha": "4.0 , 4.5", "odd": 1.925, "jogo": "MAN UTD (PROFESSOR) X AJAX (THOR)"},{"id": "175506216", "mercado": "handicap", "time": "FENERBAHCE (WBOY)", "linha": "0.0 , -0.5", "odd": 1.9, "jogo": "TOTTENHAM (BOMB1TO) X FENERBAHCE (WBOY)"},{"id": "175494150", "mercado": "handicap", "time": "INTER (PRINCE)", "linha": "0.0", "odd": 1.925, "jogo": "ARSENAL (PROFESSOR) X INTER (PRINCE)"},{"id": "175494154", "mercado": "goal_line", "tipo": "over", "linha": "3.0 , 3.5", "odd": 1.875, "jogo": "REAL MADRID (SHELBY) X PSG (ARTHUR)"},{"id": "175494157", "mercado": "handicap", "time": "INTER (PRINCE)", "linha": "-0.5 , -1.0", "odd": 1.925, "jogo": "BAYERN (THOR) X INTER (PRINCE)"},{"id": "175494177", "mercado": "goal_line", "tipo": "under", "linha": "5.0", "odd": 1.85, "jogo": "INTER (PRINCE) X REAL MADRID (SHELBY)"},{"id": "175524962", "mercado": "goal_line", "tipo": "under", "linha": "3.5", "odd": 1.825, "jogo": "LAZIO (MADISSON) X TOTTENHAM (SENSEI)"},{"id": "175494182", "mercado": "goal_line", "tipo": "over", "linha": "2.5 , 3.0", "odd": 1.925, "jogo": "PSG (ARTHUR) X ARSENAL (PROFESSOR)"},{"id": "175524710", "mercado": "handicap", "time": "PSG (GLUMAC)", "linha": "-0.5", "odd": 1.9, "jogo": "REAL MADRID (GIOX) X PSG (GLUMAC)"},{"id": "175524974", "mercado": "goal_line", "tipo": "over", "linha": "4.0 , 4.5", "odd": 1.9, "jogo": "A.BILBAO (ZANGIEF) X TOTTENHAM (SENSEI)"},{"id": "175524720", "mercado": "goal_line", "tipo": "under", "linha": "5.5 , 6.0", "odd": 1.8, "jogo": "REAL MADRID (GIOX) X MAN CITY (MASLJA)"},{"id": "175524724", "mercado": "goal_line", "tipo": "under", "linha": "5.5 , 6.0", "odd": 1.8, "jogo": "RIVER PLATE (PECONI) X PSG (GLUMAC)"},{"id": "175494192", "mercado": "goal_line", "tipo": "over", "linha": "3.0 , 3.5", "odd": 1.875, "jogo": "PSG (ARTHUR) X REAL MADRID (SHELBY)"},{"id": "175525035", "mercado": "goal_line", "tipo": "over", "linha": "3.0 , 3.5", "odd": 1.9, "jogo": "A.BILBAO (ZANGIEF) X LAZIO (MADISSON)"},{"id": "175524734", "mercado": "goal_line", "tipo": "over", "linha": "5.0", "odd": 1.9, "jogo": "RIVER PLATE (PECONI) X MAN CITY (MASLJA)"}]
 
 
 
@@ -83,6 +83,64 @@ def agendar_processar_dia_anterior():
     logger.info(f"⏰ Agendando processamento do dia anterior para {alvo}")
     threading.Timer(delay, processar_dia_anterior).start()
 
+def incremental_learning():
+    NN.atua()
+    df = pd.read_csv('df_temp_preprocessado_teste.csv')
+    hoje = datetime.today()
+    dia_atual = hoje.strftime('%Y%m%d')
+    dia_anterior = (hoje - timedelta(days=1)).strftime('%Y%m%d')
+
+    # Filtra o DataFrame para incluir apenas essas duas datas
+    dois_dias_recentes = df[df['event_day'].isin([dia_atual, dia_anterior])]
+    
+    
+    dc = qlearning.QLearningDoubleChance()
+    dc.load_model('q_learning_dc_model_final.pkl')
+    dc.alpha = 0.01
+    dc.gamma = 0.85
+    dc.epsilon = 0.01
+    dc.train(dois_dias_recentes,num_episodes=50)
+    dc.save_model('q_learning_dc_model_final.pkl')
+
+    gl = qlearning.QLearningGoalLine()
+    gl.load_model('q_learning_gl_model_final.pkl')
+    gl.alpha = 0.01
+    gl.gamma = 0.85
+    gl.epsilon = 0.01
+    gl.train(dois_dias_recentes,num_episodes=50)
+    gl.save_model('q_learning_gl_model_final.pkl')
+
+    h = qlearning.QLearningHandicap()
+    h.load_model('q_learning_h_model_final.pkl')
+    h.alpha = 0.01
+    h.gamma = 0.85
+    h.epsilon = 0.01
+    h.train(dois_dias_recentes,num_episodes=50)
+    h.save_model('q_learning_h_model_final.pkl')
+
+    dnb = qlearning.QLearningDrawNoBet()
+    dnb.load_model('q_learning_dnb_model_final.pkl')
+    dnb.alpha = 0.05
+    dnb.gamma = 0.85
+    dnb.epsilon = 0.01
+    dnb.train(dois_dias_recentes,num_episodes=50)
+    dnb.save_model('q_learning_dnb_model_final.pkl')
+    
+def agendar_treino_incremental():
+    agora = datetime.now()
+    alvo = datetime.combine(agora.date(), datetime.min.time()) + timedelta(hours=0, minutes=10)
+
+    if agora >= alvo:
+        alvo += timedelta(days=1)
+
+    delay = (alvo - agora).total_seconds()
+
+    def tarefa():
+        logger.info("🧠 Iniciando treino incremental de ql...")
+        incremental_learning()
+        logger.info("✅ Modelos de ql treinados com sucesso")
+
+    threading.Timer(delay, tarefa).start()
 
 def agendar_criacao_nns():
     agora = datetime.now()
@@ -641,6 +699,7 @@ def atualizar_csv_dia_atual():
                 df_final = df_final.drop_duplicates(subset=['id'], keep='last')
                 
                 # Ordenar por data do evento
+                df_final["time"] = df_final["time"].astype(int)
                 df_final = df_final.sort_values(by="time", ascending=False).reset_index(drop=True)
                 
                 # Verificar duplicatas finais
@@ -715,7 +774,8 @@ def main():
     
     # Schedule daily tasks
     agendar_processar_dia_anterior()
-    agendar_criacao_nns()
+ 
+    agendar_treino_incremental()
     agendar_verificacao_diaria()
     agendar_atualizacao_csv()
 
@@ -1231,14 +1291,16 @@ def predicta_handicap(prepHandicap_df,prepHandicap_df_conj, dados):
     try:
         ql_h = qlearning.QLearningHandicap()
         ql_h.load_model('q_learning_h_model_final.pkl')
-        estado = qlearning.q_learning_h(prepHandicap_df_conj)
+        first_row = prepHandicap_df_conj.iloc[0]
+        estado = qlearning.q_learning_h(first_row)
         if estado in ql_h.q_table:
             pred_ql = ql_h.choose_action(estado, epsilon=0)
         else:
+            print('Estado H nao encontrado')
             pred_ql = pred_conj
 
     except:
-        print('PROBLEMAS COM QL GL')
+        print(f'PROBLEMAS COM QL GL')
         pred_ql = pred_conj
 
     pred_handicap_1 = float(preds_proba[0][1]) 
@@ -1246,9 +1308,9 @@ def predicta_handicap(prepHandicap_df,prepHandicap_df_conj, dados):
 
     preds = [pred_handicap_1, pred_handicap_2]
 
-    th_ve = 1.1
+    th_ve = 1.0
     recomendacoes = []
-    th_odd = 1.6
+    th_odd = 1.5
     for i in range(2):
         prob = preds[i]
         odd = float(dados['odds'].iloc[i])
@@ -1289,10 +1351,12 @@ def predicta_goal_line(prepGoal_line_df,prepGoal_line_df_conj, dados):
     try:
         ql_gl = qlearning.QLearningGoalLine()
         ql_gl.load_model('q_learning_gl_model_final.pkl')
-        estado = qlearning.q_learning_gl(prepGoal_line_df_conj)
+        first_row = prepGoal_line_df_conj.iloc[0]
+        estado = qlearning.q_learning_gl(first_row)
         if estado in ql_gl.q_table:
             pred_ql = ql_gl.choose_action(estado, epsilon=0)
         else:
+            print('Estado GL nao encontrado')
             pred_ql = pred
 
     except:
@@ -1306,9 +1370,9 @@ def predicta_goal_line(prepGoal_line_df,prepGoal_line_df_conj, dados):
     pred_goal_line_2 = float(preds_proba[1][1])
     preds = [pred_goal_line_1, pred_goal_line_2]
 
-    th_ve = 1.1  # Valor Esperado mínimo
+    th_ve = 1.0  # Valor Esperado mínimo
     recomendacoes = []
-    th_odd = 1.6
+    th_odd = 1.5
     for i in range(2):
         prob = preds[i]
         odd = float(dados['odds_gl'].iloc[i])
@@ -1339,8 +1403,6 @@ def predicta_double_chance(prepDoubleChance_df, prepDoubleChance_df_conj, dados)
         predictor = TabularPredictor.load("autogluon_double_chance_model")
         predictor_conj = TabularPredictor.load("autogluon_double_chance_model_conj")
         
-        
-
         # Garante que usaremos o melhor modelo
         best_model = predictor.model_best
         logger.info(f"🔍 Modelo selecionado (Double Chance): {best_model}")
@@ -1350,26 +1412,48 @@ def predicta_double_chance(prepDoubleChance_df, prepDoubleChance_df_conj, dados)
         preds_proba = predictor.predict_proba(prepDoubleChance_df, model=best_model)
         pred = predictor_conj.predict(prepDoubleChance_df_conj, model=best_model_conj).iloc[0]
 
-
+        # Correção do problema com Q-Learning
         try:
-            ql_dc = qlearning.QLearningDoubleChanсe()
+            ql_dc = qlearning.QLearningDoubleChance()
             ql_dc.load_model('q_learning_dc_model_final.pkl')
-            estado = qlearning.q_learning_dc(prepDoubleChance_df_conj)
+            
+            # CORREÇÃO: Tratar o DataFrame antes de passar para q_learning_dc
+            try:
+                # Método 1: Tentar normalmente
+                estado = qlearning.q_learning_dc(prepDoubleChance_df_conj)
+                
+            except ValueError as ve:
+                if "truth value of a Series is ambiguous" in str(ve):
+                    logger.warning("⚠️ Erro de Series ambígua detectado, tentando correções...")
+                    
+        
+                    try:
+                        first_row = prepDoubleChance_df_conj.iloc[0]
+                        logger.info(f"📊 Tentando com primeira linha: {first_row.shape}")
+                        estado = qlearning.q_learning_dc(first_row)
+                    except Exception:
+                        logger.error("❌ Todas as tentativas falharam")
+                        raise Exception("Não foi possível gerar estado para Q-Learning")
+                else:
+                    raise ve
+            
+            logger.info(f"✅ Estado gerado: {estado} (tipo: {type(estado)})")
+            
             if estado in ql_dc.q_table:
                 pred_dc = ql_dc.choose_action(estado, epsilon=0)
+                logger.info(f"✅ Ação escolhida pelo Q-Learning: {pred_dc}")
             else:
+                logger.warning(f"⚠️ Estado '{estado}' não encontrado na Q-table")
                 pred_dc = pred
-        except:
-            print('PROBLEMAS COM O QL')
+                
+        except Exception as e:
+            logger.error(f"❌ PROBLEMA COM QL - {type(e).__name__}: {str(e)}")
             pred_dc = pred
         
+        # Resto do código permanece igual...
         # Log das dimensões das previsões
         logger.info(f"📊 Formato das previsões: {preds_proba.shape}")
         logger.info(f"📊 Conteúdo das previsões: {preds_proba}")
-        
-
-
-
         
         if preds_proba.shape[0] < 3:
             logger.error(f"❌ Número insuficiente de previsões: {preds_proba.shape[0]}")
@@ -1384,7 +1468,6 @@ def predicta_double_chance(prepDoubleChance_df, prepDoubleChance_df_conj, dados)
 
         try:
             pred_dc_2 = float(preds_proba.iloc[1, 1])
-            
             logger.info(f"📊 Previsão 2: {pred_dc_2}")
         except Exception as e:
             logger.error(f"❌ Erro ao processar previsão 2: {str(e)}")
@@ -1399,10 +1482,11 @@ def predicta_double_chance(prepDoubleChance_df, prepDoubleChance_df_conj, dados)
 
         preds = [pred_dc_1, pred_dc_2, pred_dc_3]
         logger.info(f"📊 Lista de previsões: {preds}")
-        logger.info(f"📊 pred dc: {pred}")
+        logger.info(f"📊 pred dc: {pred_dc}") 
+        logger.info(f"📊 pred conj  dc: {pred}") # Corrigido para usar pred_dc
 
-        th_ve = 1.1
-        th_odd = 1.6
+        th_ve = 1.0
+        th_odd = 1.5
         recomendacoes = []
 
         for i in range(3):
@@ -1416,11 +1500,8 @@ def predicta_double_chance(prepDoubleChance_df, prepDoubleChance_df_conj, dados)
                     if i in [0, 1]:
                         if prob > preds[1 - i]: 
                             if pred == i and pred == pred_dc:
-                                 # Compara apenas entre as duas primeiras
                                 recomendacoes.append((i + 1, ve, prob, odd))
                     else:
-                        
-                        # Para a terceira opção ("qualquer time vence"), entra direto se passar os thresholds
                         recomendacoes.append((i + 1, ve, prob, odd))
             except Exception as e:
                 logger.error(f"❌ Erro ao processar iteração {i+1}: {str(e)}")
@@ -1430,15 +1511,17 @@ def predicta_double_chance(prepDoubleChance_df, prepDoubleChance_df_conj, dados)
         logger.info(f"📊 Recomendações encontradas: {recomendacoes}")
 
         if recomendacoes:
-            melhor_opcao = max(recomendacoes, key=lambda x: x[2])  # Seleciona pela maior probabilidade
+            melhor_opcao = max(recomendacoes, key=lambda x: x[2])
             logger.info(f"✅ Double Chance opção {melhor_opcao[0]} recomendada (VE: {melhor_opcao[1]:.3f}, Prob: {melhor_opcao[2]:.3f}, Odd: {melhor_opcao[3]:.2f})")
             return (melhor_opcao[0], melhor_opcao[2])
         else:
             logger.info("❌ Nenhuma recomendação em Double Chance")
             return (None, None)
+            
     except Exception as e:
         logger.error(f"❌ Erro durante a previsão do Double Chance: {str(e)}")
         return (None, None)
+
 
 
 def predicta_draw_no_bet(pred_draw_no_bet_df,pred_draw_no_bet_df_conj, dados):
@@ -1458,10 +1541,12 @@ def predicta_draw_no_bet(pred_draw_no_bet_df,pred_draw_no_bet_df_conj, dados):
     try:
         ql_dnb = qlearning.QLearningDrawNoBet()
         ql_dnb.load_model('q_learning_dnb_model_final.pkl')
-        estado = qlearning.q_learning_gl(pred_draw_no_bet_df_conj)
+        first_row = pred_draw_no_bet_df_conj.iloc[0]
+        estado = qlearning.q_learning_gl(first_row)
         if estado in ql_dnb.q_table:
             pred_ql = ql_dnb.choose_action(estado, epsilon=0)
         else:
+            print('Estado DNB nao encontrado')
             pred_ql = pred
 
     except:
@@ -1473,8 +1558,8 @@ def predicta_draw_no_bet(pred_draw_no_bet_df,pred_draw_no_bet_df_conj, dados):
     pred_dnb_2 = float(preds_proba[1][1])
     preds = [pred_dnb_1, pred_dnb_2]
 
-    th_ve = 1.1  # Valor esperado mínimo
-    th_odd = 1.6  # Odd mínima
+    th_ve = 1.0  # Valor esperado mínimo
+    th_odd = 1.5  # Odd mínima
     recomendacoes = []
 
     for i in range(2):
@@ -1558,6 +1643,7 @@ def processar_dia_anterior():
                 print("📂 CSV existente encontrado, mesclando dados...")
                 df_existente = pd.read_csv(CSV_FILE, dtype={"event_day": str})
                 df_final = pd.concat([df_existente, df_novo], ignore_index=True)
+                df_final["time"] = df_final["time"].astype(int)
                 df_final = df_final.sort_values(by="time", ascending=False).reset_index(drop=True)
 
                 primeiro_dia = df_final["event_day"].min()
@@ -1711,6 +1797,7 @@ def atualizar_csv_dia_atual():
                 df_final = df_final.drop_duplicates(subset=['id'], keep='last')
                 
                 # Ordenar por data do evento
+                df_final["time"] = df_final["time"].astype(int)
                 df_final = df_final.sort_values(by="time", ascending=False).reset_index(drop=True)
                 
                 # Verificar duplicatas finais

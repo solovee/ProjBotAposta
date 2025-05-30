@@ -21,7 +21,7 @@ import random
 from qlearning import (
     discretizar_goals, discretizar_vitorias, discretizar_odds, 
     discretizar_goal_diff, discretizar_league, q_learning_dc,q_learning_gl,
-    QLearningDoubleChanсe, preparar_df_para_q_learning, QLearningGoalLine,QLearningDrawNoBet, QLearningHandicap,q_learning_h
+    QLearningDoubleChance, preparar_df_para_q_learning, QLearningGoalLine,QLearningDrawNoBet, QLearningHandicap,q_learning_h
 )
 #tirar input shape
 
@@ -1256,6 +1256,8 @@ def prepNNHandicap_X_conj(df=df_temp):
     X = df_temporario[['media_goals_home', 'media_goals_away','home_h2h_mean', 'away_h2h_mean',
                         'asian_handicap1_1', 'asian_handicap1_2','team_ah1','odds_ah1', 
                         'asian_handicap2_1', 'asian_handicap2_2','team_ah2','odds_ah2','league','odds_ratio','favorite_by_odds','goals_diff','h2h_diff','home_h2h_win_rate','away_h2h_win_rate','h2h_total_games','media_goals_sofridos_home','media_goals_sofridos_away','media_victories_away','media_victories_home']]
+   
+        
     
  
     return X
@@ -1293,6 +1295,7 @@ def prepNNGoal_line_X_conj(df=df_temp):
     X = df_temporario[['h2h_mean' ,'media_goals_home' ,'media_goals_away',
                         'goal_line1_1','goal_line1_2','odds_gl1', 'odds_gl2',
                         'league','prob_gl1','prob_gl2','split_line','goals_diff','media_goals_sofridos_home','h2h_total_games', 'media_goals_sofridos_away']].copy()
+
     
   
     return X
@@ -1423,6 +1426,8 @@ def prepNNDouble_chance_X_conj(df=df_temp):
     df_temporario['goal_diff'] = df_temporario['media_goals_home'] - df_temporario['media_goals_away']
     df_temporario['victory_diff'] = df_temporario['media_victories_home'] - df_temporario['media_victories_away']
     df_temporario['h2h_diff'] = df_temporario['home_h2h_mean'] - df_temporario['away_h2h_mean']
+    
+    
     df_temporario.dropna(inplace=True)
     if df_temporario.empty:
         print("❌ DataFrame vazio após dropna em prepNNdc*")
@@ -1433,6 +1438,9 @@ def prepNNDouble_chance_X_conj(df=df_temp):
                         'home_h2h_mean', 'away_h2h_mean', 'double_chance1','odds_dc1', 
                         'double_chance2', 'odds_dc2', 'double_chance3', 'odds_dc3','prob_dc1','prob_dc2','prob_dc3','goal_diff','victory_diff','h2h_diff','media_goals_sofridos_home','media_goals_sofridos_away','home_h2h_win_rate',
        'away_h2h_win_rate','h2h_total_games']].copy()
+  
+        
+
    
     
     
@@ -1529,6 +1537,7 @@ def prepNNDraw_no_bet_X_conj(df=df_temp):
     X = df_temporario[['media_goals_home', 'media_goals_away', 'media_victories_home','media_victories_away',
                         'home_h2h_mean','away_h2h_mean', 'draw_no_bet_team1', 'odds_dnb1', 'draw_no_bet_team2', 'odds_dnb2','prob_odds_dnb1','prob_odds_dnb2','goal_diff','team_strength_home','team_strength_away','media_goals_sofridos_home','media_goals_sofridos_away','home_h2h_win_rate',
        'away_h2h_win_rate','h2h_total_games']].copy()
+
     
     
     return X
@@ -4242,15 +4251,15 @@ def ql_dc(df=df_temp):
          'odds_dc1', 
         'odds_dc2', 
          'odds_dc3',
-        'goal_diff', 'victory_diff', 'h2h_diff','goals_ratio_home','goals_ratio_away','vic_ratio','h2h_total_games',
+        'goal_diff', 'victory_diff', 'h2h_diff','goals_ratio_home','goals_ratio_away','vic_ratio','h2h_total_games','home_h2h_win_rate','away_h2h_win_rate',
         'res_double_chance1', 'res_double_chance2', 'res_double_chance3']]
     df_conj.dropna(inplace=True)
     
     # Dividir em conjunto de treino e teste para o Q-Learning
-    train_q, test_q = train_test_split(df_conj, test_size=0.1, random_state=42)
+    train_q, test_q = train_test_split(df_conj, test_size=0.05, random_state=42)
     
     # Inicializar e treinar o agente Q-Learning
-    agent = QLearningDoubleChanсe(alpha=0.1, gamma=0.6, epsilon=0.1)
+    agent = QLearningDoubleChance()
     agent.train(train_q, num_episodes=500)  # Ajuste o número de episódios conforme necessário
     
     # Avaliar o modelo Q-Learning
@@ -4304,7 +4313,7 @@ def ql_dnb(df=df_temp):
     df_conj = df_conj[['league',  
          'odds_dnb1', 
         'odds_dnb2',
-        'goal_diff', 'victory_diff', 'h2h_diff','goals_ratio_home','draw_no_bet_team1','draw_no_bet_team2','goals_ratio_away','vic_ratio','h2h_total_games','dnb1_ganha','dnb2_ganha']]
+        'goal_diff', 'victory_diff', 'h2h_diff','goals_ratio_home','draw_no_bet_team1','draw_no_bet_team2','goals_ratio_away','vic_ratio','home_h2h_win_rate','away_h2h_win_rate','media_victories_home','media_victories_away','h2h_total_games','dnb1_ganha','dnb2_ganha']]
     df_conj.dropna(inplace=True)
 
     def transformar_res(row):
@@ -4323,10 +4332,10 @@ def ql_dnb(df=df_temp):
     print("\n=== Treinando modelo Q-Learning para DNB ===")
     
     # Dividir em conjunto de treino e teste para o Q-Learning
-    train_q, test_q = train_test_split(df_conj, test_size=0.1, random_state=42)
+    train_q, test_q = train_test_split(df_conj, test_size=0.05, random_state=42)
     
     # Inicializar e treinar o agente Q-Learning
-    agent = QLearningDrawNoBet(alpha=0.1, gamma=0.6, epsilon=0.1)
+    agent = QLearningDrawNoBet()
     agent.train(train_q, num_episodes=500)  # Ajuste o número de episódios conforme necessário
     
     # Avaliar o modelo Q-Learning
@@ -4386,17 +4395,17 @@ def ql_h(df=df_temp):
         
 
     df_conj['resultado'] = df_conj.apply(transformar_resultado, axis=1)
-    df_conj = df_conj[['asian_handicap1_1', 'asian_handicap1_2','team_ah1','odds_ah1', 'team_ah2','odds_ah2','h2h_diff','goals_diff', 'league','goals_ratio_home','goals_ratio_away','vic_ratio','victory_diff','h2h_total_games','resultado']].copy()
+    df_conj = df_conj[['asian_handicap1_1', 'asian_handicap1_2','asian_handicap2_1', 'asian_handicap2_2','team_ah1','odds_ah1', 'team_ah2','odds_ah2','h2h_diff','goals_diff', 'league','goals_ratio_home','goals_ratio_away','vic_ratio','victory_diff','home_h2h_win_rate','away_h2h_win_rate','h2h_total_games','media_victories_away','media_victories_home','media_goals_sofridos_away','media_goals_sofridos_home','media_goals_home','media_goals_away','resultado']].copy()
     df_conj = df_conj[df_conj['resultado'].notna()].copy()
     df_conj.dropna(inplace=True)
     # **** PASSO 1: TREINAR O MODELO Q-LEARNING ****
     print("\n=== Treinando modelo Q-Learning para ah ===")
     
     # Dividir em conjunto de treino e teste para o Q-Learning
-    train_q, test_q = train_test_split(df_conj, test_size=0.1, random_state=42)
+    train_q, test_q = train_test_split(df_conj, test_size=0.05, random_state=42)
     
     # Inicializar e treinar o agente Q-Learning
-    agent = QLearningHandicap(alpha=0.1, gamma=0.6, epsilon=0.1)
+    agent = QLearningHandicap()
     agent.train(train_q, num_episodes=500)  # Ajuste o número de episódios conforme necessário
     
     # Avaliar o modelo Q-Learning

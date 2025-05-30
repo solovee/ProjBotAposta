@@ -515,8 +515,8 @@ NN.ql_h(a)
 NN.ql_gl(a)
 main.main()
 '''
-import pandas as pd
-
-
-
 main.checa()
+
+
+
+# Os resultados estão em: resultados[0], resultados[1], resultados[2], resultados[3]
