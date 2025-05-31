@@ -1647,7 +1647,7 @@ def processar_dia_anterior():
                 df_final = df_final.sort_values(by="time", ascending=False).reset_index(drop=True)
 
                 primeiro_dia = df_final["event_day"].min()
-                df_final = df_final[df_final["event_day"] != primeiro_dia]
+                #df_final = df_final[df_final["event_day"] != primeiro_dia]
             else:
                 print("📄 Nenhum CSV encontrado, criando novo arquivo...")
                 df_final = df_novo
