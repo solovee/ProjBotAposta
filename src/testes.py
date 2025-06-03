@@ -503,19 +503,14 @@ import pandas as pd
 import dqndc
 
 
-'''
-a = pd.read_csv('df_temp_preprocessado.csv')
-NN.NN_double_chance(a)
-
-
+NN.atua()
 a = pd.read_csv('df_temp_preprocessado_teste.csv')
 NN.ql_dc(a)
 NN.ql_dnb(a)
 NN.ql_h(a)
 NN.ql_gl(a)
 main.main()
-'''
-main.checa()
+
 
 
 

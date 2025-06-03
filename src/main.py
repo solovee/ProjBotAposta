@@ -51,7 +51,7 @@ apiclient = BetsAPIClient(api_key=api)
 CSV_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'resultados_60.csv')
 #lista dos thresholds das nns
 lista_th = [0.575,0.4,0.625,0.6,0.6,0.6]
-list_checa = [{"id": "175474951", "mercado": "double_chance", "time": "AC MILAN (KLAUS)", "odd": 1.5, "jogo": "AC MILAN (KLAUS) X INTER (VENDETTA)"},{"id": "175474956", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "2.000", "jogo": "NAPOLI (DENNIS) X JUVENTUS (DEMPSEY)"},{"id": "175474960", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "1.727", "jogo": "AC MILAN (KLAUS) X JUVENTUS (DEMPSEY)"},{"id": "175474964", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "2.250", "jogo": "NAPOLI (DENNIS) X LAZIO (JACK)"},{"id": "175474967", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "1.750", "jogo": "LAZIO (JACK) X JUVENTUS (DEMPSEY)"},{"id": "175474985", "mercado": "double_chance", "time": "AC MILAN (KLAUS)", "odd": 1.5, "jogo": "NAPOLI (DENNIS) X AC MILAN (KLAUS)"},{"id": "175474997", "mercado": "double_chance", "time": "INTER (VENDETTA)", "odd": 1.5, "jogo": "INTER (VENDETTA) X AC MILAN (KLAUS)"},{"id": "175475023", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "1.700", "jogo": "JUVENTUS (DEMPSEY) X AC MILAN (KLAUS)"},{"id": "175475029", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "2.150", "jogo": "LAZIO (JACK) X NAPOLI (DENNIS)"},{"id": "175475035", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "1.950", "jogo": "ARSENAL (DEMPSEY) X INTER (JACK)"},{"id": "175475044", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "2.100", "jogo": "ARSENAL (DEMPSEY) X REAL MADRID (VENDETTA)"},{"id": "175475041", "mercado": "double_chance", "time": "BAYERN (KLAUS)", "odd": 1.55, "jogo": "BAYERN (KLAUS) X INTER (JACK)"},{"id": "175475066", "mercado": "handicap", "time": "REAL MADRID (VENDETTA)", "linha": "0.0 , -0.5", "odd": 1.875, "jogo": "INTER (JACK) X REAL MADRID (VENDETTA)"},{"id": "175475077", "mercado": "goal_line", "tipo": "under", "linha": "2.5", "odd": 1.925, "jogo": "PSG (DENNIS) X ARSENAL (DEMPSEY)"},{"id": "175475072", "mercado": "handicap", "time": "REAL MADRID (VENDETTA)", "linha": "0.0", "odd": 1.875, "jogo": "BAYERN (KLAUS) X REAL MADRID (VENDETTA)"},{"id": "175475097", "mercado": "double_chance", "time": "PSG (DENNIS)", "odd": 1.533, "jogo": "PSG (DENNIS) X INTER (JACK)"},{"id": "175475084", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "1.900", "jogo": "BAYERN (KLAUS) X ARSENAL (DEMPSEY)"},{"id": "175475105", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "1.750", "jogo": "INTER (JACK) X ARSENAL (DEMPSEY)"},{"id": "175482966", "mercado": "goal_line", "tipo": "over", "linha": "4.5 , 5.0", "odd": 1.8, "jogo": "NAPOLI (NIKKITTA) X FIORENTINA (CL1VLIND)"},{"id": "175482986", "mercado": "double_chance", "time": "NAPOLI (NIKKITTA)", "odd": 1.533, "jogo": "BOLOGNA (SENIOR) X NAPOLI (NIKKITTA)"},{"id": "175475136", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "2.250", "jogo": "ARSENAL (DEMPSEY) X PSG (DENNIS)"},{"id": "175475145", "mercado": "double_chance", "time": "PSG (DENNIS)", "odd": 1.727, "jogo": "INTER (JACK) X PSG (DENNIS)"},{"id": "175475141", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "1.700", "jogo": "ARSENAL (DEMPSEY) X BAYERN (KLAUS)"},{"id": "175475160", "mercado": "handicap", "time": "PAOK (DENNIS)", "linha": "0.0", "odd": 1.85, "jogo": "TOTTENHAM (VENDETTA) X PAOK (DENNIS)"},{"id": "175475150", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "1.750", "jogo": "LAZIO (DEMPSEY) X A.BILBAO (JACK)"},{"id": "175475171", "mercado": "handicap", "time": "TOTTENHAM (VENDETTA)", "linha": "0.0", "odd": 1.875, "jogo": "LAZIO (DEMPSEY) X TOTTENHAM (VENDETTA)"},{"id": "175483038", "mercado": "goal_line", "tipo": "over", "linha": "4.0", "odd": 1.825, "jogo": "NAPOLI (NIKKITTA) X BOLOGNA (SENIOR)"},{"id": "175475174", "mercado": "goal_line", "tipo": "under", "linha": "3.0", "odd": 1.9, "jogo": "LYON (KLAUS) X PAOK (DENNIS)"},{"id": "175475176", "mercado": "handicap", "time": "TOTTENHAM (VENDETTA)", "linha": "0.0 , -0.5", "odd": 1.95, "jogo": "A.BILBAO (JACK) X TOTTENHAM (VENDETTA)"},{"id": "175483068", "mercado": "goal_line", "tipo": "under", "linha": "5.0", "odd": 1.925, "jogo": "BOLOGNA (SENIOR) X JUVENTUS (ARCOS)"},{"id": "175475184", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "2.050", "jogo": "PAOK (DENNIS) X LAZIO (DEMPSEY)"},{"id": "175475191", "mercado": "double_chance", "time": "LAZIO (DEMPSEY)", "odd": 1.615, "jogo": "LYON (KLAUS) X LAZIO (DEMPSEY)"},{"id": "175475203", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "1.727", "jogo": "A.BILBAO (JACK) X LAZIO (DEMPSEY)"},{"id": "175475208", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "2.300", "jogo": "PAOK (DENNIS) X TOTTENHAM (VENDETTA)"},{"id": "175475218", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "2.100", "jogo": "TOTTENHAM (VENDETTA) X LAZIO (DEMPSEY)"},{"id": "175475241", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "2.250", "jogo": "TOTTENHAM (VENDETTA) X A.BILBAO (JACK)"},{"id": "175475230", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "2.250", "jogo": "PAOK (DENNIS) X LYON (KLAUS)"},{"id": "175475247", "mercado": "handicap", "time": "LYON (KLAUS)", "linha": "0.0 , 0.5", "odd": 1.85, "jogo": "TOTTENHAM (VENDETTA) X LYON (KLAUS)"},{"id": "175475252", "mercado": "handicap", "time": "PAOK (DENNIS)", "linha": "0.0", "odd": 1.85, "jogo": "LAZIO (DEMPSEY) X PAOK (DENNIS)"},{"id": "175475256", "mercado": "double_chance", "time": "LAZIO (DEMPSEY)", "odd": 1.571, "jogo": "LAZIO (DEMPSEY) X LYON (KLAUS)"},{"id": "175494080", "mercado": "goal_line", "tipo": "over", "linha": "3.0 , 3.5", "odd": 1.875, "jogo": "ROMA (SHELBY) X OLYMPIAKOS (ARTHUR)"},{"id": "175494086", "mercado": "goal_line", "tipo": "under", "linha": "4.5", "odd": 1.9, "jogo": "AJAX (THOR) X REAL SOCIEDAD (PRINCE)"},{"id": "175494098", "mercado": "over_under", "tipo": "under", "linha": "2.5", "odd": "1.800", "jogo": "OLYMPIAKOS (ARTHUR) X MAN UTD (PROFESSOR)"},{"id": "175494101", "mercado": "goal_line", "tipo": "over", "linha": "4.0 , 4.5", "odd": 1.925, "jogo": "AJAX (THOR) X MAN UTD (PROFESSOR)"},{"id": "175494134", "mercado": "handicap", "time": "MAN UTD (PROFESSOR)", "linha": "0.0", "odd": 1.925, "jogo": "ROMA (SHELBY) X MAN UTD (PROFESSOR)"},{"id": "175494139", "mercado": "handicap", "time": "REAL SOCIEDAD (PRINCE)", "linha": "0.0", "odd": 1.9, "jogo": "ROMA (SHELBY) X REAL SOCIEDAD (PRINCE)"},{"id": "175494137", "mercado": "double_chance", "time": "OLYMPIAKOS (ARTHUR)", "odd": 1.55, "jogo": "OLYMPIAKOS (ARTHUR) X AJAX (THOR)"},{"id": "175494143", "mercado": "goal_line", "tipo": "under", "linha": "2.5", "odd": 1.925, "jogo": "MAN UTD (PROFESSOR) X OLYMPIAKOS (ARTHUR)"},{"id": "175494141", "mercado": "goal_line", "tipo": "over", "linha": "4.0 , 4.5", "odd": 1.85, "jogo": "ROMA (SHELBY) X AJAX (THOR)"},{"id": "175494145", "mercado": "goal_line", "tipo": "over", "linha": "4.0 , 4.5", "odd": 1.925, "jogo": "MAN UTD (PROFESSOR) X AJAX (THOR)"},{"id": "175506216", "mercado": "handicap", "time": "FENERBAHCE (WBOY)", "linha": "0.0 , -0.5", "odd": 1.9, "jogo": "TOTTENHAM (BOMB1TO) X FENERBAHCE (WBOY)"},{"id": "175494150", "mercado": "handicap", "time": "INTER (PRINCE)", "linha": "0.0", "odd": 1.925, "jogo": "ARSENAL (PROFESSOR) X INTER (PRINCE)"},{"id": "175494154", "mercado": "goal_line", "tipo": "over", "linha": "3.0 , 3.5", "odd": 1.875, "jogo": "REAL MADRID (SHELBY) X PSG (ARTHUR)"},{"id": "175494157", "mercado": "handicap", "time": "INTER (PRINCE)", "linha": "-0.5 , -1.0", "odd": 1.925, "jogo": "BAYERN (THOR) X INTER (PRINCE)"},{"id": "175494177", "mercado": "goal_line", "tipo": "under", "linha": "5.0", "odd": 1.85, "jogo": "INTER (PRINCE) X REAL MADRID (SHELBY)"},{"id": "175524962", "mercado": "goal_line", "tipo": "under", "linha": "3.5", "odd": 1.825, "jogo": "LAZIO (MADISSON) X TOTTENHAM (SENSEI)"},{"id": "175494182", "mercado": "goal_line", "tipo": "over", "linha": "2.5 , 3.0", "odd": 1.925, "jogo": "PSG (ARTHUR) X ARSENAL (PROFESSOR)"},{"id": "175524710", "mercado": "handicap", "time": "PSG (GLUMAC)", "linha": "-0.5", "odd": 1.9, "jogo": "REAL MADRID (GIOX) X PSG (GLUMAC)"},{"id": "175524974", "mercado": "goal_line", "tipo": "over", "linha": "4.0 , 4.5", "odd": 1.9, "jogo": "A.BILBAO (ZANGIEF) X TOTTENHAM (SENSEI)"},{"id": "175524720", "mercado": "goal_line", "tipo": "under", "linha": "5.5 , 6.0", "odd": 1.8, "jogo": "REAL MADRID (GIOX) X MAN CITY (MASLJA)"},{"id": "175524724", "mercado": "goal_line", "tipo": "under", "linha": "5.5 , 6.0", "odd": 1.8, "jogo": "RIVER PLATE (PECONI) X PSG (GLUMAC)"},{"id": "175494192", "mercado": "goal_line", "tipo": "over", "linha": "3.0 , 3.5", "odd": 1.875, "jogo": "PSG (ARTHUR) X REAL MADRID (SHELBY)"},{"id": "175525035", "mercado": "goal_line", "tipo": "over", "linha": "3.0 , 3.5", "odd": 1.9, "jogo": "A.BILBAO (ZANGIEF) X LAZIO (MADISSON)"},{"id": "175524734", "mercado": "goal_line", "tipo": "over", "linha": "5.0", "odd": 1.9, "jogo": "RIVER PLATE (PECONI) X MAN CITY (MASLJA)"}]
+list_checa = []
 
 
 
@@ -110,13 +110,6 @@ def incremental_learning():
     gl.train(dois_dias_recentes,num_episodes=50)
     gl.save_model('q_learning_gl_model_final.pkl')
 
-    h = qlearning.QLearningHandicap()
-    h.load_model('q_learning_h_model_final.pkl')
-    h.alpha = 0.01
-    h.gamma = 0.85
-    h.epsilon = 0.01
-    h.train(dois_dias_recentes,num_episodes=50)
-    h.save_model('q_learning_h_model_final.pkl')
 
     dnb = qlearning.QLearningDrawNoBet()
     dnb.load_model('q_learning_dnb_model_final.pkl')
@@ -125,6 +118,14 @@ def incremental_learning():
     dnb.epsilon = 0.01
     dnb.train(dois_dias_recentes,num_episodes=50)
     dnb.save_model('q_learning_dnb_model_final.pkl')
+
+    h = qlearning.QLearningHandicap()
+    h.load_model('q_learning_h_model_final.pkl')
+    h.alpha = 0.01
+    h.gamma = 0.85
+    h.epsilon = 0.01
+    h.train(dois_dias_recentes,num_episodes=50)
+    h.save_model('q_learning_h_model_final.pkl')
     
 def agendar_treino_incremental():
     agora = datetime.now()
@@ -1015,7 +1016,7 @@ def preve(df_linha, id):
         logger.info(f"🧠 Predições retornadas: {lista_preds_true}")
 
         list_res = []
-        
+        '''
         if res_under_over:
             list_res.append(res_under_over)
         if res_handicap:
@@ -1027,11 +1028,22 @@ def preve(df_linha, id):
         if res_draw_no_bet:
             list_res.append(res_draw_no_bet)
         print(list_res)
+        '''
         melhor = None
-
+        
         try:
-            melhor = max(list_res)
-            print(melhor)
+            if res_double_chance:
+                melhor = res_double_chance
+            elif res_draw_no_bet:
+                melhor = res_draw_no_bet
+            elif res_goal_line:
+                melhor = res_goal_line
+            elif res_handicap:
+                melhor = res_handicap
+            elif res_under_over:
+                melhor = res_under_over
+            #melhor = max(list_res)
+            #print(melhor)
         except:
             logger.info("❌ Nenhuma previsão foi considerada válida.")
 
@@ -1200,7 +1212,7 @@ def preve(df_linha, id):
     except Exception as e:
         logger.error(f"❌ Erro durante a previsão: {str(e)}")
         return []
-2
+
 
 def times_para_jogo(times):
     #('arsenal','mai')
@@ -1293,11 +1305,15 @@ def predicta_handicap(prepHandicap_df,prepHandicap_df_conj, dados):
         ql_h.load_model('q_learning_h_model_final.pkl')
         first_row = prepHandicap_df_conj.iloc[0]
         estado = qlearning.q_learning_h(first_row)
+        logger.info(f"✅ Estado gerado: {estado} (tipo: {type(estado)})")
+        
         if estado in ql_h.q_table:
             pred_ql = ql_h.choose_action(estado, epsilon=0)
+            logger.info(f"✅ Ação escolhida pelo Q-Learning: {pred_ql}")
         else:
             print('Estado H nao encontrado')
             pred_ql = pred_conj
+            return (None, None)
 
     except:
         print(f'PROBLEMAS COM QL GL')
@@ -1353,11 +1369,15 @@ def predicta_goal_line(prepGoal_line_df,prepGoal_line_df_conj, dados):
         ql_gl.load_model('q_learning_gl_model_final.pkl')
         first_row = prepGoal_line_df_conj.iloc[0]
         estado = qlearning.q_learning_gl(first_row)
+        logger.info(f"✅ Estado gerado: {estado} (tipo: {type(estado)})")
+        
         if estado in ql_gl.q_table:
             pred_ql = ql_gl.choose_action(estado, epsilon=0)
+            logger.info(f"✅ Ação escolhida pelo Q-Learning: {pred_ql}")
         else:
             print('Estado GL nao encontrado')
             pred_ql = pred
+            return (None, None)
 
     except:
         print('PROBLEMAS COM QL GL')
@@ -1445,6 +1465,7 @@ def predicta_double_chance(prepDoubleChance_df, prepDoubleChance_df_conj, dados)
             else:
                 logger.warning(f"⚠️ Estado '{estado}' não encontrado na Q-table")
                 pred_dc = pred
+                return (None, None)
                 
         except Exception as e:
             logger.error(f"❌ PROBLEMA COM QL - {type(e).__name__}: {str(e)}")
@@ -1498,6 +1519,8 @@ def predicta_double_chance(prepDoubleChance_df, prepDoubleChance_df_conj, dados)
                 
                 if (ve >= th_ve) and (prob >= lista_th[4]) and (odd >= th_odd):
                     if i in [0, 1]:
+                        if pred_dc == 2:
+                            pred_dc = pred
                         if prob > preds[1 - i]: 
                             if pred == i and pred == pred_dc:
                                 recomendacoes.append((i + 1, ve, prob, odd))
@@ -1543,11 +1566,15 @@ def predicta_draw_no_bet(pred_draw_no_bet_df,pred_draw_no_bet_df_conj, dados):
         ql_dnb.load_model('q_learning_dnb_model_final.pkl')
         first_row = pred_draw_no_bet_df_conj.iloc[0]
         estado = qlearning.q_learning_gl(first_row)
+        logger.info(f"✅ Estado gerado: {estado} (tipo: {type(estado)})")
+        
         if estado in ql_dnb.q_table:
             pred_ql = ql_dnb.choose_action(estado, epsilon=0)
+            logger.info(f"✅ Ação escolhida pelo Q-Learning: {pred_ql}")
         else:
             print('Estado DNB nao encontrado')
             pred_ql = pred
+            return (None, None)
 
     except:
         print('PROBLEMAS COM QL dnb')

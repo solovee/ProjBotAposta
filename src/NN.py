@@ -1478,7 +1478,7 @@ def prepNNDraw_no_bet_X(df=df_temp):
         print("❌ DataFrame vazio após dropna em prepNNdnb*")
         return None, None
     z = df_temporario[['times','draw_no_bet_team', 'odds']].copy()
-  
+    df_temporario['draw_no_bet_team'] = df_temporario['draw_no_bet_team'].astype(int)
     df_temporario = pd.get_dummies(df_temporario, columns=['draw_no_bet_team'], prefix='draw_no_bet_type')
     X = df_temporario[['media_goals_home', 'media_goals_away', 'media_victories_home','media_victories_away','home_h2h_mean', 'away_h2h_mean', 'odds', 'prob_odds','goal_diff','team_strength_home','team_strength_away','media_goals_sofridos_home','media_goals_sofridos_away','home_h2h_win_rate',
        'away_h2h_win_rate','h2h_total_games']].copy()
@@ -1489,7 +1489,7 @@ def prepNNDraw_no_bet_X(df=df_temp):
             X_standardized = scaler.transform(X)
         X = pd.DataFrame(X_standardized, columns=['media_goals_home', 'media_goals_away', 'media_victories_home','media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']).reset_index(drop=True)
         '''
-        df_temporario['draw_no_bet_team'] = df_temporario['draw_no_bet_team'].astype(int)
+        
         type_df = df_temporario[['draw_no_bet_type_1', 'draw_no_bet_type_2']].reset_index(drop=True)
     except Exception as e:
         print('Erro draw_no_bet')
@@ -4252,7 +4252,7 @@ def ql_dc(df=df_temp):
         'odds_dc2', 
          'odds_dc3',
         'goal_diff', 'victory_diff', 'h2h_diff','goals_ratio_home','goals_ratio_away','vic_ratio','h2h_total_games','home_h2h_win_rate','away_h2h_win_rate',
-        'res_double_chance1', 'res_double_chance2', 'res_double_chance3']]
+        'res_double_chance1', 'res_double_chance2', 'res_double_chance3','media_victories_home','media_victories_away']]
     df_conj.dropna(inplace=True)
     
     # Dividir em conjunto de treino e teste para o Q-Learning
@@ -4395,7 +4395,7 @@ def ql_h(df=df_temp):
         
 
     df_conj['resultado'] = df_conj.apply(transformar_resultado, axis=1)
-    df_conj = df_conj[['asian_handicap1_1', 'asian_handicap1_2','asian_handicap2_1', 'asian_handicap2_2','team_ah1','odds_ah1', 'team_ah2','odds_ah2','h2h_diff','goals_diff', 'league','goals_ratio_home','goals_ratio_away','vic_ratio','victory_diff','home_h2h_win_rate','away_h2h_win_rate','h2h_total_games','media_victories_away','media_victories_home','media_goals_sofridos_away','media_goals_sofridos_home','media_goals_home','media_goals_away','resultado']].copy()
+    df_conj = df_conj[['asian_handicap1_1', 'asian_handicap1_2','asian_handicap2_1', 'asian_handicap2_2','team_ah1','odds_ah1', 'team_ah2','odds_ah2','h2h_diff','goals_diff', 'league','goals_ratio_home','goals_ratio_away','vic_ratio','victory_diff','home_h2h_win_rate','away_h2h_win_rate','h2h_total_games','media_victories_away','media_victories_home','media_goals_sofridos_away','media_goals_sofridos_home','media_goals_home','media_goals_away','resultado','home_h2h_mean','away_h2h_mean']].copy()
     df_conj = df_conj[df_conj['resultado'].notna()].copy()
     df_conj.dropna(inplace=True)
     # **** PASSO 1: TREINAR O MODELO Q-LEARNING ****
