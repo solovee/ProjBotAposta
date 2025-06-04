@@ -1479,25 +1479,13 @@ def prepNNDraw_no_bet_X(df=df_temp):
         return None, None
     z = df_temporario[['times','draw_no_bet_team', 'odds']].copy()
     df_temporario['draw_no_bet_team'] = df_temporario['draw_no_bet_team'].astype(int)
-    df_temporario = pd.get_dummies(df_temporario, columns=['draw_no_bet_team'], prefix='draw_no_bet_type')
+    #df_temporario = pd.get_dummies(df_temporario, columns=['draw_no_bet_team'], prefix='draw_no_bet_type')
     X = df_temporario[['media_goals_home', 'media_goals_away', 'media_victories_home','media_victories_away','home_h2h_mean', 'away_h2h_mean', 'odds', 'prob_odds','goal_diff','team_strength_home','team_strength_away','media_goals_sofridos_home','media_goals_sofridos_away','home_h2h_win_rate',
-       'away_h2h_win_rate','h2h_total_games']].copy()
-    try:
-        '''
-        with open('scaler_draw_no_bet.pkl', 'rb') as f:
-            scaler = pickle.load(f)
-            X_standardized = scaler.transform(X)
-        X = pd.DataFrame(X_standardized, columns=['media_goals_home', 'media_goals_away', 'media_victories_home','media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'odds']).reset_index(drop=True)
-        '''
-        
-        type_df = df_temporario[['draw_no_bet_type_1', 'draw_no_bet_type_2']].reset_index(drop=True)
-    except Exception as e:
-        print('Erro draw_no_bet')
-        return None, None
-    X_final = pd.concat([X, type_df], axis=1)
+       'away_h2h_win_rate','h2h_total_games', 'draw_no_bet_team']].copy()
     
-    print("Colunas de X (draw_no_bet):", X_final.columns.tolist())
-    return X_final, z
+    
+    print("Colunas de X (draw_no_bet):", X.columns.tolist())
+    return X, z
 
 
 def prepNNDraw_no_bet_X_conj(df=df_temp):

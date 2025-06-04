@@ -52,6 +52,7 @@ CSV_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'resultados_
 #lista dos thresholds das nns
 lista_th = [0.575,0.4,0.625,0.6,0.6,0.6]
 list_checa = []
+list_uni = [0]
 
 
 
@@ -129,7 +130,7 @@ def incremental_learning():
     
 def agendar_treino_incremental():
     agora = datetime.now()
-    alvo = datetime.combine(agora.date(), datetime.min.time()) + timedelta(hours=0, minutes=10)
+    alvo = datetime.combine(agora.date(), datetime.min.time()) + timedelta(hours=0, minutes=25)
 
     if agora >= alvo:
         alvo += timedelta(days=1)
@@ -895,16 +896,30 @@ def checa_jogos_do_dia(id,tentativa=0):
             if res is not None:
                 if res == 1:
                     a['resultado'] = 'ganhou'
+                    a['uni'] = a['odd'] - 1
+                    list_uni[0] += a['uni']
+                    a['unidades acumuladas'] = list_uni[0]
                     
                 elif res == 0.5:
                     a['resultado'] = 'meio ganho'
+                    a['uni'] = (a['odd'] - 1) / 2
+                    list_uni[0] += a['uni']
+                    a['unidades acumuladas'] = list_uni[0]
                     
                 elif res == -0.5:
-                    a['resultado'] = 'meio ganho'
+                    a['resultado'] = 'meia perda'
+                    a['uni'] = -0.5
+                    list_uni[0] += a['uni']
+                    a['unidades acumuladas'] = list_uni[0]
                 elif res == -1:
                     a['resultado'] = 'perdeu'
+                    a['uni'] = -1
+                    list_uni[0] += a['uni']
+                    a['unidades acumuladas'] = list_uni[0]
                 else:
                     a['resultado'] = 'empate'
+                    a['uni'] = 0
+                    a['unidades acumuladas'] = list_uni[0]
                 a = pd.DataFrame([a])
                 a.drop(columns=['id'], inplace=True)
                 
