@@ -503,15 +503,13 @@ import pandas as pd
 import dqndc
 
 
+
+main.criaTodasNNs()
 NN.atua()
 a = pd.read_csv('df_temp_preprocessado_teste.csv')
 NN.ql_dc(a)
 NN.ql_dnb(a)
-NN.ql_h(a)
 NN.ql_gl(a)
+NN.ql_h(a)
 main.main()
-
-
-
-
 # Os resultados estão em: resultados[0], resultados[1], resultados[2], resultados[3]

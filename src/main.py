@@ -50,7 +50,7 @@ apiclient = BetsAPIClient(api_key=api)
 #CSV_FILE = r"C:\Users\Leoso\Downloads\projBotAposta\src\resultados_novo.csv"
 CSV_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'resultados_60.csv')
 #lista dos thresholds das nns
-lista_th = [0.575,0.4,0.625,0.6,0.6,0.6]
+lista_th = [0.6,0.35,0.7,0.6,0.6,0.65]
 list_checa = []
 list_uni = [0]
 
@@ -181,6 +181,7 @@ def agendar_verificacao_diaria():
             global list_checa
             checa()  # Executa a verificação
             list_checa = []
+            list_uni = [0]
         except Exception as e:
             logger.error(f"❌ Erro na verificação diária: {e}")
         # Reagenda para o próximo dia
@@ -876,10 +877,18 @@ def checa_jogos_do_dia(id,tentativa=0):
     df["event_day"] = df["event_day"].astype(str)
 
     # Identifica os dois dias mais recentes
-    ultimos_dois_dias = sorted(df["event_day"].unique())[-2:]
+    agora = datetime.now()
+
+    # Se a hora for 20h ou mais, pega o dia seguinte e o atual
+    if agora.hour >= 20:
+        dia1 = agora.strftime("%Y%m%d")
+        dia2 = (agora + timedelta(days=1)).strftime("%Y%m%d")
+    else:
+        dia1 = (agora - timedelta(days=1)).strftime("%Y%m%d")
+        dia2 = agora.strftime("%Y%m%d")
 
     # Filtra o DataFrame
-    df_apenas_dois_dias = df[df["event_day"].isin(ultimos_dois_dias)]
+    df_apenas_dois_dias = df[df["event_day"].isin([dia1, dia2])]
 
     # Pré-processamento dos dados
     df_apenas_dois_dias = NN.preProcessEstatisticasGerais(df_apenas_dois_dias.copy())
@@ -898,28 +907,28 @@ def checa_jogos_do_dia(id,tentativa=0):
                     a['resultado'] = 'ganhou'
                     a['uni'] = a['odd'] - 1
                     list_uni[0] += a['uni']
-                    a['unidades acumuladas'] = list_uni[0]
+                    a['unidades acumuladas'] = round(list_uni[0], 2)
                     
                 elif res == 0.5:
                     a['resultado'] = 'meio ganho'
                     a['uni'] = (a['odd'] - 1) / 2
                     list_uni[0] += a['uni']
-                    a['unidades acumuladas'] = list_uni[0]
+                    a['unidades acumuladas'] = round(list_uni[0], 2)
                     
                 elif res == -0.5:
                     a['resultado'] = 'meia perda'
                     a['uni'] = -0.5
                     list_uni[0] += a['uni']
-                    a['unidades acumuladas'] = list_uni[0]
+                    a['unidades acumuladas'] = round(list_uni[0], 2)
                 elif res == -1:
                     a['resultado'] = 'perdeu'
                     a['uni'] = -1
                     list_uni[0] += a['uni']
-                    a['unidades acumuladas'] = list_uni[0]
+                    a['unidades acumuladas'] = round(list_uni[0], 2)
                 else:
                     a['resultado'] = 'empate'
                     a['uni'] = 0
-                    a['unidades acumuladas'] = list_uni[0]
+                    a['unidades acumuladas'] = round(list_uni[0], 2)
                 a = pd.DataFrame([a])
                 a.drop(columns=['id'], inplace=True)
                 
@@ -1271,7 +1280,7 @@ def predicta_over_under(prepOverUnder_df, dados):
     pred_over = float(preds[0])
     preds = [pred_over]
 
-    th_ve = 1.025  # Valor Esperado mínimo
+    th_ve = 1.1  # Valor Esperado mínimo
     recomendacoes = []
 
     # Odds de over e under
@@ -1339,9 +1348,9 @@ def predicta_handicap(prepHandicap_df,prepHandicap_df_conj, dados):
 
     preds = [pred_handicap_1, pred_handicap_2]
 
-    th_ve = 1.0
+    th_ve = 1.1
     recomendacoes = []
-    th_odd = 1.5
+    th_odd = 1.6
     for i in range(2):
         prob = preds[i]
         odd = float(dados['odds'].iloc[i])
@@ -1405,9 +1414,9 @@ def predicta_goal_line(prepGoal_line_df,prepGoal_line_df_conj, dados):
     pred_goal_line_2 = float(preds_proba[1][1])
     preds = [pred_goal_line_1, pred_goal_line_2]
 
-    th_ve = 1.0  # Valor Esperado mínimo
+    th_ve = 1.1  # Valor Esperado mínimo
     recomendacoes = []
-    th_odd = 1.5
+    th_odd = 1.6
     for i in range(2):
         prob = preds[i]
         odd = float(dados['odds_gl'].iloc[i])
@@ -1521,8 +1530,8 @@ def predicta_double_chance(prepDoubleChance_df, prepDoubleChance_df_conj, dados)
         logger.info(f"📊 pred dc: {pred_dc}") 
         logger.info(f"📊 pred conj  dc: {pred}") # Corrigido para usar pred_dc
 
-        th_ve = 1.0
-        th_odd = 1.5
+        th_ve = 1.1
+        th_odd = 1.6
         recomendacoes = []
 
         for i in range(3):
@@ -1534,8 +1543,6 @@ def predicta_double_chance(prepDoubleChance_df, prepDoubleChance_df_conj, dados)
                 
                 if (ve >= th_ve) and (prob >= lista_th[4]) and (odd >= th_odd):
                     if i in [0, 1]:
-                        if pred_dc == 2:
-                            pred_dc = pred
                         if prob > preds[1 - i]: 
                             if pred == i and pred == pred_dc:
                                 recomendacoes.append((i + 1, ve, prob, odd))
@@ -1600,8 +1607,8 @@ def predicta_draw_no_bet(pred_draw_no_bet_df,pred_draw_no_bet_df_conj, dados):
     pred_dnb_2 = float(preds_proba[1][1])
     preds = [pred_dnb_1, pred_dnb_2]
 
-    th_ve = 1.0  # Valor esperado mínimo
-    th_odd = 1.5  # Odd mínima
+    th_ve = 1.1  # Valor esperado mínimo
+    th_odd = 1.6  # Odd mínima
     recomendacoes = []
 
     for i in range(2):

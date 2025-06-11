@@ -468,7 +468,7 @@ def estatisticas_ultimos_5(home_team, away_team):
 def estatisticas_ultimos_5(home_team, away_team):
     try:
         # Filtra os 8 jogos mais recentes do home_team, seja como mandante ou visitante
-        df_home = df_temp[(df_temp['home'] == home_team) | (df_temp['away'] == home_team)].head(8)
+        df_home = df_temp[(df_temp['home'] == home_team) | (df_temp['away'] == home_team)].head(5)
 
         if not df_home.empty:
             # Gols marcados pelo home_team em cada jogo
@@ -499,7 +499,7 @@ def estatisticas_ultimos_5(home_team, away_team):
             vitorias_home = np.nan
 
         # Filtra os 8 jogos mais recentes do away_team, seja como mandante ou visitante
-        df_away = df_temp[(df_temp['away'] == away_team) | (df_temp['home'] == away_team)].head(8)
+        df_away = df_temp[(df_temp['away'] == away_team) | (df_temp['home'] == away_team)].head(5)
 
         if not df_away.empty:
             # Calcula os gols marcados pelo away_team em cada jogo (independente de ser mandante ou visitante)
@@ -1196,6 +1196,10 @@ def prepNNHandicap_X(df=df_temp):
     df_temporario = preparar_df_handicaps_X(df_temporario)
     df_temporario['goals_diff'] = df_temporario['media_goals_home'] - df_temporario['media_goals_away']
     df_temporario['h2h_diff'] = df_temporario['home_h2h_mean'] - df_temporario['away_h2h_mean']
+    df_temporario['home_ratio'] = df_temporario['media_goals_home'] - df_temporario['media_goals_sofridos_home']
+    df_temporario['away_ratio'] = df_temporario['media_goals_away'] - df_temporario['media_goals_sofridos_away']
+    df_temporario['vic_ratio'] = df_temporario['home_h2h_win_rate'] - df_temporario['away_h2h_win_rate']
+    df_temporario['victory_diff'] = df_temporario['media_victories_home'] - df_temporario['media_victories_away']
 
     df_temporario.dropna(inplace=True)
     if df_temporario.empty:
@@ -1209,7 +1213,7 @@ def prepNNHandicap_X(df=df_temp):
     df_temporario['team_ah'] = df_temporario['team_ah'].astype(float)
 
     df_temporario = pd.get_dummies(df_temporario, columns=['team_ah'], prefix='team_ah')
-    X = df_temporario[['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds', 'league','goals_diff', 'h2h_diff', 'favorite_by_odds', 'odds_ratio','home_h2h_win_rate','away_h2h_win_rate','h2h_total_games','media_goals_sofridos_home','media_goals_sofridos_away','media_victories_away','media_victories_home']]
+    X = df_temporario[['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds', 'league','goals_diff', 'h2h_diff', 'favorite_by_odds', 'odds_ratio','home_h2h_win_rate','away_h2h_win_rate','h2h_total_games','media_goals_sofridos_home','media_goals_sofridos_away','media_victories_away','media_victories_home','home_ratio','away_ratio','vic_ratio','victory_diff']]
     try:
         '''
         with open('scaler_handicap.pkl', 'rb') as f:
@@ -1243,6 +1247,10 @@ def prepNNHandicap_X_conj(df=df_temp):
     
     df_temporario['goals_diff'] = df_temporario['media_goals_home'] - df_temporario['media_goals_away']
     df_temporario['h2h_diff'] = df_temporario['home_h2h_mean'] - df_temporario['away_h2h_mean']
+    df_temporario['home_ratio'] = df_temporario['media_goals_home'] - df_temporario['media_goals_sofridos_home']
+    df_temporario['away_ratio'] = df_temporario['media_goals_away'] - df_temporario['media_goals_sofridos_away']
+    df_temporario['vic_ratio'] = df_temporario['home_h2h_win_rate'] - df_temporario['away_h2h_win_rate']
+    df_temporario['victory_diff'] = df_temporario['media_victories_home'] - df_temporario['media_victories_away']
 
     df_temporario.dropna(inplace=True)
     if df_temporario.empty:
@@ -1255,7 +1263,7 @@ def prepNNHandicap_X_conj(df=df_temp):
     
     X = df_temporario[['media_goals_home', 'media_goals_away','home_h2h_mean', 'away_h2h_mean',
                         'asian_handicap1_1', 'asian_handicap1_2','team_ah1','odds_ah1', 
-                        'asian_handicap2_1', 'asian_handicap2_2','team_ah2','odds_ah2','league','odds_ratio','favorite_by_odds','goals_diff','h2h_diff','home_h2h_win_rate','away_h2h_win_rate','h2h_total_games','media_goals_sofridos_home','media_goals_sofridos_away','media_victories_away','media_victories_home']]
+                        'asian_handicap2_1', 'asian_handicap2_2','team_ah2','odds_ah2','league','odds_ratio','favorite_by_odds','goals_diff','h2h_diff','home_h2h_win_rate','away_h2h_win_rate','h2h_total_games','media_goals_sofridos_home','media_goals_sofridos_away','media_victories_away','media_victories_home','home_ratio','away_ratio','vic_ratio','victory_diff']]
    
         
     
@@ -1284,6 +1292,7 @@ def prepNNGoal_line_X_conj(df=df_temp):
     
     df_temporario['split_line'] = (df_temporario['goal_line1_1'] != df_temporario['goal_line1_2']).astype(int)
     df_temporario['goals_diff'] = df_temporario['media_goals_home'] - df_temporario['media_goals_away']
+    df_temporario['goals_ratio'] = ((df_temporario['media_goals_home'] + df_temporario['media_goals_sofridos_home']) + (df_temporario['media_goals_away'] + df_temporario['media_goals_sofridos_away']))/2
 
  
     df_temporario.dropna(inplace=True)
@@ -1294,7 +1303,7 @@ def prepNNGoal_line_X_conj(df=df_temp):
     
     X = df_temporario[['h2h_mean' ,'media_goals_home' ,'media_goals_away',
                         'goal_line1_1','goal_line1_2','odds_gl1', 'odds_gl2',
-                        'league','prob_gl1','prob_gl2','split_line','goals_diff','media_goals_sofridos_home','h2h_total_games', 'media_goals_sofridos_away']].copy()
+                        'league','prob_gl1','prob_gl2','split_line','goals_diff','media_goals_sofridos_home','h2h_total_games', 'media_goals_sofridos_away','goals_ratio']].copy()
 
     
   
@@ -1321,6 +1330,7 @@ def prepNNGoal_line_X(df=df_temp):
     df_temporario = preparar_df_goallines_X(df_temporario)
     df_temporario['split_line'] = (df_temporario['goal_line_1'] != df_temporario['goal_line_2']).astype(int)
     df_temporario['goals_diff'] = df_temporario['media_goals_home'] - df_temporario['media_goals_away']
+    df_temporario['goals_ratio'] = ((df_temporario['media_goals_home'] + df_temporario['media_goals_sofridos_home']) + (df_temporario['media_goals_away'] + df_temporario['media_goals_sofridos_away']))/2
 
     df_temporario.dropna(inplace=True)
     if df_temporario.empty:
@@ -1329,7 +1339,7 @@ def prepNNGoal_line_X(df=df_temp):
     z = df_temporario[['times','goal_line_1', 'goal_line_2','type_gl', 'odds_gl', 'league']].copy()
     df_temporario['type_gl'] = df_temporario['type_gl'].astype(float)
     df_temporario = pd.get_dummies(df_temporario, columns=['type_gl'], prefix='type_gl')
-    X = df_temporario[['h2h_mean', 'media_goals_home', 'media_goals_away','odds_gl', 'goal_line_1', 'goal_line_2', 'league','prob','split_line','goals_diff','media_goals_sofridos_home','h2h_total_games', 'media_goals_sofridos_away']].copy()
+    X = df_temporario[['h2h_mean', 'media_goals_home', 'media_goals_away','odds_gl', 'goal_line_1', 'goal_line_2', 'league','prob','split_line','goals_diff','media_goals_sofridos_home','h2h_total_games', 'media_goals_sofridos_away','goals_ratio']].copy()
     try:
         '''
         with open('scaler_goal_line.pkl', 'rb') as f:
@@ -1372,6 +1382,7 @@ def prepNNDouble_chance_X(df=df_temp):
     df_temporario['goal_diff'] = df_temporario['media_goals_home'] - df_temporario['media_goals_away']
     df_temporario['victory_diff'] = df_temporario['media_victories_home'] - df_temporario['media_victories_away']
     df_temporario['h2h_diff'] = df_temporario['home_h2h_mean'] - df_temporario['away_h2h_mean']
+    df_temporario['vic_ratio'] = df_temporario['home_h2h_win_rate'] - df_temporario['away_h2h_win_rate']
     df_temporario.dropna(inplace=True)
     if df_temporario.empty:
         print("❌ DataFrame vazio após dropna em prepNNdc*")
@@ -1382,7 +1393,7 @@ def prepNNDouble_chance_X(df=df_temp):
     df_temporario = pd.get_dummies(df_temporario, columns=['double_chance'], prefix='double_chance_type')
     X = df_temporario[['media_goals_home', 'media_goals_away', 'media_victories_home', 'media_victories_away','league',
                        'home_h2h_mean', 'away_h2h_mean','prob', 'odds', 'goal_diff', 'victory_diff', 'h2h_diff','media_goals_sofridos_home','media_goals_sofridos_away','home_h2h_win_rate',
-       'away_h2h_win_rate','h2h_total_games']].copy()
+       'away_h2h_win_rate','h2h_total_games','vic_ratio']].copy()
 
     try:
         '''
@@ -1426,6 +1437,7 @@ def prepNNDouble_chance_X_conj(df=df_temp):
     df_temporario['goal_diff'] = df_temporario['media_goals_home'] - df_temporario['media_goals_away']
     df_temporario['victory_diff'] = df_temporario['media_victories_home'] - df_temporario['media_victories_away']
     df_temporario['h2h_diff'] = df_temporario['home_h2h_mean'] - df_temporario['away_h2h_mean']
+    df_temporario['vic_ratio'] = df_temporario['home_h2h_win_rate'] - df_temporario['away_h2h_win_rate']
     
     
     df_temporario.dropna(inplace=True)
@@ -1437,7 +1449,7 @@ def prepNNDouble_chance_X_conj(df=df_temp):
     X = df_temporario[['media_goals_home','media_goals_away','media_victories_home', 'media_victories_away', 'league',
                         'home_h2h_mean', 'away_h2h_mean', 'double_chance1','odds_dc1', 
                         'double_chance2', 'odds_dc2', 'double_chance3', 'odds_dc3','prob_dc1','prob_dc2','prob_dc3','goal_diff','victory_diff','h2h_diff','media_goals_sofridos_home','media_goals_sofridos_away','home_h2h_win_rate',
-       'away_h2h_win_rate','h2h_total_games']].copy()
+       'away_h2h_win_rate','h2h_total_games','vic_ratio']].copy()
   
         
 
@@ -1471,6 +1483,8 @@ def prepNNDraw_no_bet_X(df=df_temp):
     df_temporario['goal_diff'] = df_temporario['media_goals_home'] - df_temporario['media_goals_away']
     df_temporario['team_strength_home'] = df_temporario['media_victories_home'] / df_temporario['media_goals_home']
     df_temporario['team_strength_away'] = df_temporario['media_victories_away'] / df_temporario['media_goals_away']
+    df_temporario['victory_diff'] = df_temporario['media_victories_home'] - df_temporario['media_victories_away']
+    df_temporario['vic_ratio'] = df_temporario['home_h2h_win_rate'] - df_temporario['away_h2h_win_rate']
 
 
     df_temporario.dropna(inplace=True)
@@ -1481,7 +1495,7 @@ def prepNNDraw_no_bet_X(df=df_temp):
     df_temporario['draw_no_bet_team'] = df_temporario['draw_no_bet_team'].astype(int)
     #df_temporario = pd.get_dummies(df_temporario, columns=['draw_no_bet_team'], prefix='draw_no_bet_type')
     X = df_temporario[['media_goals_home', 'media_goals_away', 'media_victories_home','media_victories_away','home_h2h_mean', 'away_h2h_mean', 'odds', 'prob_odds','goal_diff','team_strength_home','team_strength_away','media_goals_sofridos_home','media_goals_sofridos_away','home_h2h_win_rate',
-       'away_h2h_win_rate','h2h_total_games', 'draw_no_bet_team']].copy()
+       'away_h2h_win_rate','h2h_total_games', 'draw_no_bet_team','victory_diff','vic_ratio']].copy()
     
     
     print("Colunas de X (draw_no_bet):", X.columns.tolist())
@@ -1513,6 +1527,9 @@ def prepNNDraw_no_bet_X_conj(df=df_temp):
     df_temporario['goal_diff'] = df_temporario['media_goals_home'] - df_temporario['media_goals_away']
     df_temporario['team_strength_home'] = df_temporario['media_victories_home'] / df_temporario['media_goals_home']
     df_temporario['team_strength_away'] = df_temporario['media_victories_away'] / df_temporario['media_goals_away']
+    df_temporario['victory_diff'] = df_temporario['media_victories_home'] - df_temporario['media_victories_away']
+    df_temporario['vic_ratio'] = df_temporario['home_h2h_win_rate'] - df_temporario['away_h2h_win_rate']
+    
 
 
     df_temporario.dropna(inplace=True)
@@ -1524,7 +1541,7 @@ def prepNNDraw_no_bet_X_conj(df=df_temp):
     
     X = df_temporario[['media_goals_home', 'media_goals_away', 'media_victories_home','media_victories_away',
                         'home_h2h_mean','away_h2h_mean', 'draw_no_bet_team1', 'odds_dnb1', 'draw_no_bet_team2', 'odds_dnb2','prob_odds_dnb1','prob_odds_dnb2','goal_diff','team_strength_home','team_strength_away','media_goals_sofridos_home','media_goals_sofridos_away','home_h2h_win_rate',
-       'away_h2h_win_rate','h2h_total_games']].copy()
+       'away_h2h_win_rate','h2h_total_games','victory_diff','vic_ratio']].copy()
 
     
     
@@ -1848,6 +1865,10 @@ def NN_handicap(df=df_temp):
     df_conj['odds_ratio'] = df_conj['odds_ah1'] / df_conj['odds_ah2']
     df_conj['goals_diff'] = df_conj['media_goals_home'] - df_conj['media_goals_away']
     df_conj['h2h_diff'] = df_conj['home_h2h_mean'] - df_conj['away_h2h_mean']
+    df_conj['home_ratio'] = df_conj['media_goals_home'] - df_conj['media_goals_sofridos_home']
+    df_conj['away_ratio'] = df_conj['media_goals_away'] - df_conj['media_goals_sofridos_away']
+    df_conj['vic_ratio'] = df_conj['home_h2h_win_rate'] - df_conj['away_h2h_win_rate']
+    df_conj['victory_diff'] = df_conj['media_victories_home'] - df_conj['media_victories_away']
 
     
     
@@ -1867,7 +1888,7 @@ def NN_handicap(df=df_temp):
 
 
     df_conj = df_conj[['media_goals_home', 'media_goals_away','home_h2h_mean', 'away_h2h_mean','asian_handicap1_1', 'asian_handicap1_2','team_ah1','odds_ah1', 'asian_handicap2_1', 'asian_handicap2_2','team_ah2','odds_ah2', 'league','favorite_by_odds','odds_ratio','goals_diff','h2h_diff','home_h2h_win_rate',
-       'away_h2h_win_rate','h2h_total_games','media_goals_sofridos_home','media_goals_sofridos_away','media_victories_away','media_victories_home','resultado']].copy()
+       'away_h2h_win_rate','h2h_total_games','media_goals_sofridos_home','media_goals_sofridos_away','media_victories_away','media_victories_home','home_ratio','away_ratio','vic_ratio','victory_diff','resultado']].copy()
     
 
     train_conj, test_conj = train_test_split(df_conj, test_size=0.1, random_state=42)
@@ -1947,11 +1968,15 @@ def NN_handicap(df=df_temp):
     # Tratamento de nulos e tipos problemáticos
     df_temporario['positivo'] = pd.to_numeric(df_temporario['positivo'], errors='coerce')
     df_temporario.dropna(subset=['positivo'], inplace=True)
-
+    df_temporario['home_ratio'] = df_temporario['media_goals_home'] - df_temporario['media_goals_sofridos_home']
+    df_temporario['away_ratio'] = df_temporario['media_goals_away'] - df_temporario['media_goals_sofridos_away']
+    df_temporario['vic_ratio'] = df_temporario['home_h2h_win_rate'] - df_temporario['away_h2h_win_rate']
+    df_temporario['victory_diff'] = df_temporario['media_victories_home'] - df_temporario['media_victories_away']
     # Feature set e target
     X = df_temporario[['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean',
-                       'asian_handicap_1', 'asian_handicap_2', 'odds', 'league','goals_diff','h2h_diff','favorite_by_odds','odds_ratio','media_goals_sofridos_home', 'media_goals_sofridos_away', 'media_victories_home','media_victories_away','home_h2h_win_rate',
+                       'asian_handicap_1', 'asian_handicap_2', 'odds', 'league','goals_diff','h2h_diff','favorite_by_odds','odds_ratio','media_goals_sofridos_home', 'media_goals_sofridos_away', 'media_victories_home','media_victories_away','home_h2h_win_rate','home_ratio','away_ratio','vic_ratio','victory_diff',
        'away_h2h_win_rate','h2h_total_games']].copy()
+    [['media_goals_home', 'media_goals_away', 'home_h2h_mean', 'away_h2h_mean','asian_handicap_1', 'asian_handicap_2', 'odds', 'league','goals_diff', 'h2h_diff', 'favorite_by_odds', 'odds_ratio','home_h2h_win_rate','away_h2h_win_rate','h2h_total_games','media_goals_sofridos_home','media_goals_sofridos_away','media_victories_away','media_victories_home']]
 
     # Adiciona colunas dummies com segurança
     for col in ['team_ah_1.0', 'team_ah_2.0']:
@@ -2264,10 +2289,11 @@ def NN_goal_line(df=df_temp):
     
     df_conj = df_temporario.copy()
     df_conj['goals_diff'] = df_conj['media_goals_home'] - df_conj['media_goals_away']
+    df_conj['goals_ratio'] = ((df_conj['media_goals_home'] + df_conj['media_goals_sofridos_home']) + (df_conj['media_goals_away'] + df_conj['media_goals_sofridos_away']))/2
     df_conj.dropna(inplace=True)
     df_conj = df_conj[['h2h_mean', 'media_goals_home', 'media_goals_away','media_goals_sofridos_home','h2h_total_games', 'media_goals_sofridos_away',
                         'goal_line1_1', 'goal_line1_2', 'odds_gl1', 'odds_gl2',
-                        'league', 'prob_gl1','prob_gl2','goals_diff','gl1_positivo','gl2_positivo']].copy()
+                        'league', 'prob_gl1','prob_gl2','goals_diff','gl1_positivo','gl2_positivo','goals_ratio']].copy()
     df_conj['split_line'] = (df_conj['goal_line1_1'] != df_conj['goal_line1_2']).astype(int)
    
     
@@ -2404,6 +2430,7 @@ def NN_goal_line(df=df_temp):
     df_temporario = preparar_df_goallines(df_temporario)
     df_temporario['split_line'] = (df_temporario['goal_line_1'] != df_temporario['goal_line_2']).astype(int)
     df_temporario['goals_diff'] = df_temporario['media_goals_home'] - df_temporario['media_goals_away']
+    df_temporario['goals_ratio'] = ((df_temporario['media_goals_home'] + df_temporario['media_goals_sofridos_home']) + (df_temporario['media_goals_away'] + df_temporario['media_goals_sofridos_away']))/2
 
     df_temporario = pd.get_dummies(df_temporario, columns=['type_gl'], prefix='type_gl')
     df_temporario = df_temporario[df_temporario['indefinido'] == False]
@@ -2414,7 +2441,7 @@ def NN_goal_line(df=df_temp):
 
     # Definição de X e y
     X = df_temporario[['h2h_mean', 'media_goals_home', 'media_goals_away', 'odds_gl',
-                    'goal_line_1', 'goal_line_2', 'league','prob','split_line','goals_diff','media_goals_sofridos_home','h2h_total_games', 'media_goals_sofridos_away']].copy().reset_index(drop=True)
+                    'goal_line_1', 'goal_line_2', 'league','prob','split_line','goals_diff','media_goals_sofridos_home','h2h_total_games', 'media_goals_sofridos_away','goals_ratio']].copy().reset_index(drop=True)
 
 
     type_df = df_temporario[['type_gl_1.0', 'type_gl_2.0']].reset_index(drop=True)
@@ -2975,6 +3002,7 @@ def NN_double_chance(df):
     df_temporario['goal_diff'] = df_temporario['media_goals_home'] - df_temporario['media_goals_away']
     df_temporario['victory_diff'] = df_temporario['media_victories_home'] - df_temporario['media_victories_away']
     df_temporario['h2h_diff'] = df_temporario['home_h2h_mean'] - df_temporario['away_h2h_mean']
+    df_temporario['vic_ratio'] = df_temporario['home_h2h_win_rate'] - df_temporario['away_h2h_win_rate']
     df_temporario.dropna(inplace=True)
     '''
     # **** PASSO 1: TREINAR O MODELO Q-LEARNING ****
@@ -3042,7 +3070,7 @@ def NN_double_chance(df):
                      'media_victories_away', 'home_h2h_mean', 'away_h2h_mean', 'double_chance1',
                      'odds_dc1', 'double_chance2', 'odds_dc2', 'double_chance3', 'odds_dc3',
                      'goal_diff', 'victory_diff', 'h2h_diff', 'media_goals_sofridos_home','media_goals_sofridos_away','home_h2h_win_rate',
-       'away_h2h_win_rate','h2h_total_games','resultado']].copy()
+       'away_h2h_win_rate','h2h_total_games','vic_ratio','resultado']].copy()
    
     train_conj, test_conj = train_test_split(df_modelo, test_size=0.1, random_state=42)
 
@@ -3112,6 +3140,8 @@ def NN_double_chance(df):
     
     if 'h2h_diff' not in df_especifico.columns:
         df_especifico['h2h_diff'] = df_especifico['home_h2h_mean'] - df_especifico['away_h2h_mean']
+
+    df_especifico['vic_ratio'] = df_especifico['home_h2h_win_rate'] - df_especifico['away_h2h_win_rate']
     
     df_especifico = pd.get_dummies(df_especifico, columns=['double_chance'], prefix='double_chance_type')
     df_especifico['resultado'] = pd.to_numeric(df_especifico['resultado'], errors='coerce')
@@ -3121,7 +3151,7 @@ def NN_double_chance(df):
     # Verifique se todas as colunas necessárias estão presentes
     required_cols = ['media_goals_home', 'media_goals_away', 'league', 'media_victories_home', 'media_victories_away',
                     'home_h2h_mean', 'away_h2h_mean', 'prob', 'odds', 'goal_diff', 'victory_diff', 'h2h_diff','media_goals_sofridos_home','media_goals_sofridos_away','home_h2h_win_rate',
-       'away_h2h_win_rate','h2h_total_games']
+       'away_h2h_win_rate','h2h_total_games','vic_ratio']
     
     for col in required_cols:
         if col not in df_especifico.columns:
@@ -3901,6 +3931,8 @@ def NN_draw_no_bet(df):
     df_conj['goal_diff'] = df_conj['media_goals_home'] - df_conj['media_goals_away']
     df_conj['team_strength_home'] = df_conj['media_victories_home'] / df_conj['media_goals_home']
     df_conj['team_strength_away'] = df_conj['media_victories_away'] / df_conj['media_goals_away']
+    df_conj['victory_diff'] = df_conj['media_victories_home'] - df_conj['media_victories_away']
+    df_conj['vic_ratio'] = df_conj['home_h2h_win_rate'] - df_conj['away_h2h_win_rate']
     df_conj.dropna(inplace=True)
 
     def transformar_res(row):
@@ -3956,7 +3988,7 @@ def NN_draw_no_bet(df):
     df_conj = df_conj[['media_goals_home', 'media_goals_away',
               'media_victories_home', 'media_victories_away', 'home_h2h_mean', 'away_h2h_mean',
               'draw_no_bet_team1', 'odds_dnb1', 'prob_odds_dnb1','draw_no_bet_team2', 'odds_dnb2', 'prob_odds_dnb2', 'team_strength_home','team_strength_away','media_goals_sofridos_home','media_goals_sofridos_away','home_h2h_win_rate',
-       'away_h2h_win_rate','h2h_total_games','resultado']].copy()
+       'away_h2h_win_rate','h2h_total_games','victory_diff','vic_ratio','resultado']].copy()
 
     
 
@@ -4026,6 +4058,8 @@ def NN_draw_no_bet(df):
     df_temporario['goal_diff'] = df_temporario['media_goals_home'] - df_temporario['media_goals_away']
     df_temporario['team_strength_home'] = df_temporario['media_victories_home'] / df_temporario['media_goals_home']
     df_temporario['team_strength_away'] = df_temporario['media_victories_away'] / df_temporario['media_goals_away']
+    df_temporario['victory_diff'] = df_temporario['media_victories_home'] - df_temporario['media_victories_away']
+    df_temporario['vic_ratio'] = df_temporario['home_h2h_win_rate'] - df_temporario['away_h2h_win_rate']
 
 
     if df_temporario.empty:
@@ -4170,7 +4204,7 @@ def ql_gl(df=df_temp):
 
     # Inicializar e treinar o agente Q-Learning
     agent = QLearningGoalLine()
-    agent.train(train_q, num_episodes=500)  # Ajuste o número de episódios conforme necessário
+    agent.train(train_q)  # Ajuste o número de episódios conforme necessário
 
     # Avaliar o modelo Q-Learning
     q_evaluation = agent.evaluate(test_q)
@@ -4248,7 +4282,7 @@ def ql_dc(df=df_temp):
     
     # Inicializar e treinar o agente Q-Learning
     agent = QLearningDoubleChance()
-    agent.train(train_q, num_episodes=500)  # Ajuste o número de episódios conforme necessário
+    agent.train(train_q)  # Ajuste o número de episódios conforme necessário
     
     # Avaliar o modelo Q-Learning
     q_evaluation = agent.evaluate(test_q)
@@ -4324,7 +4358,7 @@ def ql_dnb(df=df_temp):
     
     # Inicializar e treinar o agente Q-Learning
     agent = QLearningDrawNoBet()
-    agent.train(train_q, num_episodes=500)  # Ajuste o número de episódios conforme necessário
+    agent.train(train_q)  # Ajuste o número de episódios conforme necessário
     
     # Avaliar o modelo Q-Learning
     q_evaluation = agent.evaluate(test_q)
@@ -4394,7 +4428,7 @@ def ql_h(df=df_temp):
     
     # Inicializar e treinar o agente Q-Learning
     agent = QLearningHandicap()
-    agent.train(train_q, num_episodes=500)  # Ajuste o número de episódios conforme necessário
+    agent.train(train_q)  # Ajuste o número de episódios conforme necessário
     
     # Avaliar o modelo Q-Learning
     q_evaluation = agent.evaluate(test_q)
