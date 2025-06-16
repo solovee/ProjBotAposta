@@ -98,7 +98,7 @@ def incremental_learning():
     dc = qlearning.QLearningDoubleChance()
     dc.load_model('q_learning_dc_model_final.pkl')
     dc.alpha = 0.01
-    dc.gamma = 0.85
+    dc.gamma = 0.0
     dc.epsilon = 0.01
     dc.train(dois_dias_recentes,num_episodes=50)
     dc.save_model('q_learning_dc_model_final.pkl')
@@ -106,7 +106,7 @@ def incremental_learning():
     gl = qlearning.QLearningGoalLine()
     gl.load_model('q_learning_gl_model_final.pkl')
     gl.alpha = 0.01
-    gl.gamma = 0.85
+    gl.gamma = 0.0
     gl.epsilon = 0.01
     gl.train(dois_dias_recentes,num_episodes=50)
     gl.save_model('q_learning_gl_model_final.pkl')
