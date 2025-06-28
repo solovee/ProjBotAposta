@@ -500,11 +500,13 @@ print("✅ CSV atualizado com os dias 20250505 e 20250506. Dois dias mais antigo
 import main
 import NN
 import pandas as pd
-import dqndc
 
 
 
-main.criaTodasNNs()
+try:
+    main.criaTodasNNs()
+except:
+    print('problemas com criaNNs')
 NN.atua()
 a = pd.read_csv('df_temp_preprocessado_teste.csv')
 NN.ql_dc(a)
