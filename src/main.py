@@ -555,7 +555,7 @@ def loop_pega_jogos():
         df_jogos = pegaJogosDoDia()
         if not df_jogos.empty:
             logger.info(f"📅 Encontrados {len(df_jogos)} jogos para hoje")
-            pegaOddsEvento(df_jogos)
+            agenda_processamento(df_jogos)
         else:
             logger.info("ℹ️ Nenhum jogo encontrado por agora")
         time_module.sleep(10 * 60)  
@@ -767,7 +767,6 @@ def pegaJogosDoDia():
 
         dados_dataframe = pd.DataFrame(dados)
         logger.info(f"📋 Total de jogos antes da filtragem: {len(dados_dataframe)}")
-        print(dados_dataframe)
         
         dados_dataframe = dados_dataframe[~dados_dataframe['id_jogo'].isin(programado)]
         logger.info(f"📋 Jogos após remover programados: {len(dados_dataframe)}")
@@ -780,7 +779,6 @@ def pegaJogosDoDia():
         dados_dataframe['horario'] = dados_dataframe['horario'].astype(int)
         dados_dataframe['send_time'] = dados_dataframe['horario'] - 320
         logger.info(f"⏰ Tempo atual: {agora}")
-        print(dados_dataframe)
         logger.info(f"⏰ Primeiro horário de jogo: {dados_dataframe['horario'].min()}")
         logger.info(f"⏰ Primeiro send_time: {dados_dataframe['send_time'].min()}")
         
@@ -803,7 +801,7 @@ def pegaJogosDoDia():
 
 
 #!roda apos pegajogosDoDia, mas cada acao do jogo sera executada em seu tempo send_timer
-def pegaOddsEvento(df):
+def agenda_processamento(df):
     '''programa o processamento do jogo para cerca de 5 minutos antes do evento, e tambem programa a consulta do resultado do jogo'''
     agora = time_module.time()  # timestamp atual em segundos
     logger.info(f"⏳ Agendando {len(df)} eventos...")
