@@ -1,8 +1,8 @@
 import time as time_module 
 from datetime import datetime, timedelta, time
-import qlearning
 
-import tensorflow as tf
+
+
 from api import BetsAPIClient, dia_anterior
 import pandas as pd
 from dotenv import load_dotenv
@@ -16,7 +16,6 @@ import threading
 import os
 import signal
 import sys
-import pickle
 import mlp_pois
 import database
 
@@ -88,87 +87,6 @@ def agendar_processar_dia_anterior():
     delay = (alvo - agora).total_seconds()
     logger.info(f"⏰ Agendando processamento do dia anterior para {alvo}")
     threading.Timer(delay, processar_dia_anterior).start()
-
-def incremental_learning():
-    '''adiciona treino com os jogos do dia aos q-learnings'''
-    NN.atua()
-    df = pd.read_csv('df_temp_preprocessado_teste.csv')
-    hoje = datetime.today()
-    dia_atual = hoje.strftime('%Y%m%d')
-    dia_anterior = (hoje - timedelta(days=1)).strftime('%Y%m%d')
-
-    # Filtra o DataFrame para incluir apenas essas duas datas
-    dois_dias_recentes = df[df['event_day'].isin([dia_atual, dia_anterior])]
-    
-    
-    dc = qlearning.QLearningDoubleChance()
-    dc.load_model('q_learning_dc_model_final.pkl')
-    dc.alpha = 0.01
-    dc.gamma = 0.0
-    dc.epsilon = 0.01
-    dc.train(dois_dias_recentes,num_episodes=50)
-    dc.save_model('q_learning_dc_model_final.pkl')
-
-    gl = qlearning.QLearningGoalLine()
-    gl.load_model('q_learning_gl_model_final.pkl')
-    gl.alpha = 0.01
-    gl.gamma = 0.0
-    gl.epsilon = 0.01
-    gl.train(dois_dias_recentes,num_episodes=50)
-    gl.save_model('q_learning_gl_model_final.pkl')
-
-
-    dnb = qlearning.QLearningDrawNoBet()
-    dnb.load_model('q_learning_dnb_model_final.pkl')
-    dnb.alpha = 0.05
-    dnb.gamma = 0.85
-    dnb.epsilon = 0.01
-    dnb.train(dois_dias_recentes,num_episodes=50)
-    dnb.save_model('q_learning_dnb_model_final.pkl')
-
-    h = qlearning.QLearningHandicap()
-    h.load_model('q_learning_h_model_final.pkl')
-    h.alpha = 0.01
-    h.gamma = 0.85
-    h.epsilon = 0.01
-    h.train(dois_dias_recentes,num_episodes=50)
-    h.save_model('q_learning_h_model_final.pkl')
-    
-def agendar_treino_incremental():
-    'agenda o treino incremental diario dos q-learnings'
-    agora = datetime.now()
-    alvo = datetime.combine(agora.date(), datetime.min.time()) + timedelta(hours=0, minutes=25)
-
-    if agora >= alvo:
-        alvo += timedelta(days=1)
-
-    delay = (alvo - agora).total_seconds()
-
-    def tarefa():
-        logger.info("🧠 Iniciando treino incremental de ql...")
-        incremental_learning()
-        logger.info("✅ Modelos de ql treinados com sucesso")
-
-    threading.Timer(delay, tarefa).start()
-
-def agendar_criacao_nns():
-    '''agenda criação dos modelos autogluon'''
-    agora = datetime.now()
-    alvo = datetime.combine(agora.date(), datetime.min.time()) + timedelta(hours=0, minutes=15)
-
-    if agora >= alvo:
-        alvo += timedelta(days=1)
-
-    delay = (alvo - agora).total_seconds()
-    logger.info(f"⏰ Agendando criação de NNs para {alvo}")
-
-    def tarefa():
-        logger.info("🧠 Iniciando criação de modelos de rede neural...")
-        criaTodasNNs()
-        logger.info("✅ Modelos de rede neural criados com sucesso")
-        print(lista_th)
-
-    threading.Timer(delay, tarefa).start()
 
 
 def agendar_verificacao_diaria():
