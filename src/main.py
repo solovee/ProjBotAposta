@@ -671,7 +671,7 @@ def main():
     threading.Thread(target=checa_virada_do_dia, daemon=True).start()
     
 
-    threading.Thread(target=loop_pega_jogos, daemon=True).start() 
+    #threading.Thread(target=loop_pega_jogos, daemon=True).start() 
     
 
  
