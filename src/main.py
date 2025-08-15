@@ -40,8 +40,8 @@ api = os.getenv("API_KEY")
 chat_id = int(os.getenv("CHAT_ID"))
 #novo -4954876315
 # -1002610837223
-chats = [chat_id]
-
+chats = [chat_id, -4954876315]
+chats_all = [chat_id, -4954876315, -1002610837223]
 resultados_medias = {8: 2.49, 12: 2.18}
 
 
@@ -452,7 +452,7 @@ def checa():
         f"💰 Total de Unidades: {total_unidades:.2f}\n"
         f"📈 ROI (apenas válidas): {roi:.2f}%\n"
     )
-    for chat in chats:
+    for chat in chats_all:
         tb.sendMessages(chat, resumo_str)
    
     with open(nome_arquivo, "a", encoding="utf-8") as f:
@@ -836,8 +836,8 @@ def checa_jogos_do_dia(id,tentativa=0):
                 a.drop(columns=['id'], inplace=True)
                 
                 mens = df_para_string(a)
-                for chat in chats:
-                    tb.sendMessages(chat, mens)
+                
+                tb.sendMessages(-1002610837223, mens)
             else:
                 if tentativa  < 3:
                     time_module.sleep(2000)
@@ -888,13 +888,7 @@ def acao_do_jogo(row):
         logger.error(f"❌ Erro ao processar jogo {row['id_jogo']}: {str(e)}")
         return 0
 
-#! roda todo dia as 00:15
-def criaTodasNNs():
-    '''cria os modelos autogluon e thresholds'''
-    global lista_th 
-    logger.info("🔧 Criando todos os modelos de rede neural...")
-    lista_th = NN.criaNNs()
-    logger.info(f"📊 Thresholds definidos: {lista_th}")
+
 
 def get_first_value(df, col):
     serie = df.get(col)
