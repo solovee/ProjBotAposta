@@ -491,10 +491,10 @@ def loop_pega_jogos():
         time_module.sleep(10 * 60)  
 '''
 def loop_pega_jogos():
- 
+    tz = pytz.timezone('America/Sao_Paulo')
     while True:
-        now = datetime.now().time()  # ✅ Corrigido
-        start = time(8, 0)
+        now = datetime.now(tz).time()  # ✅ Corrigido
+        start = time(6, 0)
         end = time(18, 0)
 
         if start <= now <= end:
@@ -552,7 +552,7 @@ def atualizar_csv_dia_atual():
             
             # Verificar se o ID já existe
             if event_id in ids_existentes:
-                logger.info(f"⚠️ ID {event_id} já existe no CSV, pulando...")
+               
                 continue
                 
             odds_transformadas = df_odds[df_odds['id'] == event_id].to_dict('records')
@@ -671,7 +671,7 @@ def main():
     threading.Thread(target=checa_virada_do_dia, daemon=True).start()
     
 
-    #threading.Thread(target=loop_pega_jogos, daemon=True).start() 
+    threading.Thread(target=loop_pega_jogos, daemon=True).start() 
     
 
  
