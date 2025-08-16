@@ -493,7 +493,7 @@ def loop_pega_jogos():
 def loop_pega_jogos():
     
     while True:
-        now = datetime.now(tz).time()  # ✅ Corrigido
+        now = datetime.now().time()  # ✅ Corrigido
         start = time(9, 0)
         end = time(21, 0)
 
