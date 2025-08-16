@@ -31050,3 +31050,10 @@ NDETTA)"}
 {"id": "179589606", "mercado": "goal_line", "tipo": "over", "linha": "4.0 , 4.5", "odd": "1.900", "jogo": "REAL MADRID (EMINEM) X BAYERN (ZANGIEF)"}
 {"id": "179589606", "mercado": "double_chance", "time": "REAL MADRID (EMINEM)", "odd": "1.550", "jogo": "REAL MADRID (EMINEM) X BAYERN (ZANGIEF)"}
 {"id": "179589606", "mercado": "draw_no_bet", "time": "REAL MADRID (EMINEM)", "odd": "1.869", "jogo": "REAL MADRID (EMINEM) X BAYERN (ZANGIEF)"}
+
+--- NOVO LOTE (2025-08-16T14:32:43.229301) ---
+{"id": "179700708", "mercado": "goal_line", "tipo": "under", "linha": "5.0", "odd": "1.850", "jogo": "EINTRACHT (CEVUU) X MAN UTD (MASLJA)"}
+{"id": "179700708", "mercado": "draw_no_bet", "time": "MAN UTD (MASLJA)", "odd": "1.714", "jogo": "EINTRACHT (CEVUU) X MAN UTD (MASLJA)"}
+
+--- NOVO LOTE (2025-08-16T14:32:43.237619) ---
+{"id": "179700711", "mercado": "draw_no_bet", "time": "ROMA (GIOX)", "odd": "1.526", "jogo": "FENERBAHCE (BOLEC) X ROMA (GIOX)"}

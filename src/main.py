@@ -18,7 +18,7 @@ import signal
 import sys
 import mlp_pois
 import database
-
+import pytz
 
 
 
@@ -32,7 +32,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-
+tz = pytz.timezone("America/Sao_Paulo")
 
 load_dotenv()
 
@@ -493,9 +493,9 @@ def loop_pega_jogos():
 def loop_pega_jogos():
     
     while True:
-        now = datetime.now().time()  # ✅ Corrigido
-        start = time(9, 0)
-        end = time(21, 0)
+        now = datetime.now(tz).time()  # ✅ Corrigido
+        start = time(6, 0)
+        end = time(18, 0)
 
         if start <= now <= end:
             logger.info("🔎 Buscando jogos programados para hoje...")
@@ -937,7 +937,7 @@ def preve(df_linha, id):
             df_ou.loc[0, '📊 Tipo'] = 'over' if apostas['ou'] == 0 else 'under'
             df_ou.loc[0, '⭐ Odd'] = get_first_value(df_linha, 'odd_goals_over1') if df_ou.loc[0, '📊 Tipo'] == 'over' else get_first_value(df_linha, 'odd_goals_under1')
             df_ou.loc[0, '⚽ Linha'] = '2.5'
-            df_ou.loc[0, '⏰ Horário'] = datetime.fromtimestamp(horario).strftime('%H:%M')
+            df_ou.loc[0, '⏰ Horário'] = datetime.fromtimestamp(horario, tz).strftime('%H:%M')
             list_true.append(df_ou)
             list_check.append({
                 'id': id,
@@ -963,7 +963,7 @@ def preve(df_linha, id):
             odd_ah1 = get_first_value(df_linha, 'odds_ah1')
             odd_ah2 = get_first_value(df_linha, 'odds_ah2')
             df_h.loc[0, '⭐ Odd'] = str(odd_ah1 if df_h.loc[0, '🚀 time'] == home else odd_ah2)
-            df_h.loc[0, '⏰ Horário'] = datetime.fromtimestamp(horario).strftime('%H:%M')
+            df_h.loc[0, '⏰ Horário'] = datetime.fromtimestamp(horario, tz).strftime('%H:%M')
             list_true.append(df_h)
             list_check.append({
                 'id': id,
@@ -984,7 +984,7 @@ def preve(df_linha, id):
             odd_gl1 = get_first_value(df_linha, 'odds_gl1')
             odd_gl2 = get_first_value(df_linha, 'odds_gl2')
             df_gl.loc[0, '⭐ Odd'] = str(odd_gl1 if df_gl.loc[0, '📊 Tipo'] == 'over' else odd_gl2)
-            df_gl.loc[0, '⏰ Horário'] = datetime.fromtimestamp(horario).strftime('%H:%M')
+            df_gl.loc[0, '⏰ Horário'] = datetime.fromtimestamp(horario, tz).strftime('%H:%M')
             list_true.append(df_gl)
             list_check.append({
                 'id': id,
@@ -1010,7 +1010,7 @@ def preve(df_linha, id):
                 df_dc.loc[0, '📊 Double Chance'] = f"{home} ou {away}"
                 df_dc.loc[0, '⭐ Odd'] = get_first_value(df_linha, 'odds_dc3')
 
-            df_dc.loc[0, '⏰ Horário'] = datetime.fromtimestamp(horario).strftime('%H:%M')
+            df_dc.loc[0, '⏰ Horário'] = datetime.fromtimestamp(horario, tz).strftime('%H:%M')
 
             list_true.append(df_dc)
             list_check.append({
@@ -1029,7 +1029,7 @@ def preve(df_linha, id):
             odd_dnb1 = get_first_value(df_linha, 'odds_dnb1')
             odd_dnb2 = get_first_value(df_linha, 'odds_dnb2')
             df_dnb.loc[0, '⭐ Odd'] = odd_dnb1 if apostas['dnb'] == 0 else odd_dnb2
-            df_dnb.loc[0, '⏰ Horário'] = datetime.fromtimestamp(horario).strftime('%H:%M')
+            df_dnb.loc[0, '⏰ Horário'] = datetime.fromtimestamp(horario, tz).strftime('%H:%M')
 
             list_true.append(df_dnb)
             list_check.append({
