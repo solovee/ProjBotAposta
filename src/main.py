@@ -491,11 +491,10 @@ def loop_pega_jogos():
         time_module.sleep(10 * 60)  
 '''
 def loop_pega_jogos():
-    tz = pytz.timezone('America/Sao_Paulo')
     while True:
-        now = datetime.now(tz).time()  # ✅ Corrigido
-        start = time(6, 0)
-        end = time(18, 0)
+        now = datetime.now().time()  # ✅ Corrigido
+        start = time(9, 0)
+        end = time(21, 0)
 
         if start <= now <= end:
             logger.info("🔎 Buscando jogos programados para hoje...")
