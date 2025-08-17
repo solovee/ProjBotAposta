@@ -912,10 +912,12 @@ def preve(df_linha, id):
             df = mlp_pois.individualiza_jogo_duplo(df_linha, resultados_medias[8], resultados_medias[12])
         except Exception as e:
             logger.error(f"❌ Erro ao individualizar jogo para o jogo {id}: {e}")
+            return [], []
         try:
             df_knn_com_id = mlp_pois.preprocessor(df)
         except Exception as e:
             logger.error(f"❌ Erro ao preprocessar dados para o jogo {id}: {e}")
+            return [], []
         try:
             apostas = mlp_pois.prepara_e_preve(df_knn_com_id, df_linha)
         except Exception as e:
