@@ -22,6 +22,7 @@ import pytz
 
 
 
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -767,7 +768,7 @@ def agenda_processamento(df):
 
         threading.Timer(delay, acao_do_jogo, args=(row,)).start()
         threading.Timer(delay + 1300, checa_jogos_do_dia, args=(row['id_jogo'],)).start()
-        print(f"Agendado jogo {row['id_jogo']} para {datetime.fromtimestamp(row['send_time'])}")
+        print(f"Agendado jogo {row['id_jogo']} para {datetime.fromtimestamp(row['send_time'], tz)}")
 
 
 def checa_jogos_do_dia(id,tentativa=0):
@@ -875,7 +876,7 @@ def acao_do_jogo(row):
                 
                 f.write(json.dumps(aposta, ensure_ascii=False) + "\n")
 
-
+    
         if lista_bets_a_enviar:
             logger.info(f"📩 Enviando {len(lista_bets_a_enviar)} previsões para o Telegram")
             for bet in lista_bets_a_enviar:
@@ -929,121 +930,133 @@ def preve(df_linha, id):
             return [], []
 
         home, away = home_e_away(str(times))
-        
-        if (apostas['ou'] is not None):
-            df_ou = pd.DataFrame(columns=['🔔 Jogo','🎯 Liga', '⏰ Horário', '📊 Tipo', '⭐ Odd', '⚽ Linha'])
-            df_ou.loc[0, '🔔 Jogo'] = times_para_jogo(str(times))
-            df_ou.loc[0, '🎯 Liga'] = f"{get_first_value(df_linha, 'league')} minutos"
-            df_ou.loc[0, '📊 Tipo'] = 'over' if apostas['ou'] == 0 else 'under'
-            df_ou.loc[0, '⭐ Odd'] = get_first_value(df_linha, 'odd_goals_over1') if df_ou.loc[0, '📊 Tipo'] == 'over' else get_first_value(df_linha, 'odd_goals_under1')
-            df_ou.loc[0, '⚽ Linha'] = '2.5'
-            df_ou.loc[0, '⏰ Horário'] = datetime.fromtimestamp(horario, tz).strftime('%H:%M')
-            list_true.append(df_ou)
-            list_check.append({
-                'id': id,
-                'mercado': 'over_under',
-                'tipo': df_ou.loc[0, '📊 Tipo'],
-                'linha': '2.5',
-                'odd': df_ou.loc[0, '⭐ Odd'],
-                'jogo': df_ou.loc[0, '🔔 Jogo']
-            })
+        try:
+            if (apostas['ou'] is not None):
+                df_ou = pd.DataFrame(columns=['🔔 Jogo','🎯 Liga', '⏰ Horário', '📊 Tipo', '⭐ Odd', '⚽ Linha'])
+                df_ou.loc[0, '🔔 Jogo'] = times_para_jogo(str(times))
+                df_ou.loc[0, '🎯 Liga'] = f"{get_first_value(df_linha, 'league')} minutos"
+                df_ou.loc[0, '📊 Tipo'] = 'over' if apostas['ou'] == 0 else 'under'
+                df_ou.loc[0, '⭐ Odd'] = get_first_value(df_linha, 'odd_goals_over1') if df_ou.loc[0, '📊 Tipo'] == 'over' else get_first_value(df_linha, 'odd_goals_under1')
+                df_ou.loc[0, '⚽ Linha'] = '2.5'
+                df_ou.loc[0, '⏰ Horário'] = datetime.fromtimestamp(horario, tz).strftime('%H:%M')
+                list_true.append(df_ou)
+                list_check.append({
+                    'id': id,
+                    'mercado': 'over_under',
+                    'tipo': df_ou.loc[0, '📊 Tipo'],
+                    'linha': '2.5',
+                    'odd': df_ou.loc[0, '⭐ Odd'],
+                    'jogo': df_ou.loc[0, '🔔 Jogo']
+                })
+        except Exception as e:
+            logger.error(f"❌ Erro ao processar apostas 'ou' para o jogo {id}: {e}")
+        try:
+            if (apostas['h'] is not None):
+                df_h = pd.DataFrame(columns=['🔔 Jogo','🎯 Liga','⏰ Horário','🚀 time', '⭐ Odd', '⚽ handicap'])
+                df_h.loc[0, '🔔 Jogo'] = times_para_jogo(str(times))
+                df_h.loc[0, '🎯 Liga'] = f"{get_first_value(df_linha, 'league')} minutos"
+                if apostas['h'] == 0:
+                    ah1 = str(get_first_value(df_linha, 'asian_handicap1_1'))
+                    ah2 = str(get_first_value(df_linha, 'asian_handicap1_2'))
+                else:
+                    ah1 = str(get_first_value(df_linha, 'asian_handicap2_1'))
+                    ah2 = str(get_first_value(df_linha, 'asian_handicap2_2'))
+                df_h.loc[0, '⚽ handicap'] = ah1 if ah1 == ah2 else f"{ah1} , {ah2}"
+                df_h.loc[0, '🚀 time'] = home if apostas['h'] == 0 else away
+                odd_ah1 = get_first_value(df_linha, 'odds_ah1')
+                odd_ah2 = get_first_value(df_linha, 'odds_ah2')
+                df_h.loc[0, '⭐ Odd'] = str(odd_ah1 if df_h.loc[0, '🚀 time'] == home else odd_ah2)
+                df_h.loc[0, '⏰ Horário'] = datetime.fromtimestamp(horario, tz).strftime('%H:%M')
+                list_true.append(df_h)
+                list_check.append({
+                    'id': id,
+                    'mercado': 'handicap',
+                    'time': df_h.loc[0, '🚀 time'],
+                    'linha': df_h.loc[0, '⚽ handicap'],
+                    'odd': df_h.loc[0, '⭐ Odd'],
+                    'jogo': df_h.loc[0, '🔔 Jogo']
+                })
+        except Exception as e:
+            logger.error(f"❌ Erro ao processar apostas 'h' para o jogo {id}: {e}")
+        try:
+            if (apostas['gl'] is not None):
+                df_gl = pd.DataFrame(columns=['🔔 Jogo','🎯 Liga', '⏰ Horário', '📊 Tipo', '⭐ Odd', '⚽ Linha'])
+                df_gl.loc[0, '🔔 Jogo'] = times_para_jogo(str(times))
+                df_gl.loc[0, '🎯 Liga'] = f"{get_first_value(df_linha, 'league')} minutos"
+                gl1 = str(get_first_value(df_linha, 'goal_line1_1'))
+                gl2 = str(get_first_value(df_linha, 'goal_line1_2'))
+                df_gl.loc[0, '⚽ Linha'] = gl1 if gl1 == gl2 else f"{gl1} , {gl2}"
+                df_gl.loc[0, '📊 Tipo'] = 'over' if apostas['gl'] == 0 else 'under'
+                odd_gl1 = get_first_value(df_linha, 'odds_gl1')
+                odd_gl2 = get_first_value(df_linha, 'odds_gl2')
+                df_gl.loc[0, '⭐ Odd'] = str(odd_gl1 if df_gl.loc[0, '📊 Tipo'] == 'over' else odd_gl2)
+                df_gl.loc[0, '⏰ Horário'] = datetime.fromtimestamp(horario, tz).strftime('%H:%M')
+                list_true.append(df_gl)
+                list_check.append({
+                    'id': id,
+                    'mercado': 'goal_line',
+                    'tipo': df_gl.loc[0, '📊 Tipo'],
+                    'linha': df_gl.loc[0, '⚽ Linha'],
+                    'odd': df_gl.loc[0, '⭐ Odd'],
+                    'jogo': df_gl.loc[0, '🔔 Jogo']
+                })
+        except Exception as e:
+            logger.error(f"❌ Erro ao processar apostas 'gl' para o jogo {id}: {e}")
+        try:
+            if (apostas['dc'] is not None):
+                df_dc = pd.DataFrame(columns=['🔔 Jogo','🎯 Liga','⏰ Horário', '📊 Double Chance', '⭐ Odd'])
+                df_dc.loc[0, '🔔 Jogo'] = times_para_jogo(str(times))
+                df_dc.loc[0, '🎯 Liga'] = f"{get_first_value(df_linha, 'league')} minutos"
 
-        if (apostas['h'] is not None):
-            df_h = pd.DataFrame(columns=['🔔 Jogo','🎯 Liga','⏰ Horário','🚀 time', '⭐ Odd', '⚽ handicap'])
-            df_h.loc[0, '🔔 Jogo'] = times_para_jogo(str(times))
-            df_h.loc[0, '🎯 Liga'] = f"{get_first_value(df_linha, 'league')} minutos"
-            if apostas['h'] == 0:
-                ah1 = str(get_first_value(df_linha, 'asian_handicap1_1'))
-                ah2 = str(get_first_value(df_linha, 'asian_handicap1_2'))
-            else:
-                ah1 = str(get_first_value(df_linha, 'asian_handicap2_1'))
-                ah2 = str(get_first_value(df_linha, 'asian_handicap2_2'))
-            df_h.loc[0, '⚽ handicap'] = ah1 if ah1 == ah2 else f"{ah1} , {ah2}"
-            df_h.loc[0, '🚀 time'] = home if apostas['h'] == 0 else away
-            odd_ah1 = get_first_value(df_linha, 'odds_ah1')
-            odd_ah2 = get_first_value(df_linha, 'odds_ah2')
-            df_h.loc[0, '⭐ Odd'] = str(odd_ah1 if df_h.loc[0, '🚀 time'] == home else odd_ah2)
-            df_h.loc[0, '⏰ Horário'] = datetime.fromtimestamp(horario, tz).strftime('%H:%M')
-            list_true.append(df_h)
-            list_check.append({
-                'id': id,
-                'mercado': 'handicap',
-                'time': df_h.loc[0, '🚀 time'],
-                'linha': df_h.loc[0, '⚽ handicap'],
-                'odd': df_h.loc[0, '⭐ Odd'],
-                'jogo': df_h.loc[0, '🔔 Jogo']
-            })
-        if (apostas['gl'] is not None):
-            df_gl = pd.DataFrame(columns=['🔔 Jogo','🎯 Liga', '⏰ Horário', '📊 Tipo', '⭐ Odd', '⚽ Linha'])
-            df_gl.loc[0, '🔔 Jogo'] = times_para_jogo(str(times))
-            df_gl.loc[0, '🎯 Liga'] = f"{get_first_value(df_linha, 'league')} minutos"
-            gl1 = str(get_first_value(df_linha, 'goal_line1_1'))
-            gl2 = str(get_first_value(df_linha, 'goal_line1_2'))
-            df_gl.loc[0, '⚽ Linha'] = gl1 if gl1 == gl2 else f"{gl1} , {gl2}"
-            df_gl.loc[0, '📊 Tipo'] = 'over' if apostas['gl'] == 0 else 'under'
-            odd_gl1 = get_first_value(df_linha, 'odds_gl1')
-            odd_gl2 = get_first_value(df_linha, 'odds_gl2')
-            df_gl.loc[0, '⭐ Odd'] = str(odd_gl1 if df_gl.loc[0, '📊 Tipo'] == 'over' else odd_gl2)
-            df_gl.loc[0, '⏰ Horário'] = datetime.fromtimestamp(horario, tz).strftime('%H:%M')
-            list_true.append(df_gl)
-            list_check.append({
-                'id': id,
-                'mercado': 'goal_line',
-                'tipo': df_gl.loc[0, '📊 Tipo'],
-                'linha': df_gl.loc[0, '⚽ Linha'],
-                'odd': df_gl.loc[0, '⭐ Odd'],
-                'jogo': df_gl.loc[0, '🔔 Jogo']
-            })
+                if apostas['dc'] == 0:
+                    df_dc.loc[0, '📊 Double Chance'] = home
+                    df_dc.loc[0, '⭐ Odd'] = get_first_value(df_linha, 'odds_dc1')
+                elif apostas['dc'] == 1:
+                    df_dc.loc[0, '📊 Double Chance'] = away
+                    df_dc.loc[0, '⭐ Odd'] = get_first_value(df_linha, 'odds_dc2')
+                else:
+                    df_dc.loc[0, '📊 Double Chance'] = f"{home} ou {away}"
+                    df_dc.loc[0, '⭐ Odd'] = get_first_value(df_linha, 'odds_dc3')
 
-        if (apostas['dc'] is not None):
-            df_dc = pd.DataFrame(columns=['🔔 Jogo','🎯 Liga','⏰ Horário', '📊 Double Chance', '⭐ Odd'])
-            df_dc.loc[0, '🔔 Jogo'] = times_para_jogo(str(times))
-            df_dc.loc[0, '🎯 Liga'] = f"{get_first_value(df_linha, 'league')} minutos"
+                df_dc.loc[0, '⏰ Horário'] = datetime.fromtimestamp(horario, tz).strftime('%H:%M')
 
-            if apostas['dc'] == 0:
-                df_dc.loc[0, '📊 Double Chance'] = home
-                df_dc.loc[0, '⭐ Odd'] = get_first_value(df_linha, 'odds_dc1')
-            elif apostas['dc'] == 1:
-                df_dc.loc[0, '📊 Double Chance'] = away
-                df_dc.loc[0, '⭐ Odd'] = get_first_value(df_linha, 'odds_dc2')
-            else:
-                df_dc.loc[0, '📊 Double Chance'] = f"{home} ou {away}"
-                df_dc.loc[0, '⭐ Odd'] = get_first_value(df_linha, 'odds_dc3')
+                list_true.append(df_dc)
+                list_check.append({
+                    'id': id,
+                    'mercado': 'double_chance',
+                    'time': df_dc.loc[0, '📊 Double Chance'],
+                    'odd': df_dc.loc[0, '⭐ Odd'],
+                    'jogo': df_dc.loc[0, '🔔 Jogo']
+                })
+        except Exception as e:
+            logger.error(f"❌ Erro ao processar apostas 'dc' para o jogo {id}: {e}")
+        try:
+            if (apostas['dnb'] is not None):
+                df_dnb = pd.DataFrame(columns=['🔔 Jogo','🎯 Liga', '⏰ Horário', '📊 Draw No Bet', '⭐ Odd'])
+                df_dnb.loc[0, '🔔 Jogo'] = times_para_jogo(str(times))
+                df_dnb.loc[0, '🎯 Liga'] = f"{get_first_value(df_linha, 'league')} minutos"
+                df_dnb.loc[0, '📊 Draw No Bet'] = home if apostas['dnb'] == 0 else away
 
-            df_dc.loc[0, '⏰ Horário'] = datetime.fromtimestamp(horario, tz).strftime('%H:%M')
+                odd_dnb1 = get_first_value(df_linha, 'odds_dnb1')
+                odd_dnb2 = get_first_value(df_linha, 'odds_dnb2')
+                df_dnb.loc[0, '⭐ Odd'] = odd_dnb1 if apostas['dnb'] == 0 else odd_dnb2
+                df_dnb.loc[0, '⏰ Horário'] = datetime.fromtimestamp(horario, tz).strftime('%H:%M')
 
-            list_true.append(df_dc)
-            list_check.append({
-                'id': id,
-                'mercado': 'double_chance',
-                'time': df_dc.loc[0, '📊 Double Chance'],
-                'odd': df_dc.loc[0, '⭐ Odd'],
-                'jogo': df_dc.loc[0, '🔔 Jogo']
-            })
-        if (apostas['dnb'] is not None):
-            df_dnb = pd.DataFrame(columns=['🔔 Jogo','🎯 Liga', '⏰ Horário', '📊 Draw No Bet', '⭐ Odd'])
-            df_dnb.loc[0, '🔔 Jogo'] = times_para_jogo(str(times))
-            df_dnb.loc[0, '🎯 Liga'] = f"{get_first_value(df_linha, 'league')} minutos"
-            df_dnb.loc[0, '📊 Draw No Bet'] = home if apostas['dnb'] == 0 else away
-
-            odd_dnb1 = get_first_value(df_linha, 'odds_dnb1')
-            odd_dnb2 = get_first_value(df_linha, 'odds_dnb2')
-            df_dnb.loc[0, '⭐ Odd'] = odd_dnb1 if apostas['dnb'] == 0 else odd_dnb2
-            df_dnb.loc[0, '⏰ Horário'] = datetime.fromtimestamp(horario, tz).strftime('%H:%M')
-
-            list_true.append(df_dnb)
-            list_check.append({
-                'id': id,
-                'mercado': 'draw_no_bet',
-                'time': df_dnb.loc[0, '📊 Draw No Bet'],
-                'odd': df_dnb.loc[0, '⭐ Odd'],
-                'jogo': df_dnb.loc[0, '🔔 Jogo']
-            })
-
-        for df in list_true:
-            df = pd.DataFrame(df)
-            men = df_para_string(df)
-            list_final.append(men)
+                list_true.append(df_dnb)
+                list_check.append({
+                    'id': id,
+                    'mercado': 'draw_no_bet',
+                    'time': df_dnb.loc[0, '📊 Draw No Bet'],
+                    'odd': df_dnb.loc[0, '⭐ Odd'],
+                    'jogo': df_dnb.loc[0, '🔔 Jogo']
+                })
+        except Exception as e:
+            logger.error(f"❌ Erro ao processar apostas 'dnb' para o jogo {id}: {e}")
+        if list_true:
+            for df in list_true:
+                df = pd.DataFrame(df)
+                men = df_para_string(df)
+                list_final.append(men)
 
         if list_final:
             logger.info("✅ Previsões recomendadas:")

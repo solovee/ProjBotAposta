@@ -31057,3 +31057,12 @@ NDETTA)"}
 
 --- NOVO LOTE (2025-08-16T14:32:43.237619) ---
 {"id": "179700711", "mercado": "draw_no_bet", "time": "ROMA (GIOX)", "odd": "1.526", "jogo": "FENERBAHCE (BOLEC) X ROMA (GIOX)"}
+
+--- NOVO LOTE (2025-08-17T10:34:40.916712) ---
+
+--- NOVO LOTE (2025-08-17T10:34:42.505717) ---
+
+--- NOVO LOTE (2025-08-17T10:58:40.775578) ---
+
+--- NOVO LOTE (2025-08-17T10:58:41.672374) ---
+{"id": "179756927", "mercado": "draw_no_bet", "time": "REAL MADRID (MASLJA)", "odd": "1.526", "jogo": "REAL MADRID (MASLJA) X MAN CITY (BOLEC)"}

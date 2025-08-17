@@ -1,27 +1,16 @@
 import numpy as np
 import tensorflow as tf
 import pandas as pd
-
+from main import logger
 from dotenv import load_dotenv
-
-
 from sklearn.model_selection import train_test_split
-
 import pickle
-
-
 import pandas as pd
-
-
-
 import NN
 from sklearn.model_selection import KFold
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import MinMaxScaler
 
-
-
-import pandas as pd
 
 def contar_registros_por_liga(caminho_csv, ligas_interesse):
     """
@@ -396,8 +385,9 @@ def individualiza_jogo_duplo(df, media_8, media_12): # Adicionado resultados_med
     for col in colunas_comuns_base:
         if col not in df.columns:
             raise ValueError(f"Coluna '{col}' não encontrada no DataFrame de entrada.")
-            
-    
+    for col in colunas_comuns_base:
+        if df[col].isnull().any():
+            logger.warning(f"⚠️ Coluna '{col}' contém valores NA/None no DataFrame de entrada")
 
 
     novas_linhas = []
