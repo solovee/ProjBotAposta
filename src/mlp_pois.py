@@ -1,7 +1,8 @@
 import numpy as np
 import tensorflow as tf
 import pandas as pd
-from main import logger
+from logger_config import logger
+
 from dotenv import load_dotenv
 from sklearn.model_selection import train_test_split
 import pickle

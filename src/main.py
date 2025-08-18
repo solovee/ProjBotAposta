@@ -10,7 +10,8 @@ import os
 import threading
 import NN
 import telegramBot as tb
-import logging
+from logger_config import logger
+
 import json
 import threading
 import os
@@ -23,15 +24,6 @@ import pytz
 
 
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger(__name__)
 
 tz = pytz.timezone("America/Sao_Paulo")
 
