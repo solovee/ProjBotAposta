@@ -92,9 +92,9 @@ def agendar_processar_dia_anterior():
 
 def agendar_verificacao_diaria():
     '''agenda a revisão de resultados do dia anterior'''
-    agora = datetime.now()
+    agora = datetime.now(tz)
     
-    alvo = datetime.combine(agora.date(), time(0, 30))
+    alvo = datetime.combine(agora.date(), time(0, 30, tzinfo=tz))  # 00:30 do dia atual
     
     if agora >= alvo:
         alvo += timedelta(days=1)
@@ -451,6 +451,7 @@ def checa():
         f"✅ Apostas Válidas: {total_apostas_validas}\n"
         f"❓ Apostas None/Nulas: {contador_none} ({percentual_none:.1f}%)\n"
         f"💰 Total de Unidades: {total_unidades:.2f}\n"
+        f"💰 Total de Unidades (acumuladas): {list_uni[0]:.2f}%\n"
         f"📈 ROI (apenas válidas): {roi:.2f}%\n"
     )
     for chat in chats_all:
