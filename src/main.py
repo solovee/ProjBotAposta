@@ -442,8 +442,8 @@ def checa():
         f"✅ Total de Apostas: {total_apostas}\n"
         f"✅ Apostas Válidas: {total_apostas_validas}\n"
         f"❓ Apostas None/Nulas: {contador_none} ({percentual_none:.1f}%)\n"
-        f"💰 Total de Unidades: {total_unidades:.2f}\n"
-        f"💰 Total de Unidades (acumuladas): {list_uni[0]:.2f}%\n"
+        #f"💰 Total de Unidades: {total_unidades:.2f}\n"
+        f"💰 Total de Unidades: {list_uni[0]:.2f}\n"
         f"📈 ROI (apenas válidas): {roi:.2f}%\n"
     )
     for chat in chats_all:
@@ -454,14 +454,14 @@ def checa():
         f.write(f"✅ Total de Apostas: {total_apostas}\n")
         f.write(f"✅ Apostas Válidas: {total_apostas_validas}\n")
         f.write(f"❓ Apostas None/Nulas: {contador_none} ({percentual_none:.1f}%)\n")
-        f.write(f"💰 Total de Unidades: {total_unidades:.2f}\n")
-        f.write(f"💰 Total de Unidades (acumuladas): {list_uni[0]:.2f}%\n")
+        #f.write(f"💰 Total de Unidades: {total_unidades:.2f}\n")
+        f.write(f"💰 Total de Unidades: {list_uni[0]:.2f}\n")
         f.write(f"📈 ROI (apenas válidas): {roi:.2f}%\n")
         f.write("-" * 40 + "\n")
 
     return {
         'dataframe': df_verificacao,
-        'total_unidades': total_unidades,
+        'total_unidades': list_uni[0],
         'roi': roi,
         'apostas_total': total_apostas,
         'apostas_validas': total_apostas_validas,
