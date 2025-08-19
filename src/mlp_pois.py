@@ -726,31 +726,31 @@ def decide_aposta(probs_ou, probs_gl, probs_vic, probs_h, odds_ou, odds_gl, odds
     print(probs_ou, probs_gl, probs_vic, probs_h, odds_ou, odds_gl, odds_dc, odds_dnb, odds_h)
     decisions = {'ou': None, 'gl': None, 'dc': None,'dnb': None, 'h': None}
     if probs_ou is not None and odds_ou is not None:
-        if float(probs_ou['over']) > float(probs_ou['under']) and float(odds_ou['over']) > 1.5 and float(probs_ou['over']) > 0.6:
+        if float(probs_ou['over']) > float(probs_ou['under']) and float(odds_ou['over']) > 1.5 and float(probs_ou['over']) > 0.65:
             decisions['ou'] = 0
-        elif float(probs_ou['under']) > float(probs_ou['over']) and float(odds_ou['under']) > 1.5 and float(probs_ou['under']) > 0.6:
+        elif float(probs_ou['under']) > float(probs_ou['over']) and float(odds_ou['under']) > 1.5 and float(probs_ou['under']) > 0.65:
             decisions['ou'] = 1
     if probs_gl is not None and odds_gl is not None:
-        if float(probs_gl['over']) > float(probs_gl['under']) and float(odds_gl['over']) > 1.5 and (float(probs_gl['over']) + float(probs_gl['push'])) > 0.6:
+        if float(probs_gl['over']) > float(probs_gl['under']) and float(odds_gl['over']) > 1.5 and (float(probs_gl['over']) + float(probs_gl['push'])) > 0.65:
             decisions['gl'] = 0
-        elif float(probs_gl['under']) > float(probs_gl['over']) and float(odds_gl['under']) > 1.5 and (float(probs_gl['under']) + float(probs_gl['push'])) > 0.6:
+        elif float(probs_gl['under']) > float(probs_gl['over']) and float(odds_gl['under']) > 1.5 and (float(probs_gl['under']) + float(probs_gl['push'])) > 0.65:
             decisions['gl'] = 1
     if probs_vic is not None and odds_dc is not None:
-        if float(odds_dc['ambos']) > 1.5 and float(probs_vic['empate']) < 0.6:
+        if float(odds_dc['ambos']) > 1.5 and float(probs_vic['empate']) < 0.65:
             decisions['dc'] = 2
-        elif float(probs_vic['vitoria_casa']) > float(probs_vic['vitoria_visitante']) and float(odds_dc['vitoria_casa']) > 1.5 and (float(probs_vic['vitoria_casa']) + float(probs_vic['empate'])) > 0.6:
+        elif float(probs_vic['vitoria_casa']) > float(probs_vic['vitoria_visitante']) and float(odds_dc['vitoria_casa']) > 1.5 and (float(probs_vic['vitoria_casa']) + float(probs_vic['empate'])) > 0.65:
             decisions['dc'] = 0
-        elif float(probs_vic['vitoria_visitante']) > float(probs_vic['vitoria_casa']) and float(odds_dc['vitoria_visitante']) > 1.5 and (float(probs_vic['vitoria_visitante']) + float(probs_vic['empate'])) > 0.6:
+        elif float(probs_vic['vitoria_visitante']) > float(probs_vic['vitoria_casa']) and float(odds_dc['vitoria_visitante']) > 1.5 and (float(probs_vic['vitoria_visitante']) + float(probs_vic['empate'])) > 0.65:
             decisions['dc'] = 1
     if probs_vic is not None and odds_dnb is not None:
-        if float(probs_vic['vitoria_casa']) > float(probs_vic['vitoria_visitante']) and float(odds_dnb['vitoria_casa']) > 1.5 and (float(probs_vic['vitoria_casa']) + float(probs_vic['empate'])) > 0.6:
+        if float(probs_vic['vitoria_casa']) > float(probs_vic['vitoria_visitante']) and float(odds_dnb['vitoria_casa']) > 1.5 and (float(probs_vic['vitoria_casa']) + float(probs_vic['empate'])) > 0.65:
             decisions['dnb'] = 0
-        elif float(probs_vic['vitoria_visitante']) > float(probs_vic['vitoria_casa']) and float(odds_dnb['vitoria_visitante']) > 1.5 and (float(probs_vic['vitoria_visitante']) + float(probs_vic['empate'])) > 0.6:
+        elif float(probs_vic['vitoria_visitante']) > float(probs_vic['vitoria_casa']) and float(odds_dnb['vitoria_visitante']) > 1.5 and (float(probs_vic['vitoria_visitante']) + float(probs_vic['empate'])) > 0.65:
             decisions['dnb'] = 1
     if probs_h is not None and odds_h is not None:
-        if float(probs_h['vitoria_casa']) > float(probs_h['vitoria_visitante']) and float(odds_h['vitoria_casa']) > 1.5 and (float(probs_h['vitoria_casa']) + float(probs_h['push'])) > 0.6:
+        if float(probs_h['vitoria_casa']) > float(probs_h['vitoria_visitante']) and float(odds_h['vitoria_casa']) > 1.5 and (float(probs_h['vitoria_casa']) + float(probs_h['push'])) > 0.65:
             decisions['h'] = 0
-        elif float(probs_h['vitoria_visitante']) > float(probs_h['vitoria_casa']) and float(odds_h['vitoria_visitante']) > 1.5 and (float(probs_h['vitoria_visitante']) + float(probs_h['push'])) > 0.6:
+        elif float(probs_h['vitoria_visitante']) > float(probs_h['vitoria_casa']) and float(odds_h['vitoria_visitante']) > 1.5 and (float(probs_h['vitoria_visitante']) + float(probs_h['push'])) > 0.65:
             decisions['h'] = 1
     print(decisions)
     decisions['h'] = None

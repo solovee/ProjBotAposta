@@ -85,9 +85,9 @@ def agendar_processar_dia_anterior():
 def agendar_verificacao_diaria():
     '''agenda a revisão de resultados do dia anterior'''
     agora = datetime.now(tz)
-    
-    alvo = datetime.combine(agora.date(), time(0, 30, tzinfo=tz))  # 00:30 do dia atual
-    
+
+    alvo = datetime.combine(agora.date(), time(8, 0, tzinfo=tz))  # 08:00 do dia atual
+
     if agora >= alvo:
         alvo += timedelta(days=1)
     
@@ -455,7 +455,7 @@ def checa():
         f.write(f"✅ Apostas Válidas: {total_apostas_validas}\n")
         f.write(f"❓ Apostas None/Nulas: {contador_none} ({percentual_none:.1f}%)\n")
         f.write(f"💰 Total de Unidades: {total_unidades:.2f}\n")
-        f.write(f"💰 Total de Unidades(acumuladas): {list_uni[0]:.2f}%\n")
+        f.write(f"💰 Total de Unidades (acumuladas): {list_uni[0]:.2f}%\n")
         f.write(f"📈 ROI (apenas válidas): {roi:.2f}%\n")
         f.write("-" * 40 + "\n")
 
@@ -485,13 +485,14 @@ def loop_pega_jogos():
         time_module.sleep(10 * 60)  
 '''
 def loop_pega_jogos():
-    
     while True:
-        now = datetime.now(tz).time()  # ✅ Corrigido
-        start = time(6, 0)
-        end = time(18, 0)
-
-        if start <= now <= end:
+        now = datetime.now(tz).time()  # horário atual
+        
+        start = time(18, 0)  # início: 18:00
+        end = time(6, 0)     # fim: 06:00
+        
+        # Checa se estamos no intervalo "da noite até de manhã"
+        if now >= start or now <= end:
             logger.info("🔎 Buscando jogos programados para hoje...")
             df_jogos = pegaJogosDoDia()
             if not df_jogos.empty:
@@ -502,7 +503,7 @@ def loop_pega_jogos():
             time_module.sleep(10 * 60)  # aguarda 10 minutos
         else:
             logger.info("⏸ Fora do horário de operação. Aguardando para retomar...")
-            time_module.sleep(60 * 5)  # verifica a cada 5 minutos
+            time_module.sleep(5 * 60)  # verifica a cada 5 minutos
 
 
 
