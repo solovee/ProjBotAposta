@@ -314,4 +314,4 @@ def processar_ultimos_dias(n: int):
     primeiro_dia = df_final["event_day"].min() if "event_day" in df_final.columns else "N/A"
     print(f"✅ Dados atualizados com sucesso. Primeiro dia presente: {primeiro_dia}.")
 
-processar_ultimos_dias(1)
+processar_ultimos_dias(3)
