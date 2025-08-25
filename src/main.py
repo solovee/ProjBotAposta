@@ -18,7 +18,6 @@ import os
 import signal
 import sys
 import mlp_pois
-import database
 import pytz
 
 
@@ -47,6 +46,7 @@ CSV_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'resultados_
 lista_th = [0.6,0.35,0.65,0.6,0.6,0.65]
 list_checa = []
 list_uni = [0]
+list_tot = [0]
 
 
 
@@ -58,13 +58,12 @@ programado = []
 
 def checa_virada_do_dia():
     '''reseta os jogos programados do dia'''
-    global data_hoje, programado
+    global data_hoje
     while True:
         novo_dia = datetime.now().date().strftime('%Y%m%d')
         if novo_dia != data_hoje:
             data_hoje = novo_dia
-            programado = []
-            database.insert_csv_to_db(CSV_FILE, "dados_resultados")
+        
             logger.info("🔄 Novo dia detectado, resetando variáveis...")
         time_module.sleep(60)
 
@@ -98,11 +97,12 @@ def agendar_verificacao_diaria():
     def tarefa():
         logger.info("🔍 Iniciando verificação diária de apostas...")
         try:
-            global list_checa, list_uni, resultados_medias
+            global list_checa, list_uni, resultados_medias, list_tot, programado
             checa()  # Executa a verificação
+            programado = []
             list_checa = []
             list_uni = [0]
-        
+            list_tot = [0]
             try:
                 resultados_medias = mlp_pois.calcular_media_gols_por_liga(CSV_FILE, [8, 12])
             except Exception as e:
@@ -365,6 +365,8 @@ def jogos_do_dia():
 
 def checa():
     '''função que calcula os resultados das apostas do dia'''
+    global list_uni, list_checa
+    '''
     df_odds = jogos_do_dia()
 
     resultados_verificados = []
@@ -413,7 +415,6 @@ def checa():
                 None
     )
 
-
     
     # Cálculo do lucro (None resulta em 0)
     df_verificacao['lucro'] = df_verificacao.apply(
@@ -424,66 +425,29 @@ def checa():
                     0, 
         axis=1
     )
-
+    '''
 
  
-    total_unidades = df_verificacao['lucro'].sum()
-    total_apostas = len(df_verificacao)
-    total_apostas_validas = contador_validos
-    roi = (total_unidades / total_apostas_validas) * 100 if total_apostas_validas > 0 else 0
-    percentual_none = (contador_none / total_apostas) * 100 if total_apostas > 0 else 0
+    total_unidades = list_uni[0]
+    total_apostas = len(list_checa)
+    roi = (total_unidades / total_apostas) * 100 if total_apostas > 0 else 0
 
     data_anterior = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
     nome_arquivo = f"verificacao_diaria_{data_anterior}.txt"
-    global list_uni
-  
+    tot_checa   = list_tot[0]
+    diff = total_apostas - tot_checa
+
     resumo_str = (
         f"📊 Estatísticas Detalhadas – {data_anterior}\n"
         f"✅ Total de Apostas: {total_apostas}\n"
-        f"✅ Apostas Válidas: {total_apostas_validas}\n"
-        f"❓ Apostas None/Nulas: {contador_none} ({percentual_none:.1f}%)\n"
-        #f"💰 Total de Unidades: {total_unidades:.2f}\n"
+        f"✅ Apostas Válidas: {tot_checa}\n"
+        f"❓ Apostas None/Nulas: {diff} ({(diff / total_apostas * 100) if total_apostas > 0 else 0:.1f}%)\n"
         f"💰 Total de Unidades: {list_uni[0]:.2f}\n"
         f"📈 ROI (apenas válidas): {roi:.2f}%\n"
     )
     for chat in chats_all:
         tb.sendMessages(chat, resumo_str)
-   
-    with open(nome_arquivo, "a", encoding="utf-8") as f:
-        f.write(f"\n📅 Verificação referente ao dia {data_anterior}\n")
-        f.write(f"✅ Total de Apostas: {total_apostas}\n")
-        f.write(f"✅ Apostas Válidas: {total_apostas_validas}\n")
-        f.write(f"❓ Apostas None/Nulas: {contador_none} ({percentual_none:.1f}%)\n")
-        #f.write(f"💰 Total de Unidades: {total_unidades:.2f}\n")
-        f.write(f"💰 Total de Unidades: {list_uni[0]:.2f}\n")
-        f.write(f"📈 ROI (apenas válidas): {roi:.2f}%\n")
-        f.write("-" * 40 + "\n")
 
-    return {
-        'dataframe': df_verificacao,
-        'total_unidades': list_uni[0],
-        'roi': roi,
-        'apostas_total': total_apostas,
-        'apostas_validas': total_apostas_validas,
-        'apostas_none': contador_none,
-        'percentual_none': percentual_none
-    }
-
-
-
-'''
-def loop_pega_jogos():
-   
-    while True:
-        logger.info("🔎 Buscando jogos programados para hoje...")
-        df_jogos = pegaJogosDoDia()
-        if not df_jogos.empty:
-            logger.info(f"📅 Encontrados {len(df_jogos)} jogos para hoje")
-            agenda_processamento(df_jogos)
-        else:
-            logger.info("ℹ️ Nenhum jogo encontrado por agora")
-        time_module.sleep(10 * 60)  
-'''
 def loop_pega_jogos():
     while True:
         now = datetime.now(tz).time()  # horário atual
@@ -767,8 +731,8 @@ def agenda_processamento(df):
 
 def checa_jogos_do_dia(id,tentativa=0):
     '''checa o resultado de um jogo'''
-    global list_checa
-    print(list_checa)
+    global list_checa, list_tot
+
     df = pd.read_csv(CSV_FILE)
     
     # Garante que 'event_day' é string
@@ -833,6 +797,7 @@ def checa_jogos_do_dia(id,tentativa=0):
                 mens = df_para_string(a)
                 
                 tb.sendMessages(-1002610837223, mens)
+                list_tot[0] += 1
             else:
                 if tentativa  < 3:
                     time_module.sleep(2000)
