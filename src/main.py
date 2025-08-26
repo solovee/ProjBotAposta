@@ -440,8 +440,8 @@ def checa():
     resumo_str = (
         f"📊 Estatísticas Detalhadas – {data_anterior}\n"
         f"✅ Total de Apostas: {total_apostas}\n"
-        f"✅ Apostas Válidas: {tot_checa}\n"
-        f"❓ Apostas None/Nulas: {diff} ({(diff / total_apostas * 100) if total_apostas > 0 else 0:.1f}%)\n"
+        f"✅ Apostas Válidas: {diff}\n"
+        f"❓ Apostas None/Nulas: {tot_checa} ({(tot_checa / total_apostas * 100) if total_apostas > 0 else 0:.1f}%)\n"
         f"💰 Total de Unidades: {list_uni[0]:.2f}\n"
         f"📈 ROI (apenas válidas): {roi:.2f}%\n"
     )
@@ -634,7 +634,7 @@ def main():
     
 
  
-    agendar_processar_dia_anterior()
+    #agendar_processar_dia_anterior()
 
     agendar_verificacao_diaria()
     agendar_atualizacao_csv()
@@ -766,24 +766,24 @@ def checa_jogos_do_dia(id,tentativa=0):
             res = verificar_aposta(a,df_apenas_dois_dias)
             if res is not None:
                 if res == 1:
-                    a['resultado'] = 'ganhou'
+                    a['resultado'] = 'ganhou✅'
                     a['uni'] = float(a['odd']) - 1
                     list_uni[0] += a['uni']
                     a['unidades acumuladas'] = round(list_uni[0], 2)
                     
                 elif res == 0.5:
-                    a['resultado'] = 'meio ganho'
+                    a['resultado'] = 'meio ganho✅'
                     a['uni'] = float(float(a['odd'] - 1) / 2)
                     list_uni[0] += a['uni']
                     a['unidades acumuladas'] = round(list_uni[0], 2)
                     
                 elif res == -0.5:
-                    a['resultado'] = 'meia perda'
+                    a['resultado'] = 'meia perda❌'
                     a['uni'] = -0.5
                     list_uni[0] += a['uni']
                     a['unidades acumuladas'] = round(list_uni[0], 2)
                 elif res == -1:
-                    a['resultado'] = 'perdeu'
+                    a['resultado'] = 'perdeu❌'
                     a['uni'] = -1
                     list_uni[0] += a['uni']
                     a['unidades acumuladas'] = round(list_uni[0], 2)
@@ -797,13 +797,14 @@ def checa_jogos_do_dia(id,tentativa=0):
                 mens = df_para_string(a)
                 
                 tb.sendMessages(-1002610837223, mens)
-                list_tot[0] += 1
+                
             else:
                 if tentativa  < 3:
                     time_module.sleep(2000)
                     checa_jogos_do_dia(id,tentativa+1)
                 else:
-                    logger.info(f"❌ Jogo {id} não retornou resultado após 2 tentativas")
+                    logger.info(f"❌ Jogo {id} não retornou resultado após 3 tentativas")
+                    list_tot[0] += 1
                     return 0
 
 # Função que será executada para cada jogo
