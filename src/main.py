@@ -615,9 +615,23 @@ def remover_duplicatas():
 
 def agendar_atualizacao_csv():
     logger.info("🔄 Agendando atualização do CSV...")
+
+    # Executa a atualização
     atualizar_csv_dia_atual()
-   
-    threading.Timer(1800, agendar_atualizacao_csv).start()
+
+    # Hora atual no fuso definido
+    agora = datetime.now(tz).time()
+    inicio = time(8, 0)
+    fim = time(17, 0)
+
+    # Se estiver dentro do intervalo 08:00–17:00 → 30 min
+    if inicio <= agora <= fim:
+        intervalo = 60 * 30
+    else:
+        intervalo = 60 * 60 * 3  # 3h
+
+    logger.info(f"⏳ Próxima atualização em {intervalo/60:.0f} minutos")
+    threading.Timer(intervalo, agendar_atualizacao_csv).start()
 
 def main():
     
@@ -733,11 +747,6 @@ def checa_jogos_do_dia(id,tentativa=0):
     '''checa o resultado de um jogo'''
     global list_checa, list_tot
 
-    df = pd.read_csv(CSV_FILE)
-    
-    # Garante que 'event_day' é string
-    df["event_day"] = df["event_day"].astype(str)
-
     # Identifica os dois dias mais recentes
     agora = datetime.now()
 
@@ -748,17 +757,29 @@ def checa_jogos_do_dia(id,tentativa=0):
     else:
         dia1 = (agora - timedelta(days=1)).strftime("%Y%m%d")
         dia2 = agora.strftime("%Y%m%d")
-
+    df_apenas_dois_dias = pd.read_csv(
+    CSV_FILE,
+    nrows=1500,              # lê só as 1500 primeiras linhas
+    dtype={"event_day": str}
+)
     # Filtra o DataFrame
-    df_apenas_dois_dias = df[df["event_day"].isin([dia1, dia2])]
+    df_apenas_dois_dias = pd.read_csv(
+        CSV_FILE,
+        nrows=1000,              # lê só as 1000 primeiras linhas
+        dtype={"event_day": str}
+    )
+
+    df_apenas_dois_dias = df_apenas_dois_dias[df_apenas_dois_dias["event_day"].isin([dia1, dia2])]
+
+ 
 
     # Pré-processamento dos dados
-    df_apenas_dois_dias = NN.preProcessEstatisticasGerais(df_apenas_dois_dias.copy())
-    df_apenas_dois_dias = NN.preProcessOverUnder(df_apenas_dois_dias.copy())
-    df_apenas_dois_dias = NN.preProcessHandicap_i(df_apenas_dois_dias.copy())
-    df_apenas_dois_dias = NN.preProcessGoalLine_i(df_apenas_dois_dias.copy())
-    df_apenas_dois_dias = NN.preProcessDoubleChance(df_apenas_dois_dias.copy())
-    df_apenas_dois_dias = NN.preProcessDrawNoBet_i(df_apenas_dois_dias.copy())
+    df_apenas_dois_dias = NN.preProcessEstatisticasGerais(df_apenas_dois_dias)
+    df_apenas_dois_dias = NN.preProcessOverUnder(df_apenas_dois_dias)
+    df_apenas_dois_dias = NN.preProcessHandicap_i(df_apenas_dois_dias)
+    df_apenas_dois_dias = NN.preProcessGoalLine_i(df_apenas_dois_dias)
+    df_apenas_dois_dias = NN.preProcessDoubleChance(df_apenas_dois_dias)
+    df_apenas_dois_dias = NN.preProcessDrawNoBet_i(df_apenas_dois_dias)
     
 
     for a in list_checa:
