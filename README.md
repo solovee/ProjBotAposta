@@ -1,1 +1,1 @@
-projeto de bot de apostas fifa
+Desenvolvimento de um bot de apostas de FIFA para Telegram, utilizando Betsapi, MLP, Modelo de Poisson, SQLite e estratégias de banca para previsão de linhas desreguladas em tempo real. modelos teste base foram feitos utilizando Q-Learning, Deep Q-Network e Autogluon.
